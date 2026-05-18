@@ -1,0 +1,31 @@
+node_modules
+dist
+web/dist
+.DS_Store
+*.log
+logs/
+.env
+.env.local
+.cache
+bun.lock
+package-lock.json
+
+# Playwright test artifacts & local screenshots
+.playwright-mcp/
+screenshot/
+*.png
+!web/**/*.png
+!src-server/**/*.png
+!src-tauri/icons/app-icon.png
+
+# Rust build artifacts
+/target/
+src-server/target/
+
+# Tauri
+src-tauri/binaries/agent-panel-server-*
+src-tauri/icons/*
+!src-tauri/icons/app-icon.png
+!src-tauri/icons/app-icon-128.png
+src-server/.vite/
+web/coverage/

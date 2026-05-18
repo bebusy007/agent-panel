@@ -1,0 +1,408 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Agent Panel Design System
+   ============================================
+   Rules defined in: docs/ui-update/design-system.md
+   DO NOT freestyle colors/spacing — follow the spec.
+   ============================================ */
+
+@layer base {
+  :root {
+    /* === Typography scale (user-adjustable via Settings) === */
+    --text-h1: 24px;
+    --text-h2: 16px;
+    --text-body: 14px;
+    --text-caption: 12px;
+    --text-label: 11px;
+    --text-sub: 10px;
+
+    /* === Dark Mode (default) ===
+     * Deep base + rgba white overlays for natural depth.
+     * Text: #F5F5FA → #A8A8B8 → #78788A → #55556A */
+    --background: #0D0D14;
+    --foreground: #F5F5FA;
+    --card: rgba(255, 255, 255, 0.05);
+    --card-foreground: #F5F5FA;
+    --popover: #1A1A24;
+    --popover-foreground: #F5F5FA;
+    --primary: #34D399;
+    --primary-foreground: #FFFFFF;
+    --secondary: rgba(255, 255, 255, 0.08);
+    --secondary-foreground: #E0E0EA;
+    --muted: rgba(255, 255, 255, 0.06);
+    --muted-foreground: #78788A;
+    --accent: #34D399;
+    --accent-foreground: #FFFFFF;
+    --destructive: #FF4444;
+    --destructive-foreground: #FFFFFF;
+    --border: rgba(255, 255, 255, 0.10);
+    --input: rgba(255, 255, 255, 0.08);
+    --ring: #34D399;
+    --radius: 0.5rem;
+    --code-bg: rgba(0, 0, 0, 0.30);
+    --code-border: rgba(255, 255, 255, 0.12);
+
+    /* Status */
+    --success: #34D399;
+    --success-foreground: #0D0D14;
+    --warning: #FBBF24;
+    --warning-foreground: #0D0D14;
+    --info: #60A5FA;
+    --info-foreground: #0D0D14;
+
+    /* Metric */
+    --metric-purple: #A78BFA;
+    --metric-blue: #60A5FA;
+    --metric-green: #34D399;
+    --metric-amber: #FBBF24;
+    --metric-pink: #F472B6;
+    --metric-teal: #2DD4BF;
+
+    /* Tool */
+    --tool-read: #60A5FA;
+    --tool-write: #FBBF24;
+    --tool-edit: #FBBF24;
+    --tool-bash: #34D399;
+    --tool-search: #A78BFA;
+    --tool-web: #38BDF8;
+    --tool-agent: #2DD4BF;
+    --tool-task: #818CF8;
+    --tool-question: #FCD34D;
+    --tool-skill: #FB7185;
+
+    /* Terminal */
+    --terminal-bg: rgba(0, 0, 0, 0.45);
+    --terminal-fg: #d4d4d8;
+    --terminal-border: rgba(255, 255, 255, 0.08);
+    --terminal-cmd-label: #6ee7b7;
+    --terminal-cmd-text: #d1fae5;
+    --terminal-cmd-border: rgba(52, 211, 153, 0.30);
+    --terminal-cmd-border-b: rgba(52, 211, 153, 0.20);
+
+    /* Shadows — Dark (heavier) */
+    --shadow-e1: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-e2: 0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25);
+    --shadow-e3: 0 4px 16px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.2);
+    --shadow-e4: 0 8px 32px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
+    --shadow-glow: 0 0 20px rgba(6, 199, 85, 0.15);
+
+    /* Chart */
+    --chart-1: #A78BFA;
+    --chart-2: #34D399;
+    --chart-3: #FBBF24;
+    --chart-4: #60A5FA;
+    --chart-5: #FB7185;
+
+    /* Heatmap */
+    --heatmap-empty: rgba(255, 255, 255, 0.04);
+    --heatmap-low: rgba(52, 211, 153, 0.25);
+    --heatmap-medium: rgba(52, 211, 153, 0.50);
+    --heatmap-high: #34D399;
+
+    /* Sidebar */
+    --sidebar: #0A0A10;
+    --sidebar-foreground: #E0E0EA;
+    --sidebar-border: rgba(255, 255, 255, 0.08);
+    --sidebar-accent: rgba(255, 255, 255, 0.06);
+    --sidebar-accent-foreground: #F5F5FA;
+
+    /* Timing */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+
+    /* Legacy compat — maps old tokens to new system */
+    --bg-base: 13 13 20;
+    --bg-subtle: 20 20 28;
+    --bg-surface: 26 26 36;
+    --bg-elevated: 38 38 50;
+    --fg-default: 245 245 250;
+    --fg-muted: 168 168 184;
+    --fg-subtle: 120 120 138;
+    --border-default: 44 44 58;
+    --border-strong: 66 66 82;
+  }
+
+  .light {
+    /* === Light Mode ===
+     * Background: #FFFFFF page, #FAFAFA card substrate.
+     * Text: #111111 → #555555 → #888888 */
+    --background: #FFFFFF;
+    --foreground: #111111;
+    --card: #FFFFFF;
+    --card-foreground: #111111;
+    --popover: #FFFFFF;
+    --popover-foreground: #111111;
+    --primary: #059669;
+    --primary-foreground: #FFFFFF;
+    --secondary: #F3F4F5;
+    --secondary-foreground: #333333;
+    --muted: #F3F4F5;
+    --muted-foreground: #888888;
+    --accent: #059669;
+    --accent-foreground: #FFFFFF;
+    --destructive: #E53935;
+    --destructive-foreground: #FFFFFF;
+    --border: #E8E9EB;
+    --input: #F3F4F5;
+    --ring: #059669;
+    --code-bg: #E8E9EB;
+    --code-border: #DDE0E3;
+
+    --success: #16A34A;
+    --success-foreground: #FFFFFF;
+    --warning: #D97706;
+    --warning-foreground: #FFFFFF;
+    --info: #2563EB;
+    --info-foreground: #FFFFFF;
+
+    --metric-purple: #7C3AED;
+    --metric-blue: #2563EB;
+    --metric-green: #16A34A;
+    --metric-amber: #D97706;
+    --metric-pink: #DB2777;
+    --metric-teal: #0D9488;
+
+    --tool-read: #2563EB;
+    --tool-write: #D97706;
+    --tool-edit: #D97706;
+    --tool-bash: #16A34A;
+    --tool-search: #7C3AED;
+    --tool-web: #0284C7;
+    --tool-agent: #0D9488;
+    --tool-task: #4F46E5;
+    --tool-question: #CA8A04;
+    --tool-skill: #E11D48;
+
+    /* Terminal */
+    --terminal-bg: #FFFFFF;
+    --terminal-fg: #1e1e1e;
+    --terminal-border: #E8E9EB;
+    --terminal-cmd-label: #059669;
+    --terminal-cmd-text: #111111;
+    --terminal-cmd-border: #d1fae5;
+    --terminal-cmd-border-b: #d1fae5;
+
+    /* Shadows — Light (subtle, dual-layer) */
+    --shadow-e1: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-e2: 0 2px 8px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.03);
+    --shadow-e3: 0 4px 16px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02);
+    --shadow-e4: 0 8px 32px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.02);
+    --shadow-glow: 0 0 20px rgba(5, 150, 105, 0.08);
+
+    --chart-1: #5B4CD6;
+    --chart-2: #16A34A;
+    --chart-3: #D97706;
+    --chart-4: #2563EB;
+    --chart-5: #DB2777;
+
+    --heatmap-empty: #F3F4F5;
+    --heatmap-low: #BBF7D0;
+    --heatmap-medium: #4ADE80;
+    --heatmap-high: #16A34A;
+
+    --sidebar: #FAFAFA;
+    --sidebar-foreground: #333333;
+    --sidebar-border: #E8E9EB;
+    --sidebar-accent: #F3F4F5;
+    --sidebar-accent-foreground: #111111;
+
+    /* Legacy compat */
+    --bg-base: 255 255 255;
+    --bg-subtle: 250 250 250;
+    --bg-surface: 255 255 255;
+    --bg-elevated: 243 244 245;
+    --fg-default: 17 17 17;
+    --fg-muted: 85 85 85;
+    --fg-subtle: 136 136 136;
+    --border-default: 232 233 235;
+    --border-strong: 210 210 218;
+  }
+}
+
+/* === Base === */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* === Masonry === */
+.masonry-grid {
+  display: flex;
+  margin-left: -16px;
+  width: auto;
+}
+.masonry-column {
+  padding-left: 16px;
+  background-clip: padding-box;
+}
+.masonry-column > * {
+  margin-bottom: 16px;
+}
+
+/* === Markdown body === */
+.md-body {
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4 {
+  font-weight: 600;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  color: var(--foreground);
+}
+.md-body h1 { font-size: 20px; }
+.md-body h2 { font-size: 16px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.md-body h3 { font-size: 15px; }
+.md-body p { margin: 0.6em 0; }
+.md-body ul,
+.md-body ol { margin: 0.6em 0; padding-left: 1.4em; }
+.md-body li { margin: 0.2em 0; }
+.md-body code {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
+.md-body pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.md-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+.md-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.md-body a:hover {
+  text-decoration: underline;
+}
+.md-body blockquote {
+  border-left: 3px solid var(--primary);
+  padding: 0 12px;
+  color: var(--muted-foreground);
+  margin: 0.6em 0;
+}
+.md-body table {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 13px;
+}
+.md-body th,
+.md-body td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+}
+.md-body th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.md-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.4em 0;
+}
+
+/* === Search mark === */
+mark.search-mark-active {
+  background-color: rgba(251, 191, 36, 0.85) !important;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.5);
+}
+
+/* === Typography overrides ===
+ * Make Tailwind's text-* classes read from CSS variables so
+ * user adjustments in Settings propagate everywhere. */
+.text-2xl     { font-size: var(--text-h1) !important; }
+.text-base    { font-size: var(--text-h2) !important; }
+.text-sm      { font-size: var(--text-body) !important; }
+.text-xs      { font-size: var(--text-caption) !important; }
+.\!text-\[11px\],
+.text-\[11px\] { font-size: var(--text-label) !important; }
+.\!text-\[10px\],
+.text-\[10px\] { font-size: var(--text-sub) !important; }
+
+/* === Typography utility classes ===
+ * Spec: docs/ui-update/typography.md
+ * Font sizes are driven by CSS variables (--text-*) so users
+ * can adjust them in Settings. */
+.typo-h1 {
+  font-size: var(--text-h1);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.typo-h2 {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.typo-body {
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.typo-caption {
+  font-size: var(--text-caption);
+  font-weight: 400;
+  line-height: 1.4;
+}
+.typo-label {
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.typo-sub {
+  font-size: var(--text-sub);
+  font-weight: 400;
+  line-height: 1.3;
+}

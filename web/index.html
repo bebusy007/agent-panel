@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>⚡</text></svg>" />
+    <title>Agent Panel</title>
+  </head>
+  <body>
+    <script>
+      // Prevent flash of wrong theme on load
+      (function() {
+        var t = localStorage.getItem('agent-panel-theme');
+        if (t === 'light' || (t !== 'dark' && !window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('light');
+        }
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

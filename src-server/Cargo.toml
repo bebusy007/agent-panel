@@ -1,0 +1,62 @@
+[package]
+name = "agent-panel-server"
+version = "0.0.1"
+edition = "2024"
+description = "Rust backend for Agent Panel — local AI agent asset dashboard"
+
+[dependencies]
+# HTTP server
+axum = { version = "0.8", features = ["ws"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors", "compression-gzip", "trace", "request-id"] }
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Search
+aho-corasick = "1"
+memmap2 = "0.9"
+rayon = "1"
+lru = "0.12"
+
+# File system
+walkdir = "2"
+notify = "7"
+dirs = "6"
+
+# HTTP types (used by tower-http TraceLayer)
+http = "1"
+
+# Encoding
+base64 = "0.22"
+
+# Utilities
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+clap = { version = "4", features = ["derive"] }
+open = "5"
+
+# Platform
+libc = "0.2"
+
+# URL utilities
+urlencoding = "2"
+
+# Static file embedding
+rust-embed = "8"
+
+[dev-dependencies]
+tempfile = "3"
+tokio-test = "0.4"
+axum-test = "20"
+pretty_assertions = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
