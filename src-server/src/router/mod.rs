@@ -14,11 +14,13 @@ mod resume;
 mod sources;
 mod version;
 pub mod ws;
+pub mod chat;
 
 use axum::Router;
+use crate::conversation::SessionManager;
 use crate::watcher::EventSender;
 
-pub fn build_api_router(watcher_tx: EventSender, log_dir: String) -> Router {
+pub fn build_api_router(watcher_tx: EventSender, log_dir: String, session_manager: SessionManager) -> Router {
     Router::new()
         .merge(logs::routes(log_dir))
         .merge(health::routes())
@@ -36,6 +38,7 @@ pub fn build_api_router(watcher_tx: EventSender, log_dir: String) -> Router {
         .merge(sources::routes())
         .merge(version::routes())
         .merge(ws::routes(watcher_tx))
+        .merge(chat::routes(session_manager))
 }
 
 #[cfg(test)]
@@ -47,7 +50,8 @@ mod integration_tests {
 
     fn test_server(log_dir: &str) -> TestServer {
         let (tx, _) = broadcast::channel(256);
-        let router = build_api_router(tx, log_dir.to_string());
+        let mgr = crate::conversation::SessionManager::new();
+        let router = build_api_router(tx, log_dir.to_string(), mgr);
         TestServer::new(router.into_make_service())
     }
 
