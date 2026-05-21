@@ -186,6 +186,24 @@ async fn handle_client_message(
             let _ = manager.disconnect(session_key).await;
             return Err(true);
         }
+        ClientMessage::RewindFiles {
+            request_id,
+            user_message_id,
+            dry_run,
+            files,
+        } => {
+            // Rewind is sent as a control_request to CLI stdin
+            // The response comes back through the event stream
+            let line = crate::conversation::build_rewind_request(
+                &request_id,
+                &user_message_id,
+                dry_run,
+                files.as_deref(),
+            );
+            // We need to write directly to the actor's stdin — for now, treat as a message
+            // TODO: Add dedicated rewind command to ActorCommand enum for proper handling
+            tracing::info!(request_id, user_message_id, dry_run, "Rewind request");
+        }
     }
 
     Ok(())

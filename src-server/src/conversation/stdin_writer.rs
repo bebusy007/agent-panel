@@ -113,6 +113,34 @@ fn is_document_type(media_type: &str) -> bool {
     matches!(media_type, "application/pdf")
 }
 
+/// Build a rewind_files control request for CLI stdin.
+pub fn build_rewind_request(
+    request_id: &str,
+    user_message_id: &str,
+    dry_run: bool,
+    files: Option<&[String]>,
+) -> String {
+    let mut request = serde_json::json!({
+        "subtype": "rewind_files",
+        "userMessageId": user_message_id,
+        "dryRun": dry_run,
+    });
+
+    if let Some(file_list) = files {
+        request["files"] = serde_json::json!(file_list);
+    }
+
+    let payload = serde_json::json!({
+        "type": "control_request",
+        "request_id": request_id,
+        "request": request,
+    });
+
+    let mut line = serde_json::to_string(&payload).unwrap();
+    line.push('\n');
+    line
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

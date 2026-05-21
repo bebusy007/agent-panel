@@ -25,6 +25,21 @@ pub enum ServerMessage {
     Disconnected {
         reason: String,
     },
+    RewindResponse {
+        request_id: String,
+        #[serde(flatten)]
+        result: RewindResult,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct RewindResult {
+    pub can_rewind: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub files_changed: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -50,6 +65,14 @@ pub enum ClientMessage {
     },
     Interrupt {},
     Disconnect {},
+    RewindFiles {
+        request_id: String,
+        user_message_id: String,
+        #[serde(default)]
+        dry_run: bool,
+        #[serde(default)]
+        files: Option<Vec<String>>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
