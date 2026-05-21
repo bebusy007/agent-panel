@@ -13,6 +13,7 @@ mod trash;
 mod resume;
 mod sources;
 mod version;
+mod cli_check;
 pub mod ws;
 pub mod chat;
 
@@ -39,6 +40,7 @@ pub fn build_api_router(watcher_tx: EventSender, log_dir: String, session_manage
         .merge(version::routes())
         .merge(ws::routes(watcher_tx))
         .merge(chat::routes(session_manager))
+        .merge(cli_check::routes())
 }
 
 #[cfg(test)]
