@@ -15,6 +15,7 @@ interface ConversationPanelProps {
 export function ConversationPanel({ sessionId, cwd }: ConversationPanelProps) {
   const {
     state,
+    connectionState,
     connect,
     disconnect,
     sendMessage,
@@ -92,7 +93,9 @@ export function ConversationPanel({ sessionId, cwd }: ConversationPanelProps) {
       <ConversationPrompt
         isConnected={connected}
         isRunning={running}
+        connectionState={connectionState}
         hasPendingPermission={hasPendingPermission}
+        error={state.error}
         onSend={handleSend}
         onInterrupt={interrupt}
         onConnect={connect}

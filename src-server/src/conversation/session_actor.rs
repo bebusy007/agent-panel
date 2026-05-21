@@ -68,12 +68,6 @@ impl SessionActor {
             session_id: None,
         };
 
-        // Notify: spawned
-        let _ = event_tx.send(ServerMessage::StateChange {
-            state: SessionState::Spawned,
-            reason: None,
-        });
-
         tokio::spawn(actor.run());
 
         Ok(SessionActorHandle {
@@ -85,6 +79,13 @@ impl SessionActor {
 
     async fn run(mut self) {
         let mut stdout_rx = self.transport.stdout_rx();
+
+        // Immediately notify connected (CLI doesn't emit init until first message)
+        let _ = self.event_tx.send(ServerMessage::Connected {
+            epoch: 0,
+            session_id: String::new(),
+            reconnect_token: None,
+        });
 
         loop {
             tokio::select! {

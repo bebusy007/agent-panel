@@ -83,6 +83,8 @@ impl LocalTransport {
             "--input-format".to_string(),
             "stream-json".to_string(),
             "--verbose".to_string(),
+            "--permission-prompt-tool".to_string(),
+            "stdio".to_string(),
         ];
 
         match &config.mode {

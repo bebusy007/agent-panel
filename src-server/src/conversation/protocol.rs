@@ -180,13 +180,75 @@ fn parse_content_block_stop(value: &Value) -> Vec<ChatEvent> {
 }
 
 fn parse_assistant(value: &Value) -> Vec<ChatEvent> {
-    let message_id = value
-        .get("message")
-        .and_then(|m| m.get("id"))
+    let mut events = vec![];
+    let message = match value.get("message") {
+        Some(m) => m,
+        None => {
+            return vec![ChatEvent::Raw { data: value.clone() }];
+        }
+    };
+
+    let message_id = message
+        .get("id")
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    vec![ChatEvent::AssistantMessage { message_id }]
+
+    // Extract content blocks from the complete assistant message
+    if let Some(content) = message.get("content").and_then(|c| c.as_array()) {
+        for block in content {
+            let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
+            match block_type {
+                "text" => {
+                    if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
+                        if !text.is_empty() {
+                            events.push(ChatEvent::TextDelta {
+                                text: text.to_string(),
+                            });
+                        }
+                    }
+                }
+                "thinking" => {
+                    if let Some(thinking) = block.get("thinking").and_then(|t| t.as_str()) {
+                        if !thinking.is_empty() {
+                            events.push(ChatEvent::ThinkingDelta {
+                                text: thinking.to_string(),
+                            });
+                        }
+                    }
+                }
+                "tool_use" => {
+                    let tool_use_id = block
+                        .get("id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let tool_name = block
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    events.push(ChatEvent::ToolUseStart {
+                        tool_use_id: tool_use_id.clone(),
+                        tool_name,
+                    });
+                    // If input is present (complete message), add it as delta
+                    if let Some(input) = block.get("input") {
+                        let input_str = serde_json::to_string(input).unwrap_or_default();
+                        events.push(ChatEvent::ToolInputDelta {
+                            tool_use_id: tool_use_id.clone(),
+                            json_delta: input_str,
+                        });
+                        events.push(ChatEvent::ToolUseEnd { tool_use_id });
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    events.push(ChatEvent::AssistantMessage { message_id });
+    events
 }
 
 fn parse_user(value: &Value) -> Vec<ChatEvent> {

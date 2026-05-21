@@ -89,6 +89,16 @@ async fn handle_ws_session(
         }
     };
 
+    // Send initial spawned state directly (not via broadcast, to avoid race)
+    let spawned_msg = ServerMessage::StateChange {
+        state: SessionState::Spawned,
+        reason: None,
+    };
+    let json = serde_json::to_string(&spawned_msg).unwrap_or_default();
+    if socket.send(Message::Text(json.into())).await.is_err() {
+        return;
+    }
+
     // Main loop: forward events and handle incoming messages
     loop {
         tokio::select! {

@@ -1,11 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Send, Square } from "lucide-react";
+import { Send, Square, Loader2 } from "lucide-react";
 import type { AttachmentData } from "@/lib/conversation/chat-protocol";
+import type { ConnectionState } from "@/lib/conversation/chat-protocol";
 
 interface ConversationPromptProps {
   isConnected: boolean;
   isRunning: boolean;
+  connectionState: ConnectionState;
   hasPendingPermission: boolean;
+  error: string | null;
   onSend: (text: string, attachments?: AttachmentData[]) => void;
   onInterrupt: () => void;
   onConnect: () => void;
@@ -17,7 +20,9 @@ interface ConversationPromptProps {
 export function ConversationPrompt({
   isConnected,
   isRunning,
+  connectionState,
   hasPendingPermission,
+  error,
   onSend,
   onInterrupt,
   onConnect,
@@ -110,17 +115,29 @@ export function ConversationPrompt({
     [onSlashTrigger, onSlashClose]
   );
 
-  // Not connected: show connect button
+  // Not connected: show connect button or status
   if (!isConnected) {
     return (
-      <div className="border-t border-border px-4 py-3">
-        <button
-          onClick={onConnect}
-          disabled={disabled}
-          className="w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
-        >
-          ▶ Connect and continue
-        </button>
+      <div className="border-t border-border px-4 py-3 space-y-2">
+        {error && (
+          <div className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+            {error}
+          </div>
+        )}
+        {connectionState === "connecting" ? (
+          <div className="flex items-center justify-center gap-2 h-9">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Connecting...</span>
+          </div>
+        ) : (
+          <button
+            onClick={onConnect}
+            disabled={disabled}
+            className="w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            Connect and continue
+          </button>
+        )}
       </div>
     );
   }

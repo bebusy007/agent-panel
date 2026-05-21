@@ -82,10 +82,10 @@ async fn get_cli_version(cli_path: &str) -> Option<String> {
 
     if output.status.success() {
         let version_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        // Extract version number from output like "claude 2.1.146" or just "2.1.146"
+        // Extract version number: "2.1.146 (Claude Code)" → "2.1.146"
         let version = version_str
             .split_whitespace()
-            .last()
+            .next()
             .unwrap_or(&version_str)
             .to_string();
         Some(version)
