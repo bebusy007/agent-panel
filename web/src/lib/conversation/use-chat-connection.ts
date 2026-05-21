@@ -16,7 +16,6 @@ import {
 interface UseChatConnectionOptions {
   sessionId?: string;
   cwd?: string;
-  autoConnect?: boolean;
 }
 
 interface UseChatConnectionReturn {
@@ -35,6 +34,11 @@ export function useChatConnection(
   const [state, dispatch] = useReducer(chatReducer, INITIAL_STATE);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const getConnectionState = (): ConnectionState => {
     switch (state.phase) {
@@ -64,21 +68,24 @@ export function useChatConnection(
   const connect = useCallback(() => {
     if (wsRef.current) {
       wsRef.current.close();
+      wsRef.current = null;
     }
 
     dispatch({ type: "CONNECT_START" });
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
+    const opts = optionsRef.current;
 
     let url: string;
-    if (options.sessionId) {
-      url = `${protocol}//${host}/api/ws/chat/resume/${options.sessionId}`;
-      if (state.reconnectToken) {
-        url += `?token=${encodeURIComponent(state.reconnectToken)}`;
+    if (opts.sessionId) {
+      url = `${protocol}//${host}/api/ws/chat/resume/${opts.sessionId}`;
+      const token = stateRef.current.reconnectToken;
+      if (token) {
+        url += `?token=${encodeURIComponent(token)}`;
       }
-    } else if (options.cwd) {
-      url = `${protocol}//${host}/api/ws/chat/new?cwd=${encodeURIComponent(options.cwd)}`;
+    } else if (opts.cwd) {
+      url = `${protocol}//${host}/api/ws/chat/new?cwd=${encodeURIComponent(opts.cwd)}`;
     } else {
       dispatch({ type: "ERROR", code: "invalid_config", message: "No sessionId or cwd provided" });
       return;
@@ -87,9 +94,13 @@ export function useChatConnection(
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
+    ws.onopen = () => {
+      // WebSocket established, waiting for backend "connected" message
+    };
+
     ws.onmessage = (event) => {
       try {
-        const msg: ServerMessage = JSON.parse(event.data);
+        const msg = JSON.parse(event.data as string) as ServerMessage;
         handleServerMessage(msg, dispatch);
       } catch {
         // Ignore unparseable messages
@@ -98,10 +109,16 @@ export function useChatConnection(
 
     ws.onclose = () => {
       wsRef.current = null;
-      // Auto-reconnect after 3s if not explicitly disconnected
-      if (state.phase !== "disconnected" && state.phase !== "empty") {
+      const currentPhase = stateRef.current.phase;
+      // Auto-reconnect after 3s if session was active (not explicitly disconnected)
+      if (
+        currentPhase !== "disconnected" &&
+        currentPhase !== "empty" &&
+        currentPhase !== "error"
+      ) {
         reconnectTimerRef.current = setTimeout(() => {
-          if (options.sessionId) {
+          // Only reconnect if we have a sessionId to resume
+          if (optionsRef.current.sessionId || stateRef.current.sessionId) {
             connect();
           }
         }, 3000);
@@ -109,9 +126,9 @@ export function useChatConnection(
     };
 
     ws.onerror = () => {
-      dispatch({ type: "ERROR", code: "ws_error", message: "WebSocket connection error" });
+      dispatch({ type: "ERROR", code: "ws_error", message: "WebSocket connection failed" });
     };
-  }, [options.sessionId, options.cwd, state.reconnectToken, state.phase]);
+  }, []); // No deps — uses refs for latest state
 
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) {
@@ -161,7 +178,6 @@ export function useChatConnection(
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
       }
-      // Note: we do NOT close the WebSocket on unmount (page navigation keeps connection)
     };
   }, []);
 
@@ -178,13 +194,6 @@ export function useChatConnection(
 
 function handleServerMessage(msg: ServerMessage, dispatch: React.Dispatch<ChatAction>) {
   switch (msg.type) {
-    case "state_change":
-      if (msg.state === "idle") {
-        // TurnComplete already handled via event, but idle from state_change
-        // can also indicate turn end without explicit result event
-      }
-      break;
-
     case "connected":
       dispatch({
         type: "CONNECTED",
@@ -195,8 +204,8 @@ function handleServerMessage(msg: ServerMessage, dispatch: React.Dispatch<ChatAc
       break;
 
     case "event": {
-      // ServerEvent wraps a ChatEvent — extract the event fields
-      const { type: _type, ...eventFields } = msg;
+      // ServerEvent has type="event" plus the ChatEvent fields flattened
+      const { type: _type, ...eventFields } = msg as unknown as Record<string, unknown>;
       dispatch({ type: "SERVER_EVENT", event: eventFields as unknown as ChatEvent });
       break;
     }
@@ -207,6 +216,13 @@ function handleServerMessage(msg: ServerMessage, dispatch: React.Dispatch<ChatAc
 
     case "disconnected":
       dispatch({ type: "DISCONNECT" });
+      break;
+
+    case "state_change":
+      // state_change with idle means turn ended (but reducer handles this via TurnComplete event)
+      break;
+
+    default:
       break;
   }
 }

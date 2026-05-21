@@ -340,3 +340,17 @@ mod tests {
         assert_eq!(back.media_type, "image/png");
     }
 }
+
+#[cfg(test)]
+mod event_serialization_tests {
+    use super::*;
+    #[test]
+    fn event_wrapping_serializes_correctly() {
+        let event = ChatEvent::TextDelta { text: "hello".into() };
+        let msg = ServerMessage::Event(event);
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains("\"type\":\"event\""));
+        assert!(json.contains("\"event_type\":\"text_delta\""));
+        assert!(json.contains("\"text\":\"hello\""));
+    }
+}

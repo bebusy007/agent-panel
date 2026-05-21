@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FolderOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { ConversationPanel } from "@/components/conversation/ConversationPanel";
 
 export default function NewSessionView() {
@@ -45,23 +45,15 @@ export default function NewSessionView() {
 
         <div className="space-y-3">
           <label className="block text-xs font-medium text-muted-foreground">
-            Project directory
+            Project directory (absolute path)
           </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={cwd}
-              onChange={(e) => setCwd(e.target.value)}
-              placeholder="/Users/you/project"
-              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <button
-              title="Browse..."
-              className="rounded-lg border border-border px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            >
-              <FolderOpen className="size-4" />
-            </button>
-          </div>
+          <input
+            type="text"
+            value={cwd}
+            onChange={(e) => setCwd(e.target.value)}
+            placeholder="/Users/you/project"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
         </div>
 
         <button
