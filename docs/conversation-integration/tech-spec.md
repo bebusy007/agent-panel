@@ -160,7 +160,7 @@ CLI 以 `--output-format stream-json` 运行时，stdout 每行一个 JSON 对�
 |-----------|------|
 | `system` (subtype: `init`) | 会话初始化，含 session_id、slash_commands |
 | `content_block_start` | 新内容块开始（text 或 tool_use） |
-| `content_block_delta` | 内容增量（text_delta 或 input_json_delta） |
+| `content_block_delta` | 内容增量（text_delta、thinking_delta 或 input_json_delta） |
 | `content_block_stop` | 内容块结束 |
 | `assistant` | 完整 assistant 消息（含所有 content blocks） |
 | `user` | 用户消息 / tool_result 回传 |
@@ -172,6 +172,7 @@ CLI 以 `--output-format stream-json` 运行时，stdout 每行一个 JSON 对�
 | ChatEvent 变体 | 来源 | 前端用途 |
 |---------------|------|---------|
 | `SessionInit { session_id, slash_commands }` | system/init | 初始化 Slash 菜单、获取 session_id |
+| `ThinkingDelta { text }` | content_block_delta (thinking) | 展示思考过程 |
 | `TextDelta { text }` | content_block_delta (text_delta) | 流式文本渲染 |
 | `ToolUseStart { tool_use_id, tool_name }` | content_block_start (tool_use) | 渲染 ToolCard 骨架 |
 | `ToolInputDelta { tool_use_id, json_delta }` | content_block_delta (input_json_delta) | 填充 ToolCard 参数 |

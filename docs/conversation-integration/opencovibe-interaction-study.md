@@ -674,7 +674,11 @@ interface Attachment {
 }
 ```
 
-后端 `session_actor.rs` 的 `build_user_payload()` 会把 attachment 转成 Claude user message content block：
+后端 `session_actor.rs` 的 `build_user_payload()` 会把 attachment 转成 Claude user message content block。
+
+**注意**：OpenCovibe 不仅仅是把附件 base64 放进 content block，还会额外将附件**保存到磁盘**（`save_attachment_to_disk`，保存到 run 数据目录下），并在 text block 中注入保存路径提示（`[Attached files saved at: ...]`），使 Claude 后续可以通过 Read 工具访问这些文件。Agent Panel 实现时需要决定是否也做磁盘保存——如果做，需要在后端数据目录下管理临时附件生命周期。
+
+最终写入 stdin 的 JSON 结构：
 
 ```json
 {

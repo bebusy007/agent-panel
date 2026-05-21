@@ -294,7 +294,7 @@
 
 ## 6. P0.5 / P1 安全和产出能力
 
-### Plan 25：基础 Rewind
+### Plan 27：基础 Rewind
 
 **聚焦功能**：回退到 user checkpoint。  
 **依赖**：Plan 10、Plan 3。  
@@ -302,7 +302,7 @@
 **交付结果**：checkpoint candidates、dry run、full rewind、rewind marker。  
 **验收**：能回退到某条 user 消息，成功后有 marker。
 
-### Plan 26：导出 Markdown / HTML
+### Plan 28：导出 Markdown / HTML
 
 **聚焦功能**：导出当前对话。  
 **依赖**：Plan 10、Plan 11、Plan 13。  
@@ -314,113 +314,113 @@
 
 ## 7. P1 增强计划
 
-### Plan 27：Quick Actions 与 Git Branch
+### Plan 29：Quick Actions 与 Git Branch
 
 **聚焦功能**：输入框上方快捷操作和分支展示。  
 **依赖**：Plan 15、Plan 19。  
 **交付结果**：quick action pills、More、git branch badge、branch poll。
 
-### Plan 28：Slash 子交互
+### Plan 30：Slash 子交互
 
 **聚焦功能**：完善 slash 菜单。  
 **依赖**：Plan 19、Plan 40。  
 **交付结果**：model 子视图、permission mode 子视图、aliases、argument hints。
 
-### Plan 29：Permission Suggestions / Rules
+### Plan 31：Permission Suggestions / Rules
 
 **聚焦功能**：处理 permission suggestions。  
 **依赖**：Plan 18。  
 **交付结果**：suggestion 按钮、Rules 入口、settings 持久化扩展点。
 
-### Plan 30：@ Mention 文件引用
+### Plan 32：@ Mention 文件引用
 
 **聚焦功能**：输入框中引用当前项目文件/目录。  
 **依赖**：Plan 21。  
 **交付结果**：文件列表 API、AtMentionMenu、path ref chip。
 
-### Plan 31：高级附件能力
+### Plan 33：高级附件能力
 
 **聚焦功能**：大 PDF、Office 转换、目录拖拽。  
-**依赖**：Plan 21、Plan 30。  
+**依赖**：Plan 21、Plan 32。  
 **交付结果**：大 PDF path-ref、docx/xlsx 转 markdown、临时附件存储。
 
-### Plan 32：截图
+### Plan 34：截图
 
 **聚焦功能**：Web 环境截图能力。  
 **依赖**：Plan 21。  
 **交付结果**：截图按钮说明、Screen Capture API、截图转 image attachment。
 
-### Plan 33：Context 和 Compact
+### Plan 35：Context 和 Compact
 
 **聚焦功能**：上下文用量和压缩标记。  
 **依赖**：Plan 20、Plan 19。  
 **交付结果**：ContextUsageGrid、compact marker、context history placeholder。
 
-### Plan 34：ToolActivity 侧栏
+### Plan 36：ToolActivity 侧栏
 
 **聚焦功能**：实时工具侧栏。  
 **依赖**：Plan 13。  
 **交付结果**：tools tab、files tab、info tab、tasks tab、点击滚动。
 
-### Plan 35：Tool Burst 折叠
+### Plan 37：Tool Burst 折叠
 
 **聚焦功能**：连续工具调用折叠。  
-**依赖**：Plan 13、Plan 34。  
+**依赖**：Plan 13、Plan 36。  
 **交付结果**：burst 分组、展开/折叠。
 
-### Plan 36：Rewind 文件选择
+### Plan 38：Rewind 文件选择
 
 **聚焦功能**：选择部分文件回退。  
-**依赖**：Plan 25。  
+**依赖**：Plan 27。  
 **交付结果**：files preview、文件选择、降级全量提示。
 
-### Plan 37：导出范围与 PDF
+### Plan 39：导出范围与 PDF
 
 **聚焦功能**：增强导出能力。  
-**依赖**：Plan 26。  
+**依赖**：Plan 28。  
 **交付结果**：message range、time range、PDF print、include/exclude thinking/tools。
 
-### Plan 38：API Key / Base URL 配置
+### Plan 40：API Key / Base URL 配置
 
 **聚焦功能**：独立配置 API key 和 base URL。  
 **依赖**：Plan 8。  
 **交付结果**：Settings 对话 tab、API key 脱敏、base URL、default model、permission mode。
 
-### Plan 39：自定义输入拦截
+### Plan 41：自定义输入拦截
 
 **聚焦功能**：输入预处理。  
 **依赖**：Plan 15、Plan 19。  
 **交付结果**：中文符号转 slash、自定义 alias、输入拦截扩展点。
 
-### Plan 40：输出增强
+### Plan 42：输出增强
 
 **聚焦功能**：输出安全和渲染增强。  
 **依赖**：Plan 9、Plan 13。  
 **交付结果**：输出增强 hook、安全提示、自定义渲染扩展点。
 
-### Plan 41：会话分叉 Fork
+### Plan 43：会话分叉 Fork
 
 **聚焦功能**：从历史节点分叉会话。  
-**依赖**：Plan 25。  
+**依赖**：Plan 27。  
 **交付结果**：fork action、新 session id、跳转新会话。
 
 ---
 
 ## 8. P2 远期计划
 
-### Plan 42：SSH Transport
+### Plan 44：SSH Transport
 
 **聚焦功能**：远程机器运行 Claude CLI。  
 **依赖**：Plan 4、Plan 5。  
 **交付结果**：SSH transport、remote cwd、auth forwarding 策略。
 
-### Plan 43：多 Provider
+### Plan 45：多 Provider
 
 **聚焦功能**：OpenAI/Gemini 等 provider。  
-**依赖**：Plan 38。  
+**依赖**：Plan 40。  
 **交付结果**：provider abstraction、env mapping、model mapping。
 
-### Plan 44：协作模式
+### Plan 46：协作模式
 
 **聚焦功能**：多人观看同一 session。  
 **依赖**：Plan 7、Plan 10。  
@@ -430,13 +430,13 @@
 
 ## 9. 全局验收
 
-### Plan 45：自动化测试矩阵
+### Plan 25：自动化测试矩阵
 
 **聚焦功能**：防止回归。  
 **依赖**：所有 P0。  
 **交付结果**：Rust protocol tests、actor tests、WS tests、TS reducer tests、Prompt tests、Permission tests、Export/Rewind tests。
 
-### Plan 46：真实 CLI Smoke Test
+### Plan 26：真实 CLI Smoke Test
 
 **聚焦功能**：真实端到端验证。  
 **依赖**：所有 P0。  
@@ -452,8 +452,9 @@ Plan 1-3：协议
   -> Plan 9-10：前端 Store / Unified Timeline
   -> Plan 11-14：消息、thinking、tool、滚动
   -> Plan 15-20：输入栏、权限、slash、状态栏
-  -> Plan 21-26：附件、页面入口、rewind、export
-  -> Plan 27+：增强能力
+  -> Plan 21-24：附件、页面入口
+  -> Plan 27-28：rewind、export
+  -> Plan 29+：增强能力
 ```
 
 关键约束：
