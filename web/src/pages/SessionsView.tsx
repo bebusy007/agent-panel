@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { emitAppEvent } from "@/lib/events";
 import {
   Trash2,
@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Search,
   ChevronDown,
+  Plus,
 } from "lucide-react";
 import { api, type RustSessionSummary, type RustSearchHit } from "@/lib/api";
 import { invalidateAsyncCache, useCachedAsync, useDebounced } from "@/lib/hooks";
@@ -320,6 +321,12 @@ export default function SessionsView() {
           >
             <RefreshCw className="size-3.5" /> 刷新
           </button>
+          <Link
+            to="/sessions/new"
+            className="text-xs px-3 py-1.5 rounded-md border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-colors inline-flex items-center gap-1.5"
+          >
+            <Plus className="size-3.5" /> New Chat
+          </Link>
         </div>
       </header>
 

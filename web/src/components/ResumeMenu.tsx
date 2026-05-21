@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Play, Copy, Check, Terminal } from "lucide-react";
+import { Play, Copy, Check, Terminal, MessageSquare } from "lucide-react";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/utils";
 import type { SessionSummary, ResumeHints } from "@/lib/api";
@@ -9,10 +9,12 @@ import { COPY_FEEDBACK_LONG_MS, RESUME_MENU_WIDTH } from "@/lib/constants";
 export function ResumeMenu({
   session,
   compact = false,
+  onChatResume,
 }: {
   session: SessionSummary;
   hints?: ResumeHints;
   compact?: boolean;
+  onChatResume?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [hints, setHints] = useState<ResumeHints | null>(null);
@@ -115,6 +117,17 @@ export function ResumeMenu({
             </div>
           ) : (
             <div className="p-2 space-y-1">
+              {/* GUI chat (primary action) */}
+              {onChatResume && (
+                <button
+                  onClick={() => { onChatResume(); setOpen(false); }}
+                  className="w-full flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <MessageSquare className="size-3.5" />
+                  <span className="font-medium">Continue in GUI</span>
+                </button>
+              )}
+
               {/* Terminal command (primary) */}
               {hints?.terminalCommand && (
                 <div className="rounded-md border border-border bg-background/60 p-2">

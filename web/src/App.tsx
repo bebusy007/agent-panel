@@ -17,6 +17,7 @@ const UsageView = lazy(() => import("./pages/UsageView"));
 const SessionsView = lazy(() => import("./pages/SessionsView"));
 const SessionsTrashView = lazy(() => import("./pages/SessionsTrashView"));
 const SessionDetailView = lazy(() => import("./pages/SessionDetailView"));
+const NewSessionView = lazy(() => import("./pages/NewSessionView"));
 const FavoritesView = lazy(() => import("./pages/FavoritesView"));
 const SettingsView = lazy(() => import("./pages/SettingsView"));
 const LogsView = lazy(() => import("./pages/LogsView"));
@@ -121,6 +122,7 @@ function AppRoutes() {
           <Route path="/agents/:id" element={<AgentDetailView />} />
           <Route path="/usage" element={<UsageView />} />
           <Route path="/sessions" element={<SessionsView />} />
+          <Route path="/sessions/new" element={<NewSessionView />} />
           <Route path="/sessions/trash" element={<SessionsTrashView />} />
           <Route path="/sessions/:id" element={<SessionDetailView />} />
           <Route path="/favorites" element={<FavoritesView />} />

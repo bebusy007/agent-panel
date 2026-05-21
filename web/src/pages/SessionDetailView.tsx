@@ -6,6 +6,7 @@ import {
   Trash2,
   PanelRightClose,
   PanelRightOpen,
+  MessageSquare,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import {
@@ -21,6 +22,7 @@ import { RightSidebar } from "@/components/session/RightSidebar";
 import { SessionProvider, useSession } from "@/components/session/SessionContext";
 import { ResumeMenu } from "@/components/ResumeMenu";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ConversationPanel } from "@/components/conversation/ConversationPanel";
 import { cleanupPromptPreview } from "@/lib/text-cleanup";
 import { emitAppEvent } from "@/lib/events";
 import { useDetailNav } from "@/lib/use-detail-nav";
@@ -118,6 +120,7 @@ function SessionDetailViewInner({
     null,
   );
   const [deleting, setDeleting] = useState(false);
+  const [chatMode, setChatMode] = useState(false);
 
   const requestDelete = async () => {
     if (!summary) return;
@@ -145,6 +148,8 @@ function SessionDetailViewInner({
         onDelete={requestDelete}
         onToggleRight={toggleRightPanel}
         rightOpen={rightPanelOpen}
+        chatMode={chatMode}
+        onToggleChat={() => setChatMode(!chatMode)}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -182,14 +187,21 @@ function SessionDetailViewInner({
           </>
         )}
 
-        {/* Center: SessionDetail (context-driven mode) */}
+        {/* Center: SessionDetail or ConversationPanel */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <SessionDetail
-            id={id}
-            hideHeader
-            scrollToMessageId={scrollToMsg}
-            onTrash={requestDelete}
-          />
+          {chatMode ? (
+            <ConversationPanel
+              sessionId={id}
+              cwd={summary?.cwd}
+            />
+          ) : (
+            <SessionDetail
+              id={id}
+              hideHeader
+              scrollToMessageId={scrollToMsg}
+              onTrash={requestDelete}
+            />
+          )}
         </div>
 
         {/* Right sidebar (resizable) */}
@@ -245,12 +257,16 @@ function PageHeader({
   onDelete,
   onToggleRight,
   rightOpen,
+  chatMode,
+  onToggleChat,
 }: {
   summary: SessionSummary | undefined;
   onBack: () => void;
   onDelete: () => void;
   onToggleRight: () => void;
   rightOpen: boolean;
+  chatMode: boolean;
+  onToggleChat: () => void;
 }) {
   if (!summary) {
     return (
@@ -315,6 +331,19 @@ function PageHeader({
           ({formatRelative(summary.lastActivity)})
         </span>
       </div>
+      <button
+        onClick={onToggleChat}
+        title={chatMode ? "Switch to history view" : "Start conversation"}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors",
+          chatMode
+            ? "border-primary/50 bg-primary/10 text-primary"
+            : "border-border text-muted-foreground hover:border-border hover:text-fg"
+        )}
+      >
+        <MessageSquare className="size-3" />
+        <span>{chatMode ? "Chat" : "Chat"}</span>
+      </button>
       <ResumeMenu session={summary} compact />
       <a
         href={api.sessionExportUrl(summary.id)}
