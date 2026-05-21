@@ -16,7 +16,7 @@ export function StreamingAssistantBlock({
     <div ref={containerRef} className="relative py-2">
       <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
         {text ? (
-          <MarkdownWithHighlight content={text} />
+          <MarkdownWithHighlight text={text} />
         ) : isStreaming ? (
           <span className="text-muted-foreground text-sm italic">Generating...</span>
         ) : null}

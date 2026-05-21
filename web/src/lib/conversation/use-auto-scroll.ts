@@ -6,7 +6,7 @@ interface UseAutoScrollOptions {
 }
 
 interface UseAutoScrollReturn {
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: React.RefObject<HTMLDivElement>;
   isAtBottom: boolean;
   scrollToBottom: () => void;
   showNewMessageIndicator: boolean;
@@ -16,7 +16,7 @@ export function useAutoScroll(
   options: UseAutoScrollOptions = {}
 ): UseAutoScrollReturn {
   const { threshold = 50, deps = [] } = options;
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showIndicator, setShowIndicator] = useState(false);
   const userScrolledRef = useRef(false);
