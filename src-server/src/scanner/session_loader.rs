@@ -18,13 +18,15 @@ pub struct ImageMeta {
     pub file_path: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
     pub id: String,
     pub role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -109,6 +111,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 images: None,
                 raw: Some(entry.clone()),
                 agent_hash: None,
+                thinking_text: None,
             });
             continue;
         }
@@ -137,6 +140,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     images: None,
                     raw: Some(entry.clone()),
                     agent_hash: None,
+                    thinking_text: None,
                 });
                 continue;
             }
@@ -168,6 +172,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 images: None,
                 raw: Some(entry.clone()),
                 agent_hash: None,
+                thinking_text: None,
             });
             continue;
         }
@@ -188,16 +193,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     id: format!("{}-{}", uuid, idx),
                     role: "assistant".to_string(),
                     text: Some("(thinking)".to_string()),
-                    tool_name: None,
-                    tool_input: None,
-                    tool_output: None,
-                    tool_use_id: None,
-                    tool_status: None,
                     timestamp: timestamp.clone(),
                     model: model.clone(),
-                    images: None,
                     raw: Some(entry.clone()),
-                    agent_hash: None,
+                    ..Default::default()
                 });
                 continue;
             }
@@ -227,6 +226,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 images: None,
                 raw: Some(entry.clone()),
                 agent_hash: None,
+                thinking_text: None,
             });
             continue;
         }
@@ -272,6 +272,35 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         // Collect [Image: source:] paths from text blocks for cache_path
         let image_source_paths: Vec<String> = all_paths;
 
+        // For assistant messages: collect thinking text to attach to the text message
+        let mut collected_thinking: Option<String> = None;
+        if msg_type == "assistant" {
+            for block in &blocks {
+                if let ContentBlock::Thinking(t) = block {
+                    collected_thinking = Some(match collected_thinking {
+                        Some(existing) => format!("{}\n{}", existing, t),
+                        None => t.clone(),
+                    });
+                }
+            }
+        }
+
+        // Check if this is a thinking-only assistant (no text/tool blocks)
+        let has_non_thinking = blocks.iter().any(|b| !matches!(b, ContentBlock::Thinking(_)));
+        if msg_type == "assistant" && !has_non_thinking && collected_thinking.is_some() {
+            idx += 1;
+            messages.push(Message {
+                id: format!("{}-{}", uuid, idx),
+                role: "assistant".to_string(),
+                thinking_text: collected_thinking,
+                timestamp: timestamp.clone(),
+                model: model.clone(),
+                raw: Some(entry.clone()),
+                ..Default::default()
+            });
+            continue;
+        }
+
         for block in blocks {
             match block {
                 ContentBlock::Image { media_type, source_type } => {
@@ -287,24 +316,8 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                         last.images.get_or_insert_with(Vec::new).push(meta);
                     }
                 }
-                ContentBlock::Thinking(text) => {
-                    idx += 1;
-                    let id = format!("{}-thinking-{}", uuid, idx);
-                    messages.push(Message {
-                        id,
-                        role: "assistant".to_string(),
-                        text: Some(format!("<details><summary>Thinking</summary>\n\n{}\n\n</details>", text)),
-                        tool_name: None,
-                        tool_input: None,
-                        tool_output: None,
-                        tool_use_id: None,
-                        tool_status: None,
-                        timestamp: timestamp.clone(),
-                        model: model.clone(),
-                        images: None,
-                        raw: None,
-                        agent_hash: None,
-                    });
+                ContentBlock::Thinking(_) => {
+                    // Already collected above, will be attached to the text message
                 }
                 ContentBlock::Text(text) => {
                     idx += 1;
@@ -319,16 +332,11 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                         id,
                         role: role.to_string(),
                         text: Some(text),
-                        tool_name: None,
-                        tool_input: None,
-                        tool_output: None,
-                        tool_use_id: None,
-                        tool_status: None,
+                        thinking_text: collected_thinking.take(),
+                        images,
                         timestamp: timestamp.clone(),
                         model: model.clone(),
-                        images,
-                        raw: None,
-                        agent_hash: None,
+                        ..Default::default()
                     });
                 }
                 ContentBlock::ToolUse { name, input, tool_use_id } => {
@@ -337,17 +345,12 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     messages.push(Message {
                         id,
                         role: "tool_use".to_string(),
-                        text: None,
                         tool_name: Some(name),
                         tool_input: Some(input),
-                        tool_output: None,
                         tool_use_id: Some(tool_use_id),
-                        tool_status: None,
                         timestamp: timestamp.clone(),
                         model: model.clone(),
-                        images: None,
-                        raw: None,
-                        agent_hash: None,
+                        ..Default::default()
                     });
                 }
                 ContentBlock::ToolResult { content, tool_use_id, is_error } => {
@@ -356,17 +359,12 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     messages.push(Message {
                         id,
                         role: "tool_result".to_string(),
-                        text: None,
-                        tool_name: None,
-                        tool_input: None,
                         tool_output: Some(content),
                         tool_use_id: Some(tool_use_id),
                         tool_status: if is_error { Some("error".to_string()) } else { None },
                         timestamp: timestamp.clone(),
-                        model: None,
-                        images: None,
-                        raw: None,
                         agent_hash: agent_hash_from_entry.clone(),
+                        ..Default::default()
                     });
                 }
             }
@@ -410,7 +408,7 @@ fn parse_codex_entry(
                             tool_use_id: None, tool_status: None,
                             timestamp: timestamp.clone(),
                             model: None, images: None, raw: None,
-                            agent_hash: None,
+                            agent_hash: None, thinking_text: None,
                         });
                     }
                 }
@@ -428,7 +426,7 @@ fn parse_codex_entry(
                         tool_use_id: None, tool_status: None,
                         timestamp: timestamp.clone(),
                         model: None, images: None, raw: None,
-                        agent_hash: None,
+                        agent_hash: None, thinking_text: None,
                     });
                 }
             }
@@ -454,7 +452,7 @@ fn parse_codex_entry(
                                 tool_use_id: None, tool_status: None,
                                 timestamp: timestamp.clone(),
                                 model: None, images: None, raw: None,
-                                agent_hash: None,
+                                agent_hash: None, thinking_text: None,
                             });
                         }
                         _ => {}
@@ -500,6 +498,7 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     images: None,
                     raw: None,
                     agent_hash: None,
+                    thinking_text: None,
                 });
             }
             "tool_use" => {
@@ -523,6 +522,7 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     images: None,
                     raw: None,
                     agent_hash: None,
+                    thinking_text: None,
                 });
             }
             "tool_result" => {
@@ -556,6 +556,7 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     images: None,
                     raw: None,
                     agent_hash: None,
+                    thinking_text: None,
                 });
             }
             _ => {}
@@ -1141,9 +1142,9 @@ mod tests {
     #[test]
     fn test_search_in_messages() {
         let messages = vec![
-            Message { id: "1".into(), role: "user".into(), text: Some("How do I use Rust?".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
-            Message { id: "2".into(), role: "assistant".into(), text: Some("Rust is great for systems programming.".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
-            Message { id: "3".into(), role: "user".into(), text: Some("What about Python?".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
+            Message { id: "1".into(), role: "user".into(), text: Some("How do I use Rust?".into()), thinking_text: None, tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
+            Message { id: "2".into(), role: "assistant".into(), text: Some("Rust is great for systems programming.".into()), thinking_text: None, tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
+            Message { id: "3".into(), role: "user".into(), text: Some("What about Python?".into()), thinking_text: None, tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
         ];
 
         let hits = search_in_messages(&messages, "Rust", 10);
@@ -1157,7 +1158,7 @@ mod tests {
             id: format!("{i}"), role: "user".into(), text: Some(format!("match keyword {i}")),
             tool_name: None, tool_input: None, tool_output: None, tool_use_id: None,
             tool_status: None, timestamp: None, model: None, images: None, raw: None,
-            agent_hash: None,
+            agent_hash: None, thinking_text: None,
         }).collect();
 
         let hits = search_in_messages(&messages, "keyword", 5);
@@ -1277,11 +1278,10 @@ mod tests {
             r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
         ]);
         let msgs = load_messages(&file).unwrap();
-        assert_eq!(msgs.len(), 2);
+        assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
-        assert!(msgs[0].text.as_ref().unwrap().contains("let me think"));
-        assert_eq!(msgs[1].role, "assistant");
-        assert_eq!(msgs[1].text, Some("Here is the answer".to_string()));
+        assert_eq!(msgs[0].text, Some("Here is the answer".to_string()));
+        assert_eq!(msgs[0].thinking_text, Some("let me think".to_string()));
     }
 
     #[test]
@@ -1698,7 +1698,7 @@ mod tests {
     #[test]
     fn test_search_in_messages_no_match() {
         let messages = vec![
-            Message { id: "1".into(), role: "user".into(), text: Some("Hello".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
+            Message { id: "1".into(), role: "user".into(), text: Some("Hello".into()), thinking_text: None, tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
         ];
         let hits = search_in_messages(&messages, "xyz", 10);
         assert!(hits.is_empty());
@@ -1707,7 +1707,7 @@ mod tests {
     #[test]
     fn test_search_in_messages_tool_output() {
         let messages = vec![
-            Message { id: "1".into(), role: "tool_result".into(), text: None, tool_name: None, tool_input: None, tool_output: Some("file content with keyword".into()), tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
+            Message { id: "1".into(), role: "tool_result".into(), text: None, thinking_text: None, tool_name: None, tool_input: None, tool_output: Some("file content with keyword".into()), tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
         ];
         let hits = search_in_messages(&messages, "keyword", 10);
         assert_eq!(hits.len(), 1);

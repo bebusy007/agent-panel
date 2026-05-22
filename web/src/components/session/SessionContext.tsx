@@ -272,20 +272,11 @@ export function SessionProvider({
           isLive: true,
         });
       } else if (entry.kind === "assistant") {
-        if (entry.thinkingText) {
-          newMessages.push({
-            id: `thinking_${entry.id}`,
-            role: "assistant",
-            text: `<details><summary>Thinking</summary>\n\n${entry.thinkingText}\n\n</details>`,
-            timestamp: new Date(entry.ts).toISOString(),
-            isLive: true,
-          });
-        }
         newMessages.push({
           id: entry.id,
           role: "assistant",
           text: entry.text,
-          model: undefined,
+          thinkingText: entry.thinkingText || undefined,
           timestamp: new Date(entry.ts).toISOString(),
           isLive: true,
         });

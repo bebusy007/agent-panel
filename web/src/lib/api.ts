@@ -72,6 +72,7 @@ export interface RustMessage {
   id: string;
   role: string;
   text?: string;
+  thinkingText?: string;
   toolName?: string;
   toolInput?: unknown;
   toolOutput?: string;

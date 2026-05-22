@@ -174,6 +174,14 @@ export function MessageBlock({
               expanded={longExpanded}
               onExpand={onToggle}
             >
+              {m.thinkingText && (
+                <details className="mb-2 text-xs text-muted-foreground bg-purple-500/5 border border-purple-500/15 rounded-md">
+                  <summary className="px-3 py-1.5 cursor-pointer font-medium">Thinking</summary>
+                  <div className="px-3 pb-2 whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
+                    {m.thinkingText}
+                  </div>
+                </details>
+              )}
               <MarkdownWithHighlight text={m.text} highlight={highlight} />
             </CollapsibleBody>
           ) : m.role === "tool_use" ? (

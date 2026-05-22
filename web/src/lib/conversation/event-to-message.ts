@@ -9,6 +9,7 @@ export interface LiveMessage {
   id: string;
   role: string;
   text?: string;
+  thinkingText?: string;
   toolName?: string;
   toolInput?: unknown;
   toolOutput?: string;
