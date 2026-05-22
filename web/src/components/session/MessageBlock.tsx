@@ -168,7 +168,7 @@ export function MessageBlock({
       </div>
       {showBody && (
         <>
-          {m.role === "assistant" && m.text ? (
+          {m.role === "assistant" && (m.text || m.thinkingText) ? (
             <CollapsibleBody
               longMode={longMode}
               expanded={longExpanded}
@@ -182,7 +182,7 @@ export function MessageBlock({
                   </div>
                 </details>
               )}
-              <MarkdownWithHighlight text={m.text} highlight={highlight} />
+              {m.text && <MarkdownWithHighlight text={m.text} highlight={highlight} />}
             </CollapsibleBody>
           ) : m.role === "tool_use" ? (
             <pre className="text-[11px] font-mono text-muted-foreground overflow-x-auto bg-background rounded p-2 border border-border">

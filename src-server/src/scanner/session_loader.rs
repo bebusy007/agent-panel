@@ -57,6 +57,8 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
     let reader = BufReader::new(file);
     let mut messages = Vec::new();
     let mut idx = 0u32;
+    // Accumulate thinking from thinking-only assistant entries to attach to the next text assistant
+    let mut pending_thinking: Option<String> = None;
 
     for line in reader.lines() {
         let line = match line {
@@ -288,17 +290,17 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         // Check if this is a thinking-only assistant (no text/tool blocks)
         let has_non_thinking = blocks.iter().any(|b| !matches!(b, ContentBlock::Thinking(_)));
         if msg_type == "assistant" && !has_non_thinking && collected_thinking.is_some() {
-            idx += 1;
-            messages.push(Message {
-                id: format!("{}-{}", uuid, idx),
-                role: "assistant".to_string(),
-                thinking_text: collected_thinking,
-                timestamp: timestamp.clone(),
-                model: model.clone(),
-                raw: Some(entry.clone()),
-                ..Default::default()
-            });
+            // Store thinking for the next text-assistant message
+            pending_thinking = collected_thinking;
             continue;
+        }
+
+        // If we have pending thinking from a previous entry, attach it
+        if msg_type == "assistant" && has_non_thinking && pending_thinking.is_some() {
+            collected_thinking = match collected_thinking {
+                Some(ct) => Some(format!("{}\n{}", pending_thinking.take().unwrap(), ct)),
+                None => pending_thinking.take(),
+            };
         }
 
         for block in blocks {
