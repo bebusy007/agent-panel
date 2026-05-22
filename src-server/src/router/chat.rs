@@ -24,6 +24,8 @@ pub struct NewSessionQuery {
 pub struct ResumeSessionQuery {
     #[serde(default)]
     token: Option<String>,
+    #[serde(default)]
+    cwd: Option<String>,
 }
 
 pub fn routes(manager: SessionManager) -> Router {
@@ -40,7 +42,7 @@ async fn ws_resume_handler(
     State(manager): State<SessionManager>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| {
-        handle_ws_session(socket, manager, SpawnMode::Resume { session_id }, None, params.token)
+        handle_ws_session(socket, manager, SpawnMode::Resume { session_id }, params.cwd, params.token)
     })
 }
 

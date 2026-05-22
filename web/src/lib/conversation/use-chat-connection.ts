@@ -86,10 +86,12 @@ export function useChatConnection(
     let url: string;
     if (opts.sessionId) {
       url = `${protocol}//${host}/api/ws/chat/resume/${opts.sessionId}`;
+      const params = new URLSearchParams();
       const token = stateRef.current.reconnectToken;
-      if (token) {
-        url += `?token=${encodeURIComponent(token)}`;
-      }
+      if (token) params.set("token", token);
+      if (opts.cwd) params.set("cwd", opts.cwd);
+      const qs = params.toString();
+      if (qs) url += `?${qs}`;
     } else if (opts.cwd) {
       url = `${protocol}//${host}/api/ws/chat/new?cwd=${encodeURIComponent(opts.cwd)}`;
     } else {
