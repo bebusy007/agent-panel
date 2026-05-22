@@ -148,11 +148,22 @@ export function SessionProvider({
     };
   }, [id]);
 
-  const messages = data?.messages ?? [];
+  const historyMessages = data?.messages ?? [];
   const summary = data?.session;
   const resumeHints = data?.resumeHints;
   const subagents = data?.subagents ?? [];
   const messageCount = data?.messageCount ?? 0;
+
+  // ── Chat connection (defined early so liveMessages is available for merge) ──
+  const chatConn = useChatConnection({ sessionId: id, cwd: summary?.cwd });
+  const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
+  const prevTimelineLenRef = useRef(0);
+
+  // Merge history + live messages for the virtual list
+  const messages: Message[] = useMemo(
+    () => [...historyMessages, ...liveMessages as Message[]],
+    [historyMessages, liveMessages]
+  );
 
   const turns = useMemo(() => buildTurns(messages), [messages]);
 
@@ -234,20 +245,15 @@ export function SessionProvider({
     setScrollSignal(null);
   }, [id]);
 
-  // ── Chat connection ──
-  const chatConn = useChatConnection({ sessionId: id, cwd: summary?.cwd });
-  const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
-  const prevEventsLenRef = useRef(0);
-
   // React to chat store events: convert to live messages
   useEffect(() => {
-    const { timeline, streamingText, thinkingText } = chatConn.state;
+    const { timeline } = chatConn.state;
     const timelineLen = timeline.length;
-    if (timelineLen === prevEventsLenRef.current) return;
+    if (timelineLen === prevTimelineLenRef.current) return;
 
     // Process new timeline entries
-    const newEntries = timeline.slice(prevEventsLenRef.current);
-    prevEventsLenRef.current = timelineLen;
+    const newEntries = timeline.slice(prevTimelineLenRef.current);
+    prevTimelineLenRef.current = timelineLen;
 
     const newMessages: LiveMessage[] = [];
     for (const entry of newEntries) {
