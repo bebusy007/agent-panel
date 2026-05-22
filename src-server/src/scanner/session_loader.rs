@@ -287,6 +287,25 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                         last.images.get_or_insert_with(Vec::new).push(meta);
                     }
                 }
+                ContentBlock::Thinking(text) => {
+                    idx += 1;
+                    let id = format!("{}-thinking-{}", uuid, idx);
+                    messages.push(Message {
+                        id,
+                        role: "assistant".to_string(),
+                        text: Some(format!("<details><summary>Thinking</summary>\n\n{}\n\n</details>", text)),
+                        tool_name: None,
+                        tool_input: None,
+                        tool_output: None,
+                        tool_use_id: None,
+                        tool_status: None,
+                        timestamp: timestamp.clone(),
+                        model: model.clone(),
+                        images: None,
+                        raw: None,
+                        agent_hash: None,
+                    });
+                }
                 ContentBlock::Text(text) => {
                     idx += 1;
                     let id = format!("{}-b{}", uuid, idx);
@@ -604,6 +623,7 @@ fn is_thinking_only(content: Option<&serde_json::Value>) -> bool {
 
 enum ContentBlock {
     Text(String),
+    Thinking(String),
     Image { media_type: String, source_type: String },
     ToolUse { name: String, input: serde_json::Value, tool_use_id: String },
     ToolResult { content: String, tool_use_id: String, is_error: bool },
@@ -624,6 +644,16 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
                 if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
                     if !text.is_empty() {
                         blocks.push(ContentBlock::Text(text.to_string()));
+                    }
+                }
+            }
+            "thinking" => {
+                let text = item.get("thinking")
+                    .or_else(|| item.get("text"))
+                    .and_then(|v| v.as_str());
+                if let Some(t) = text {
+                    if !t.is_empty() {
+                        blocks.push(ContentBlock::Thinking(t.to_string()));
                     }
                 }
             }
@@ -1244,12 +1274,14 @@ mod tests {
     fn test_thinking_with_text_assistant() {
         let dir = TempDir::new().unwrap();
         let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
+            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
         ]);
         let msgs = load_messages(&file).unwrap();
-        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs.len(), 2);
         assert_eq!(msgs[0].role, "assistant");
-        assert_eq!(msgs[0].text, Some("Here is the answer".to_string()));
+        assert!(msgs[0].text.as_ref().unwrap().contains("let me think"));
+        assert_eq!(msgs[1].role, "assistant");
+        assert_eq!(msgs[1].text, Some("Here is the answer".to_string()));
     }
 
     #[test]
