@@ -276,7 +276,7 @@ export function SessionProvider({
           newMessages.push({
             id: `thinking_${entry.id}`,
             role: "assistant",
-            text: "(thinking)",
+            text: `<details><summary>Thinking</summary>\n\n${entry.thinkingText}\n\n</details>`,
             timestamp: new Date(entry.ts).toISOString(),
             isLive: true,
           });
