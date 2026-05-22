@@ -47,6 +47,7 @@ import { pairToolResults } from "@/lib/tool-result-pairing";
 import { useSession } from "./session/SessionContext";
 import { MessageToolbar } from "./session/MessageToolbar";
 import { MessageStream } from "./session/MessageStream";
+import { ChatInput } from "./conversation/ChatInput";
 
 /**
  * SessionDetail — when used inside a SessionProvider (the normal case in
@@ -98,7 +99,7 @@ function ContextDrivenDetail({
   scrollToMessageId?: string | null;
   onMessagesLoaded?: (messages: Message[]) => void;
 }) {
-  const { messages, loading, error } = useSession();
+  const { messages, loading, error, chat } = useSession();
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -123,6 +124,8 @@ function ContextDrivenDetail({
       <div className="flex-1 min-h-0 overflow-hidden">
         <MessageStream scrollToMessageId={scrollToMessageId} />
       </div>
+      {/* Chat input — always visible at the bottom */}
+      <ChatInput />
     </div>
   );
 }

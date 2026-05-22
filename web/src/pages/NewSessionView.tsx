@@ -1,37 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { ConversationPanel } from "@/components/conversation/ConversationPanel";
 
 export default function NewSessionView() {
   const navigate = useNavigate();
-  const [cwd, setCwd] = useState(() => {
-    // Default to home directory or last used project
-    return "";
-  });
-  const [started, setStarted] = useState(false);
+  const [cwd, setCwd] = useState("");
 
-  if (started && cwd) {
-    return (
-      <div className="flex h-full flex-col">
-        <header className="flex shrink-0 items-center gap-3 border-b border-border bg-sidebar px-4 py-2.5">
-          <button
-            onClick={() => navigate("/sessions")}
-            className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-fg"
-          >
-            <ArrowLeft className="size-4" />
-          </button>
-          <h1 className="text-sm font-medium text-fg">New Conversation</h1>
-          <span className="text-xs text-muted-foreground font-mono truncate">
-            {cwd}
-          </span>
-        </header>
-        <div className="flex-1 min-h-0">
-          <ConversationPanel cwd={cwd} />
-        </div>
-      </div>
-    );
-  }
+  const handleStart = () => {
+    if (!cwd.trim()) return;
+    // Navigate to a special "new session" URL that SessionDetailView can handle
+    // For now, store cwd in sessionStorage and navigate to a new-session placeholder
+    sessionStorage.setItem("agent-panel:new-session-cwd", cwd.trim());
+    navigate("/sessions/__new__");
+  };
 
   return (
     <div className="flex h-full flex-col items-center justify-center p-8 animate-fade-in">
@@ -51,13 +32,14 @@ export default function NewSessionView() {
             type="text"
             value={cwd}
             onChange={(e) => setCwd(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleStart()}
             placeholder="/Users/you/project"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
 
         <button
-          onClick={() => cwd.trim() && setStarted(true)}
+          onClick={handleStart}
           disabled={!cwd.trim()}
           className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >

@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { api } from "@/lib/api";
@@ -31,6 +32,15 @@ import {
   loadRightPanelWidth,
   saveRightPanelWidth,
 } from "@/lib/sidebar-state";
+import { useChatConnection } from "@/lib/conversation/use-chat-connection";
+import type { ChatSessionState, ConnectionState, AttachmentData } from "@/lib/conversation";
+import {
+  eventToMessages,
+  updateToolInput,
+  createOptimisticUserMessage,
+  flushStreamingToMessages,
+  type LiveMessage,
+} from "@/lib/conversation/event-to-message";
 
 interface SessionContextValue {
   id: string;
@@ -67,6 +77,17 @@ interface SessionContextValue {
 
   favIds: Set<string>;
   toggleFav: (m: Message) => Promise<void>;
+
+  // Chat conversation state
+  chat: {
+    state: ChatSessionState;
+    connectionState: ConnectionState;
+    sendMessage: (text: string, attachments?: AttachmentData[]) => void;
+    respondPermission: (requestId: string, decision: "allow" | "deny") => void;
+    interrupt: () => void;
+    disconnect: () => void;
+  };
+  liveMessages: LiveMessage[];
 }
 
 const SessionCtx = createContext<SessionContextValue | null>(null);
@@ -213,6 +234,81 @@ export function SessionProvider({
     setScrollSignal(null);
   }, [id]);
 
+  // ── Chat connection ──
+  const chatConn = useChatConnection({ sessionId: id, cwd: summary?.cwd });
+  const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
+  const prevEventsLenRef = useRef(0);
+
+  // React to chat store events: convert to live messages
+  useEffect(() => {
+    const { timeline, streamingText, thinkingText } = chatConn.state;
+    const timelineLen = timeline.length;
+    if (timelineLen === prevEventsLenRef.current) return;
+
+    // Process new timeline entries
+    const newEntries = timeline.slice(prevEventsLenRef.current);
+    prevEventsLenRef.current = timelineLen;
+
+    const newMessages: LiveMessage[] = [];
+    for (const entry of newEntries) {
+      if (entry.kind === "user" && !entry.optimistic) continue; // handled by optimistic path
+      if (entry.kind === "user" && entry.optimistic) {
+        newMessages.push(createOptimisticUserMessage(entry.text, entry.id));
+      } else if (entry.kind === "tool") {
+        newMessages.push({
+          id: entry.toolUseId,
+          role: "tool_use",
+          toolName: entry.toolName,
+          toolUseId: entry.toolUseId,
+          toolInput: entry.input ? tryParseJson(entry.input) : undefined,
+          toolStatus: entry.status,
+          timestamp: new Date(entry.ts).toISOString(),
+          isLive: true,
+        });
+      } else if (entry.kind === "assistant") {
+        if (entry.thinkingText) {
+          newMessages.push({
+            id: `thinking_${entry.id}`,
+            role: "assistant",
+            text: "(thinking)",
+            timestamp: new Date(entry.ts).toISOString(),
+            isLive: true,
+          });
+        }
+        newMessages.push({
+          id: entry.id,
+          role: "assistant",
+          text: entry.text,
+          model: undefined,
+          timestamp: new Date(entry.ts).toISOString(),
+          isLive: true,
+        });
+      }
+    }
+
+    if (newMessages.length > 0) {
+      setLiveMessages((prev) => [...prev, ...newMessages]);
+    }
+  }, [chatConn.state.timeline]);
+
+  // Handle tool input deltas (update existing tool message)
+  useEffect(() => {
+    const { timeline } = chatConn.state;
+    setLiveMessages((prev) => {
+      let updated = prev;
+      for (const entry of timeline) {
+        if (entry.kind === "tool" && entry.input) {
+          updated = updated.map((m) =>
+            m.role === "tool_use" && m.toolUseId === entry.toolUseId
+              ? { ...m, toolInput: tryParseJson(entry.input), toolStatus: entry.status }
+              : m
+          );
+        }
+      }
+      return updated;
+    });
+  }, [chatConn.state.timeline]);
+
   const value: SessionContextValue = {
     id,
     loading,
@@ -242,7 +338,20 @@ export function SessionProvider({
     toggleExpanded,
     favIds,
     toggleFav,
+    chat: {
+      state: chatConn.state,
+      connectionState: chatConn.connectionState,
+      sendMessage: chatConn.sendMessage,
+      respondPermission: chatConn.respondPermission,
+      interrupt: chatConn.interrupt,
+      disconnect: chatConn.disconnect,
+    },
+    liveMessages,
   };
 
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
+}
+
+function tryParseJson(s: string): unknown {
+  try { return JSON.parse(s); } catch { return s; }
 }

@@ -40,6 +40,9 @@ export function useChatConnection(
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  // Pending message to send after WS connects (auto-connect-on-send pattern)
+  const pendingFirstMessage = useRef<{ text: string; attachments: AttachmentData[] } | null>(null);
+
   const getConnectionState = (): ConnectionState => {
     switch (state.phase) {
       case "empty":
@@ -66,6 +69,9 @@ export function useChatConnection(
   }, []);
 
   const connect = useCallback(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      return; // Already connected
+    }
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -95,7 +101,18 @@ export function useChatConnection(
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // WebSocket established, waiting for backend "connected" message
+      // If there's a pending first message (auto-connect-on-send), send it now
+      if (pendingFirstMessage.current) {
+        const { text, attachments } = pendingFirstMessage.current;
+        pendingFirstMessage.current = null;
+        const uuid = crypto.randomUUID();
+        dispatch({ type: "SEND_MESSAGE", text, uuid });
+        ws.send(JSON.stringify({
+          type: "user_message",
+          text,
+          attachments,
+        } satisfies ClientMessage));
+      }
     };
 
     ws.onmessage = (event) => {
@@ -110,14 +127,12 @@ export function useChatConnection(
     ws.onclose = () => {
       wsRef.current = null;
       const currentPhase = stateRef.current.phase;
-      // Auto-reconnect after 3s if session was active (not explicitly disconnected)
       if (
         currentPhase !== "disconnected" &&
         currentPhase !== "empty" &&
         currentPhase !== "error"
       ) {
         reconnectTimerRef.current = setTimeout(() => {
-          // Only reconnect if we have a sessionId to resume
           if (optionsRef.current.sessionId || stateRef.current.sessionId) {
             connect();
           }
@@ -128,7 +143,7 @@ export function useChatConnection(
     ws.onerror = () => {
       dispatch({ type: "ERROR", code: "ws_error", message: "WebSocket connection failed" });
     };
-  }, []); // No deps — uses refs for latest state
+  }, []);
 
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) {
@@ -145,15 +160,25 @@ export function useChatConnection(
 
   const sendMessage = useCallback(
     (text: string, attachments?: AttachmentData[]) => {
+      const atts = attachments ?? [];
+
+      // Auto-connect if not connected: queue message, then connect
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        pendingFirstMessage.current = { text, attachments: atts };
+        connect();
+        return;
+      }
+
+      // Already connected: send immediately
       const uuid = crypto.randomUUID();
       dispatch({ type: "SEND_MESSAGE", text, uuid });
       sendWsMessage({
         type: "user_message",
         text,
-        attachments: attachments ?? [],
+        attachments: atts,
       });
     },
-    [sendWsMessage]
+    [sendWsMessage, connect]
   );
 
   const respondPermission = useCallback(
@@ -172,7 +197,6 @@ export function useChatConnection(
     dispatch({ type: "TURN_INTERRUPTED" });
   }, [sendWsMessage]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (reconnectTimerRef.current) {
@@ -204,7 +228,6 @@ function handleServerMessage(msg: ServerMessage, dispatch: React.Dispatch<ChatAc
       break;
 
     case "event": {
-      // ServerEvent has type="event" plus the ChatEvent fields flattened
       const { type: _type, ...eventFields } = msg as unknown as Record<string, unknown>;
       dispatch({ type: "SERVER_EVENT", event: eventFields as unknown as ChatEvent });
       break;
@@ -219,7 +242,9 @@ function handleServerMessage(msg: ServerMessage, dispatch: React.Dispatch<ChatAc
       break;
 
     case "state_change":
-      // state_change with idle means turn ended (but reducer handles this via TurnComplete event)
+      if (msg.state === "spawned") {
+        dispatch({ type: "CONNECT_START" });
+      }
       break;
 
     default:
