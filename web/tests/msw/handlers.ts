@@ -127,8 +127,8 @@ export const handlers = [
       currentStreak: 1,
       longestStreak: 1,
       daily: [],
-      byModel: {},
-      bySource: {},
+      byModel: [],
+      bySource: [],
     });
   }),
 
