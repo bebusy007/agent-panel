@@ -29,3 +29,5 @@ src-tauri/icons/*
 !src-tauri/icons/app-icon-128.png
 src-server/.vite/
 web/coverage/
+.claude/worktrees/
+logs/

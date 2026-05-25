@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { Message } from "@/lib/api";
-import { imageUrl } from "@/lib/api";
-import { ImageThumbnail } from "./ImageThumbnail";
-import { ImageLightbox } from "./ImageLightbox";
+import { useState } from 'react';
+import type { Message } from '@/lib/api';
+import { imageUrl } from '@/lib/api';
+import { ImageThumbnail } from './ImageThumbnail';
+import { ImageLightbox } from './ImageLightbox';
 
 interface Props {
   sessionId: string;
@@ -22,9 +22,10 @@ export function ImageThumbnailStrip({ sessionId, message }: Props) {
     <>
       <div className="mt-2 flex flex-wrap gap-2">
         {images.map((img, i) => {
-          const fileName = img.cachePath?.split("/").pop()
-            || img.filePath?.split("/").pop()
-            || `image-${img.index}`;
+          const fileName =
+            img.cachePath?.split('/').pop() ||
+            img.filePath?.split('/').pop() ||
+            `image-${img.index}`;
           return (
             <div key={img.index} className="flex flex-col items-start gap-0.5">
               <span className="text-[10px] text-muted-foreground">{fileName}</span>

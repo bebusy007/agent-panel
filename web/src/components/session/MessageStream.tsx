@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useSession } from "./SessionContext";
-import { MessageBlock } from "./MessageBlock";
-import { MetaBlock, ThinkingBlock } from "./MetaBlock";
-import { ToolCard } from "../tool-cards/ToolCard";
-import { canonicalTool } from "@/lib/tool-aliases";
-import { centerMarkInScroller } from "@/lib/highlight";
-import { turnIndexForMessage } from "@/lib/turn-grouping";
-import type { Message, SubagentMeta } from "@/lib/api";
-import { pairToolResults } from "@/lib/tool-result-pairing";
-import type { NavTarget } from "@/lib/use-session-search";
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useSession } from './SessionContext';
+import { MessageBlock } from './MessageBlock';
+import { MetaBlock, ThinkingBlock } from './MetaBlock';
+import { ToolCard } from '../tool-cards/ToolCard';
+import { canonicalTool } from '@/lib/tool-aliases';
+import { centerMarkInScroller } from '@/lib/highlight';
+import { turnIndexForMessage } from '@/lib/turn-grouping';
+import type { Message, SubagentMeta } from '@/lib/api';
+import { pairToolResults } from '@/lib/tool-result-pairing';
+import type { NavTarget } from '@/lib/use-session-search';
 import {
   ESTIMATE_DEFAULT_HEIGHT,
   ESTIMATE_META_HEIGHT,
@@ -25,7 +25,7 @@ import {
   SCROLL_TICK_MS,
   MAX_RETRY_FRAMES,
   SCROLL_ANCHOR_OFFSET,
-} from "@/lib/constants";
+} from '@/lib/constants';
 
 interface Props {
   scrollToMessageId?: string | null;
@@ -57,10 +57,7 @@ export function MessageStream({ scrollToMessageId }: Props) {
     return m;
   }, [subagents]);
 
-  const { resultByToolUseId, hiddenIds } = useMemo(
-    () => pairToolResults(filtered),
-    [filtered],
-  );
+  const { resultByToolUseId, hiddenIds } = useMemo(() => pairToolResults(filtered), [filtered]);
 
   const visibleMessages = useMemo(() => {
     if (hiddenIds.size === 0) return filtered;
@@ -83,19 +80,19 @@ export function MessageStream({ scrollToMessageId }: Props) {
       if (!m) return ESTIMATE_DEFAULT_HEIGHT;
       const imageExtra = (m.images?.length ?? 0) > 0 ? IMAGE_STRIP_EXTRA_HEIGHT : 0;
       switch (m.role) {
-        case "meta":
+        case 'meta':
           return ESTIMATE_META_HEIGHT;
-        case "tool_use":
+        case 'tool_use':
           return ESTIMATE_TOOL_HEIGHT;
-        case "tool_result":
+        case 'tool_result':
           return ESTIMATE_TOOL_HEIGHT;
-        case "user": {
+        case 'user': {
           const len = m.text?.length ?? 0;
           const base = len < SHORT_TEXT_THRESHOLD ? 72 : len < MEDIUM_TEXT_THRESHOLD ? 100 : 160;
           return base + imageExtra;
         }
-        case "assistant": {
-          if (m.text === "(thinking)") return ESTIMATE_META_HEIGHT;
+        case 'assistant': {
+          if (m.text === '(thinking)') return ESTIMATE_META_HEIGHT;
           const len = m.text?.length ?? 0;
           const base = len < SHORT_TEXT_THRESHOLD ? 72 : len < MEDIUM_TEXT_THRESHOLD ? 120 : 200;
           return base + imageExtra;
@@ -126,10 +123,7 @@ export function MessageStream({ scrollToMessageId }: Props) {
   // exact id is not in the visible list (e.g. user messages filtered
   // out), scan the original allMessages forward from that id's position
   // to find the nearest message that IS visible.
-  const visibleIdSet = useMemo(
-    () => new Set(visibleMessages.map((m) => m.id)),
-    [visibleMessages],
-  );
+  const visibleIdSet = useMemo(() => new Set(visibleMessages.map((m) => m.id)), [visibleMessages]);
 
   const findVisibleIndex = useCallback(
     (msgId: string): number => {
@@ -150,7 +144,7 @@ export function MessageStream({ scrollToMessageId }: Props) {
         const result = filtered.find((m) => m.id === msgId);
         if (result?.toolUseId) {
           const parent = filtered.find(
-            (m) => m.role === "tool_use" && m.toolUseId === result.toolUseId,
+            (m) => m.role === 'tool_use' && m.toolUseId === result.toolUseId,
           );
           if (parent) {
             idx = visibleMessages.findIndex((m) => m.id === parent.id);
@@ -257,9 +251,9 @@ export function MessageStream({ scrollToMessageId }: Props) {
       rafId = requestAnimationFrame(computeTurn);
     };
 
-    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener('scroll', onScroll);
       if (rafId !== null) cancelAnimationFrame(rafId);
       if (flushTimerRef.current !== null) clearTimeout(flushTimerRef.current);
     };
@@ -277,8 +271,8 @@ export function MessageStream({ scrollToMessageId }: Props) {
     if (idx < 0) return;
     const timer = setTimeout(() => {
       rowVirtualizer.scrollToIndex(idx, {
-        align: "start",
-        behavior: "smooth",
+        align: 'start',
+        behavior: 'smooth',
       });
       scrolledRef.current = true;
     }, SCROLL_TO_MSG_DELAY_MS);
@@ -293,8 +287,8 @@ export function MessageStream({ scrollToMessageId }: Props) {
     if (idx < 0) return;
     const timer = setTimeout(() => {
       rowVirtualizer.scrollToIndex(idx, {
-        align: "start",
-        behavior: "smooth",
+        align: 'start',
+        behavior: 'smooth',
       });
     }, SCROLL_TICK_MS);
     return () => clearTimeout(timer);
@@ -307,9 +301,8 @@ export function MessageStream({ scrollToMessageId }: Props) {
     const { msgIdx, localIdx } = navTarget;
     const total = visibleMessages.length;
     const isNearEnd = msgIdx >= total - 3;
-    const align: "start" | "center" | "end" =
-      msgIdx <= 2 ? "start" : isNearEnd ? "end" : "center";
-    rowVirtualizer.scrollToIndex(msgIdx, { align, behavior: "smooth" });
+    const align: 'start' | 'center' | 'end' = msgIdx <= 2 ? 'start' : isNearEnd ? 'end' : 'center';
+    rowVirtualizer.scrollToIndex(msgIdx, { align, behavior: 'smooth' });
 
     if (isNearEnd && parentRef.current) {
       const el = parentRef.current;
@@ -343,22 +336,20 @@ export function MessageStream({ scrollToMessageId }: Props) {
     const apply = () => {
       if (cancelled || !parentRef.current) return;
       parentRef.current
-        .querySelectorAll<HTMLElement>("mark.search-mark-active")
-        .forEach((el) => el.classList.remove("search-mark-active"));
-      const row = parentRef.current.querySelector<HTMLElement>(
-        `[data-index="${msgIdx}"]`,
-      );
+        .querySelectorAll<HTMLElement>('mark.search-mark-active')
+        .forEach((el) => el.classList.remove('search-mark-active'));
+      const row = parentRef.current.querySelector<HTMLElement>(`[data-index="${msgIdx}"]`);
       if (!row) {
         if (attempts++ < MAX_RETRY_FRAMES) requestAnimationFrame(apply);
         return;
       }
-      const marks = row.querySelectorAll<HTMLElement>("mark.search-mark");
+      const marks = row.querySelectorAll<HTMLElement>('mark.search-mark');
       if (marks.length <= localIdx) {
         if (attempts++ < MAX_RETRY_FRAMES) requestAnimationFrame(apply);
         return;
       }
       const target = marks[localIdx]!;
-      target.classList.add("search-mark-active");
+      target.classList.add('search-mark-active');
       centerMarkInScroller(target);
     };
     const timer = setTimeout(() => requestAnimationFrame(apply), SCROLL_TICK_MS);
@@ -370,11 +361,7 @@ export function MessageStream({ scrollToMessageId }: Props) {
   }, [navTarget?.msgIdx, navTarget?.localIdx, navTarget?.nonce]);
 
   if (visibleMessages.length === 0) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground text-center">
-        没有匹配的消息
-      </div>
-    );
+    return <div className="p-6 text-sm text-muted-foreground text-center">没有匹配的消息</div>;
   }
 
   return (
@@ -382,23 +369,21 @@ export function MessageStream({ scrollToMessageId }: Props) {
       <div
         style={{
           height: `${rowVirtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
+          width: '100%',
+          position: 'relative',
         }}
       >
         {rowVirtualizer.getVirtualItems().map((vi) => {
           const m = visibleMessages[vi.index]!;
           const pairedResult =
-            m.role === "tool_use" && m.toolUseId
-              ? resultByToolUseId.get(m.toolUseId)
-              : undefined;
+            m.role === 'tool_use' && m.toolUseId ? resultByToolUseId.get(m.toolUseId) : undefined;
           return (
             <div
               key={m.id}
               data-index={vi.index}
               ref={rowVirtualizer.measureElement}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
@@ -406,29 +391,29 @@ export function MessageStream({ scrollToMessageId }: Props) {
               }}
               className="pb-3"
             >
-              {m.role === "meta" ? (
+              {m.role === 'meta' ? (
                 <MetaBlock m={m} />
-              ) : m.role === "assistant" && m.text === "(thinking)" ? (
+              ) : m.role === 'assistant' && m.text === '(thinking)' ? (
                 <ThinkingBlock m={m} />
-              ) : m.role === "tool_use" ? (
+              ) : m.role === 'tool_use' ? (
                 <ToolCard
                   tool={m}
                   result={pairedResult}
                   favorited={favIds.has(m.id)}
                   onToggleFav={() => toggleFav(m)}
                   subagentMeta={
-                    canonicalTool(m.toolName) === "Task"
-                      ? (pairedResult?.agentHash
-                            ? subagentLookup.get(`hash::${pairedResult.agentHash}`)
-                            : undefined) ??
+                    canonicalTool(m.toolName) === 'Task'
+                      ? ((pairedResult?.agentHash
+                          ? subagentLookup.get(`hash::${pairedResult.agentHash}`)
+                          : undefined) ??
                         subagentLookup.get(
-                          `${(m.toolInput as Record<string, unknown>)?.subagent_type ?? (m.toolInput as Record<string, unknown>)?.subagentType ?? ""}::${(m.toolInput as Record<string, unknown>)?.description ?? ""}`,
+                          `${(m.toolInput as Record<string, unknown>)?.subagent_type ?? (m.toolInput as Record<string, unknown>)?.subagentType ?? ''}::${(m.toolInput as Record<string, unknown>)?.description ?? ''}`,
                         ) ??
                         (() => {
-                          const out = pairedResult?.toolOutput ?? "";
+                          const out = pairedResult?.toolOutput ?? '';
                           const nm = out.match(/^name:\s*(.+)/m);
                           return nm ? subagentLookup.get(`type::${nm[1].trim()}`) : undefined;
-                        })()
+                        })())
                       : undefined
                   }
                   sessionId={sessionId}

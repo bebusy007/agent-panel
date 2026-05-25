@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   MessagesSquare,
@@ -9,12 +9,12 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
-} from "lucide-react";
+} from 'lucide-react';
 
 // Sparkles keeps showing up in the brand chip — `void` keeps the import
 // honest for TS's noUnusedLocals while letting tree-shake do its thing.
 void Sparkles;
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface NavItem {
   to: string;
@@ -24,14 +24,14 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { to: "/", label: "概览", icon: LayoutDashboard, end: true },
+  { to: '/', label: '概览', icon: LayoutDashboard, end: true },
   // Sessions tab now hosts both 会话 and 消息 search modes — what
   // used to be the standalone /history page is just the "消息" toggle
   // inside the search box now (see docs/routing-and-navigation.md §1.4).
-  { to: "/sessions", label: "会话", icon: MessagesSquare },
-  { to: "/usage", label: "用量", icon: BarChart3 },
-  { to: "/extensions", label: "扩展", icon: Boxes },
-  { to: "/favorites", label: "收藏", icon: Star },
+  { to: '/sessions', label: '会话', icon: MessagesSquare },
+  { to: '/usage', label: '用量', icon: BarChart3 },
+  { to: '/extensions', label: '扩展', icon: Boxes },
+  { to: '/favorites', label: '收藏', icon: Star },
 ];
 
 // We keep /skills and /mcps as standalone routes (and as sections inside
@@ -72,10 +72,10 @@ export function IconRail({
             title={item.label}
             className={({ isActive }) =>
               cn(
-                "relative flex size-9 items-center justify-center rounded-md transition-colors",
+                'relative flex size-9 items-center justify-center rounded-md transition-colors',
                 isActive
-                  ? "bg-secondary text-fg"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-fg",
+                  ? 'bg-secondary text-fg'
+                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-fg',
               )
             }
           >
@@ -95,10 +95,14 @@ export function IconRail({
         {sidebarAvailable && (
           <button
             onClick={onToggleCollapsed}
-            title={collapsed ? "展开侧栏" : "折叠侧栏"}
+            title={collapsed ? '展开侧栏' : '折叠侧栏'}
             className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-muted-foreground"
           >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            {collapsed ? (
+              <PanelLeftOpen className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )}
           </button>
         )}
         <NavLink
@@ -106,10 +110,10 @@ export function IconRail({
           title="设置"
           className={({ isActive }) =>
             cn(
-              "flex size-9 items-center justify-center rounded-md transition-colors",
+              'flex size-9 items-center justify-center rounded-md transition-colors',
               isActive
-                ? "bg-secondary text-fg"
-                : "text-muted-foreground hover:bg-secondary/60 hover:text-muted-foreground",
+                ? 'bg-secondary text-fg'
+                : 'text-muted-foreground hover:bg-secondary/60 hover:text-muted-foreground',
             )
           }
         >

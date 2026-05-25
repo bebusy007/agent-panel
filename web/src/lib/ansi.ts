@@ -1,14 +1,14 @@
-import AnsiToHtml from "ansi-to-html";
+import AnsiToHtml from 'ansi-to-html';
 
 const converter = new AnsiToHtml({
-  fg: "inherit",
-  bg: "transparent",
+  fg: 'inherit',
+  bg: 'transparent',
   newline: false,
   escapeXML: true,
 });
 
 export function ansiToHtml(s: string): string {
-  if (!s) return "";
+  if (!s) return '';
   return converter.toHtml(s);
 }
 
@@ -19,5 +19,5 @@ export function hasAnsiCodes(s: string): boolean {
 const STRIP_RE = /\x1b\[[0-9;?]*[a-zA-Z]/g;
 
 export function stripAnsi(s: string): string {
-  return s.replace(STRIP_RE, "");
+  return s.replace(STRIP_RE, '');
 }

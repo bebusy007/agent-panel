@@ -8,10 +8,10 @@
  */
 export function escapeHtml(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /**
@@ -34,18 +34,14 @@ export function highlightHtml(text: string, q: string): string {
     parts.push(`<mark>${escapeHtml(text.slice(idx, idx + ql.length))}</mark>`);
     cursor = idx + ql.length;
   }
-  return parts.join("");
+  return parts.join('');
 }
 
 /**
  * Extract a snippet of `contextLen` chars around the first match of `q` in `text`,
  * with the match wrapped in <mark> (HTML string). Returns plain escaped text if no match.
  */
-export function snippetWithHighlight(
-  text: string,
-  q: string,
-  contextLen = 160
-): string {
+export function snippetWithHighlight(text: string, q: string, contextLen = 160): string {
   if (!q || !q.trim()) return escapeHtml(text.slice(0, contextLen));
   const ql = q.toLowerCase();
   const tl = text.toLowerCase();
@@ -55,15 +51,15 @@ export function snippetWithHighlight(
   const start = Math.max(0, idx - Math.floor(contextLen / 3));
   const end = Math.min(text.length, start + contextLen);
   const slice = text.slice(start, end);
-  const prefix = start > 0 ? "…" : "";
-  const suffix = end < text.length ? "…" : "";
+  const prefix = start > 0 ? '…' : '';
+  const suffix = end < text.length ? '…' : '';
   return prefix + highlightHtml(slice, q) + suffix;
 }
 
 // ---- Segment helpers (framework-agnostic, used by frontend JSX wrapper) ----
 
 export interface HighlightSegment {
-  type: "text" | "mark";
+  type: 'text' | 'mark';
   value: string;
 }
 
@@ -72,7 +68,7 @@ export interface HighlightSegment {
  * Case-insensitive. Returns segments suitable for mapping to React elements.
  */
 export function highlightSegments(text: string, q: string): HighlightSegment[] {
-  if (!q || !q.trim() || !text) return [{ type: "text", value: text }];
+  if (!q || !q.trim() || !text) return [{ type: 'text', value: text }];
   const ql = q.toLowerCase();
   const tl = text.toLowerCase();
   const segments: HighlightSegment[] = [];
@@ -80,11 +76,11 @@ export function highlightSegments(text: string, q: string): HighlightSegment[] {
   while (cursor < text.length) {
     const idx = tl.indexOf(ql, cursor);
     if (idx < 0) {
-      segments.push({ type: "text", value: text.slice(cursor) });
+      segments.push({ type: 'text', value: text.slice(cursor) });
       break;
     }
-    if (idx > cursor) segments.push({ type: "text", value: text.slice(cursor, idx) });
-    segments.push({ type: "mark", value: text.slice(idx, idx + ql.length) });
+    if (idx > cursor) segments.push({ type: 'text', value: text.slice(cursor, idx) });
+    segments.push({ type: 'mark', value: text.slice(idx, idx + ql.length) });
     cursor = idx + ql.length;
   }
   return segments;

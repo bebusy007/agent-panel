@@ -4,10 +4,10 @@
 //! This module scans all of them and returns unified SessionSummary entries.
 
 use super::sessions::SessionSummary;
+use rayon::prelude::*;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-use rayon::prelude::*;
 use walkdir::WalkDir;
 
 /// Safely truncate a string at a char boundary.
@@ -48,7 +48,8 @@ pub fn scan_codex_sessions() -> Vec<SessionSummary> {
         .map(|e| e.path().to_path_buf())
         .collect();
 
-    let results: Vec<SessionSummary> = files.par_iter()
+    let results: Vec<SessionSummary> = files
+        .par_iter()
         .filter_map(|path| scan_codex_file(path))
         .collect();
     tracing::info!(count = results.len(), "codex session scan complete");
@@ -73,7 +74,9 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
     let mut message_count: u32 = 0;
 
     for line in reader.lines().flatten() {
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         let entry: serde_json::Value = match serde_json::from_str(&line) {
             Ok(v) => v,
             Err(_) => continue,
@@ -84,7 +87,9 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
         let ts = entry.get("timestamp").and_then(|v| v.as_str());
 
         if let Some(t) = ts {
-            if started_at.is_none() { started_at = Some(t.to_string()); }
+            if started_at.is_none() {
+                started_at = Some(t.to_string());
+            }
             last_activity = Some(t.to_string());
         }
 
@@ -92,7 +97,10 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
             "session_meta" => {
                 if let Some(p) = payload {
                     cwd = p.get("cwd").and_then(|v| v.as_str()).map(|s| s.to_string());
-                    model = p.get("model_provider").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    model = p
+                        .get("model_provider")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
                     session_id = p.get("id").and_then(|v| v.as_str()).map(|s| s.to_string());
                 }
             }
@@ -106,22 +114,23 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
                     if first_user_text.is_none() {
                         // Codex puts the user text directly in payload.message (string)
                         // or sometimes in payload.message.content
-                        let text = payload
-                            .and_then(|p| p.get("message"))
-                            .and_then(|m| {
-                                if let Some(s) = m.as_str() {
+                        let text = payload.and_then(|p| p.get("message")).and_then(|m| {
+                            if let Some(s) = m.as_str() {
+                                return Some(s.to_string());
+                            }
+                            if let Some(c) = m.get("content") {
+                                if let Some(s) = c.as_str() {
                                     return Some(s.to_string());
                                 }
-                                if let Some(c) = m.get("content") {
-                                    if let Some(s) = c.as_str() {
-                                        return Some(s.to_string());
-                                    }
-                                }
-                                None
-                            });
+                            }
+                            None
+                        });
                         if let Some(t) = text {
                             if !t.trim().is_empty() {
-                                first_user_text = Some(safe_truncate(&t, crate::constants::FIRST_MESSAGE_MAX_LEN).to_string());
+                                first_user_text = Some(
+                                    safe_truncate(&t, crate::constants::FIRST_MESSAGE_MAX_LEN)
+                                        .to_string(),
+                                );
                             }
                         }
                     }
@@ -215,7 +224,8 @@ pub fn scan_cursor_sessions() -> Vec<SessionSummary> {
         jsonl_files.extend(files);
     }
 
-    let results: Vec<SessionSummary> = jsonl_files.par_iter()
+    let results: Vec<SessionSummary> = jsonl_files
+        .par_iter()
         .filter_map(|path| scan_cursor_file(path))
         .collect();
     tracing::info!(count = results.len(), "cursor session scan complete");
@@ -240,7 +250,11 @@ fn cursor_project_dir_to_cwd(project_dir: &str) -> Option<String> {
         let mut found = false;
         for end in (i + 1..=segments.len()).rev() {
             let candidate = segments[i..end].join("-");
-            let base = if path.ends_with('/') { path.clone() } else { format!("{}/", path) };
+            let base = if path.ends_with('/') {
+                path.clone()
+            } else {
+                format!("{}/", path)
+            };
             let test_path = format!("{}{}", base, candidate);
             if std::path::Path::new(&test_path).exists() {
                 path = test_path;
@@ -253,12 +267,18 @@ fn cursor_project_dir_to_cwd(project_dir: &str) -> Option<String> {
             return None;
         }
     }
-    if std::path::Path::new(&path).exists() { Some(path) } else { None }
+    if std::path::Path::new(&path).exists() {
+        Some(path)
+    } else {
+        None
+    }
 }
 
 fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
     let meta = fs::metadata(file_path).ok()?;
-    if meta.len() == 0 { return None; }
+    if meta.len() == 0 {
+        return None;
+    }
 
     let file = fs::File::open(file_path).ok()?;
     let reader = BufReader::new(file);
@@ -267,8 +287,14 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
     let mut message_count: u32 = 0;
     let mut last_ts: Option<String> = None;
 
-    for line in reader.lines().flatten().take(crate::constants::CURSOR_SCAN_LINES) {
-        if line.is_empty() { continue; }
+    for line in reader
+        .lines()
+        .flatten()
+        .take(crate::constants::CURSOR_SCAN_LINES)
+    {
+        if line.is_empty() {
+            continue;
+        }
         let entry: serde_json::Value = match serde_json::from_str(&line) {
             Ok(v) => v,
             Err(_) => continue,
@@ -280,16 +306,22 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
         }
 
         if first_text.is_none() {
-            let text = entry.get("message")
+            let text = entry
+                .get("message")
                 .and_then(|m| m.get("content"))
                 .and_then(|c| c.as_array())
-                .and_then(|arr| arr.iter().find_map(|b| b.get("text").and_then(|t| t.as_str())))
+                .and_then(|arr| {
+                    arr.iter()
+                        .find_map(|b| b.get("text").and_then(|t| t.as_str()))
+                })
                 .or_else(|| entry.get("content").and_then(|v| v.as_str()))
                 .or_else(|| entry.get("text").and_then(|v| v.as_str()))
                 .or_else(|| entry.get("query").and_then(|v| v.as_str()));
             if let Some(t) = text {
                 let cleaned = super::session_loader::strip_cursor_tags(t);
-                first_text = Some(safe_truncate(&cleaned, crate::constants::FIRST_MESSAGE_MAX_LEN).to_string());
+                first_text = Some(
+                    safe_truncate(&cleaned, crate::constants::FIRST_MESSAGE_MAX_LEN).to_string(),
+                );
             }
         }
     }
@@ -308,7 +340,9 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
     let cwd = cursor_project_dir_to_cwd(&project_dir);
 
     // Use file mtime as fallback timestamps when JSONL has none
-    let file_mtime_str = meta.modified().ok()
+    let file_mtime_str = meta
+        .modified()
+        .ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
         .map(|d| {
             chrono::DateTime::from_timestamp(d.as_secs() as i64, 0)
@@ -321,7 +355,11 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
     Some(SessionSummary {
         id: format!("cursor-agent:{}", name),
         source: "cursor-agent".to_string(),
-        title: safe_truncate(first_text.as_deref().unwrap_or("(Cursor session)"), crate::constants::TITLE_MAX_LEN).to_string(),
+        title: safe_truncate(
+            first_text.as_deref().unwrap_or("(Cursor session)"),
+            crate::constants::TITLE_MAX_LEN,
+        )
+        .to_string(),
         file_path: file_path.to_string_lossy().to_string(),
         project_dir,
         first_user_message: first_text,
@@ -366,50 +404,66 @@ pub fn scan_claude_history() -> Vec<SessionSummary> {
     };
 
     let reader = BufReader::new(file);
-    let mut sessions: std::collections::HashMap<String, SessionSummary> = std::collections::HashMap::new();
+    let mut sessions: std::collections::HashMap<String, SessionSummary> =
+        std::collections::HashMap::new();
 
     for line in reader.lines().flatten() {
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         let entry: serde_json::Value = match serde_json::from_str(&line) {
             Ok(v) => v,
             Err(_) => continue,
         };
 
-        let session_id = entry.get("sessionId").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        if session_id.is_empty() { continue; }
+        let session_id = entry
+            .get("sessionId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if session_id.is_empty() {
+            continue;
+        }
 
         let display = entry.get("display").and_then(|v| v.as_str()).unwrap_or("");
-        let timestamp = entry.get("timestamp").and_then(|v| v.as_u64())
-            .map(|ts| {
-                chrono::DateTime::from_timestamp(ts as i64 / crate::constants::MS_PER_SECOND as i64, 0)
-                    .map(|dt| dt.to_rfc3339())
-                    .unwrap_or_default()
-            });
-        let project = entry.get("project").and_then(|v| v.as_str()).map(|s| s.to_string());
-
-        let entry_session = sessions.entry(format!("history:{}", session_id)).or_insert(SessionSummary {
-            id: format!("history:{}", session_id),
-            source: "claude-history".to_string(),
-            title: safe_truncate(display, crate::constants::TITLE_MAX_LEN).to_string(),
-            file_path: history_file.to_string_lossy().to_string(),
-            project_dir: project.clone().unwrap_or_default(),
-            first_user_message: Some(safe_truncate(display, crate::constants::FIRST_MESSAGE_MAX_LEN).to_string()),
-            cwd: project,
-            git_branch: None,
-            model: None,
-            session_id_raw: Some(session_id),
-            started_at: timestamp.clone(),
-            last_activity: timestamp.clone(),
-            message_count: 0,
-            size_bytes: 0,
-            subagent_count: 0,
-            tokens_total: None,
-            tokens_input: None,
-            tokens_output: None,
-            tokens_cache_read: None,
-            tokens_cache_write: None,
-            estimated_cost_usd: None,
+        let timestamp = entry.get("timestamp").and_then(|v| v.as_u64()).map(|ts| {
+            chrono::DateTime::from_timestamp(ts as i64 / crate::constants::MS_PER_SECOND as i64, 0)
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_default()
         });
+        let project = entry
+            .get("project")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let entry_session =
+            sessions
+                .entry(format!("history:{}", session_id))
+                .or_insert(SessionSummary {
+                    id: format!("history:{}", session_id),
+                    source: "claude-history".to_string(),
+                    title: safe_truncate(display, crate::constants::TITLE_MAX_LEN).to_string(),
+                    file_path: history_file.to_string_lossy().to_string(),
+                    project_dir: project.clone().unwrap_or_default(),
+                    first_user_message: Some(
+                        safe_truncate(display, crate::constants::FIRST_MESSAGE_MAX_LEN).to_string(),
+                    ),
+                    cwd: project,
+                    git_branch: None,
+                    model: None,
+                    session_id_raw: Some(session_id),
+                    started_at: timestamp.clone(),
+                    last_activity: timestamp.clone(),
+                    message_count: 0,
+                    size_bytes: 0,
+                    subagent_count: 0,
+                    tokens_total: None,
+                    tokens_input: None,
+                    tokens_output: None,
+                    tokens_cache_read: None,
+                    tokens_cache_write: None,
+                    estimated_cost_usd: None,
+                });
 
         entry_session.message_count += 1;
         if let Some(ref ts) = timestamp {
@@ -431,7 +485,9 @@ mod tests {
     #[test]
     fn test_scan_codex_file() {
         let dir = TempDir::new().unwrap();
-        let file = dir.path().join("rollout-2026-03-11T18-04-38-019cdc5b-0523-7772-b0f7-fef74bde9bca.jsonl");
+        let file = dir
+            .path()
+            .join("rollout-2026-03-11T18-04-38-019cdc5b-0523-7772-b0f7-fef74bde9bca.jsonl");
         let mut f = fs::File::create(&file).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-03-11T10:04:41Z","type":"session_meta","payload":{{"id":"019cdc5b-0523-7772-b0f7-fef74bde9bca","cwd":"/home/test","model_provider":"openai"}}}}"#).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-03-11T10:05:00Z","type":"event_msg","payload":{{"type":"user_message","message":"hello codex","images":[],"text_elements":[]}}}}"#).unwrap();
@@ -450,7 +506,10 @@ mod tests {
     #[test]
     fn test_extract_codex_id() {
         let stem = "rollout-2026-03-11T18-04-38-019cdc5b-0523-7772-b0f7-fef74bde9bca";
-        assert_eq!(extract_codex_id(stem), Some("019cdc5b-0523-7772-b0f7-fef74bde9bca"));
+        assert_eq!(
+            extract_codex_id(stem),
+            Some("019cdc5b-0523-7772-b0f7-fef74bde9bca")
+        );
     }
 
     #[test]
@@ -521,7 +580,9 @@ mod tests {
     #[test]
     fn test_scan_codex_file_user_message_in_content() {
         let dir = TempDir::new().unwrap();
-        let file = dir.path().join("rollout-2026-01-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
+        let file = dir
+            .path()
+            .join("rollout-2026-01-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
         let mut f = fs::File::create(&file).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-01-01T00:00:00Z","type":"event_msg","payload":{{"type":"user_message","message":{{"content":"nested message"}}}}}}"#).unwrap();
 
@@ -534,7 +595,9 @@ mod tests {
     #[test]
     fn test_scan_codex_file_no_session_meta() {
         let dir = TempDir::new().unwrap();
-        let file = dir.path().join("rollout-2026-01-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
+        let file = dir
+            .path()
+            .join("rollout-2026-01-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
         let mut f = fs::File::create(&file).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-01-01T00:00:00Z","type":"event_msg","payload":{{"type":"user_message","message":"first msg"}}}}"#).unwrap();
 
@@ -548,7 +611,9 @@ mod tests {
     #[test]
     fn test_scan_codex_file_response_item_counts() {
         let dir = TempDir::new().unwrap();
-        let file = dir.path().join("rollout-2026-02-01T00-00-00-11111111-2222-3333-4444-555555555555.jsonl");
+        let file = dir
+            .path()
+            .join("rollout-2026-02-01T00-00-00-11111111-2222-3333-4444-555555555555.jsonl");
         let mut f = fs::File::create(&file).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-02-01T10:00:00Z","type":"event_msg","payload":{{"type":"user_message","message":"q1"}}}}"#).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-02-01T10:01:00Z","type":"response_item","payload":{{"type":"message","text":"a1"}}}}"#).unwrap();
@@ -558,13 +623,18 @@ mod tests {
         let result = scan_codex_file(&file).unwrap();
         assert_eq!(result.message_count, 4);
         assert_eq!(result.started_at, Some("2026-02-01T10:00:00Z".to_string()));
-        assert_eq!(result.last_activity, Some("2026-02-01T10:03:00Z".to_string()));
+        assert_eq!(
+            result.last_activity,
+            Some("2026-02-01T10:03:00Z".to_string())
+        );
     }
 
     #[test]
     fn test_scan_codex_file_empty_user_message_skipped() {
         let dir = TempDir::new().unwrap();
-        let file = dir.path().join("rollout-2026-01-01T00-00-00-aaaabbbb-1111-2222-3333-444444444444.jsonl");
+        let file = dir
+            .path()
+            .join("rollout-2026-01-01T00-00-00-aaaabbbb-1111-2222-3333-444444444444.jsonl");
         let mut f = fs::File::create(&file).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-01-01T00:00:00Z","type":"event_msg","payload":{{"type":"user_message","message":"   "}}}}"#).unwrap();
         writeln!(f, r#"{{"timestamp":"2026-01-01T00:01:00Z","type":"event_msg","payload":{{"type":"user_message","message":"real message"}}}}"#).unwrap();

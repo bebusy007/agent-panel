@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { ArrowUpCircle, X } from "lucide-react";
-import { api } from "@/lib/api";
-import { COPY_FEEDBACK_UPDATE_MS } from "@/lib/constants";
+import { useEffect, useState } from 'react';
+import { ArrowUpCircle, X } from 'lucide-react';
+import { api } from '@/lib/api';
+import { COPY_FEEDBACK_UPDATE_MS } from '@/lib/constants';
 
-const DISMISS_KEY = "agent-panel:update-dismissed";
+const DISMISS_KEY = 'agent-panel:update-dismissed';
 
 export function UpdateBanner() {
   const [info, setInfo] = useState<{
@@ -21,7 +21,10 @@ export function UpdateBanner() {
       setDismissed(true);
       return;
     }
-    api.version().then((v) => { }).catch(() => {});
+    api
+      .version()
+      .then((v) => {})
+      .catch(() => {});
   }, []);
 
   if (dismissed || !info?.hasUpdate) return null;
@@ -37,7 +40,7 @@ export function UpdateBanner() {
 
   const handleDismiss = () => {
     setDismissed(true);
-    sessionStorage.setItem(DISMISS_KEY, info.latest ?? "");
+    sessionStorage.setItem(DISMISS_KEY, info.latest ?? '');
   };
 
   return (
@@ -46,14 +49,14 @@ export function UpdateBanner() {
       <span>
         新版本可用：
         <span className="font-mono text-muted-foreground">v{info.current}</span>
-        {" → "}
+        {' → '}
         <span className="font-mono font-semibold">{info.latest}</span>
       </span>
       <button
         onClick={handleCopy}
         className="ml-1 rounded bg-accent/20 px-2 py-0.5 font-mono text-xs text-accent hover:bg-accent/30 transition-colors"
       >
-        {copied ? "已复制" : "复制更新命令"}
+        {copied ? '已复制' : '复制更新命令'}
       </button>
       <button
         onClick={handleDismiss}

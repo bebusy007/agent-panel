@@ -1,24 +1,23 @@
-import { extractOutputText, shortenPath } from "@/lib/tool-rendering";
-import type { Message } from "@/lib/api";
-import { CopyButton } from "../ToolCardHeader";
+import { extractOutputText, shortenPath } from '@/lib/tool-rendering';
+import type { Message } from '@/lib/api';
+import { CopyButton } from '../ToolCardHeader';
 
 export function GrepCard({ tool, result }: { tool: Message; result?: Message }) {
   const input = (tool.toolInput as Record<string, unknown> | undefined) ?? {};
-  const pattern = (input.pattern as string) || (input.query as string) || (input.glob as string) || "";
-  const path = (input.path as string) || (input.cwd as string) || "";
+  const pattern =
+    (input.pattern as string) || (input.query as string) || (input.glob as string) || '';
+  const path = (input.path as string) || (input.cwd as string) || '';
   const out = result?.toolOutput ?? extractOutputText(tool.toolOutput);
 
-  const lines = out ? out.split("\n").filter(Boolean) : [];
+  const lines = out ? out.split('\n').filter(Boolean) : [];
   const matchCount = lines.length;
 
   return (
     <div className="space-y-1 px-3 pb-3">
       <div className="flex items-center justify-between rounded-md border border-purple-500/30 bg-purple-500/5 px-2.5 py-1 text-[11px]">
         <span className="font-mono text-purple-200">
-          {pattern || "(no pattern)"}
-          {path && (
-            <span className="ml-1.5 text-muted-foreground">in {shortenPath(path)}</span>
-          )}
+          {pattern || '(no pattern)'}
+          {path && <span className="ml-1.5 text-muted-foreground">in {shortenPath(path)}</span>}
         </span>
         <span className="text-muted-foreground tabular-nums">{matchCount} 行</span>
       </div>

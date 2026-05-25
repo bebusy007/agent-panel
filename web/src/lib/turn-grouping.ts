@@ -7,9 +7,9 @@
  * Pure function, no React. Easy to unit-test.
  */
 
-import type { Message } from "@/lib/api";
-import { cleanupPromptPreview } from "@/lib/text-cleanup";
-import { canonicalTool } from "@/lib/tool-aliases";
+import type { Message } from '@/lib/api';
+import { cleanupPromptPreview } from '@/lib/text-cleanup';
+import { canonicalTool } from '@/lib/tool-aliases';
 
 export interface TurnEntry {
   /** Zero-based turn index; equals position in the returned array. */
@@ -39,12 +39,12 @@ export function buildTurns(messages: Message[]): TurnEntry[] {
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     // System / meta lines at the very start get swept into a "turn 0".
-    if (m.role === "user") {
+    if (m.role === 'user') {
       cur = {
         index: turns.length,
         userMessage: m,
         userMessageIndex: i,
-        preview: previewOf(m.text || ""),
+        preview: previewOf(m.text || ''),
         messageCount: 1,
         toolCount: 0,
         hasError: false,
@@ -61,7 +61,7 @@ export function buildTurns(messages: Message[]): TurnEntry[] {
         index: turns.length,
         userMessage: undefined,
         userMessageIndex: -1,
-        preview: "(系统消息)",
+        preview: '(系统消息)',
         messageCount: 0,
         toolCount: 0,
         hasError: false,
@@ -71,11 +71,11 @@ export function buildTurns(messages: Message[]): TurnEntry[] {
     }
 
     cur.messageCount++;
-    if (m.role === "tool_use") {
+    if (m.role === 'tool_use') {
       cur.toolCount++;
-      if (canonicalTool(m.toolName) === "Task") cur.subagentCount++;
+      if (canonicalTool(m.toolName) === 'Task') cur.subagentCount++;
     }
-    if (m.role === "tool_result" && m.toolStatus === "error") cur.hasError = true;
+    if (m.role === 'tool_result' && m.toolStatus === 'error') cur.hasError = true;
   }
 
   return turns;
@@ -87,10 +87,7 @@ export function buildTurns(messages: Message[]): TurnEntry[] {
  * userMessageIndex — the message belongs to the last turn whose
  * userMessageIndex <= msgIndex.
  */
-export function turnIndexForMessage(
-  turns: TurnEntry[],
-  msgIndex: number,
-): number {
+export function turnIndexForMessage(turns: TurnEntry[], msgIndex: number): number {
   let best = 0;
   for (let i = 0; i < turns.length; i++) {
     const start = turns[i]!.userMessageIndex === -1 ? 0 : turns[i]!.userMessageIndex;

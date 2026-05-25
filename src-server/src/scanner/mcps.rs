@@ -97,17 +97,26 @@ fn read_mcp_servers(path: &Path, source: &str) -> Option<Vec<McpSummary>> {
     let mut results = Vec::new();
 
     for (name, config) in mcp_servers {
-        let command = config.get("command").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let url = config.get("url").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let command = config
+            .get("command")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let url = config
+            .get("url")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         // Build description from command/url
         let description = if let Some(ref cmd) = command {
-            let args = config.get("args")
+            let args = config
+                .get("args")
                 .and_then(|v| v.as_array())
-                .map(|arr| arr.iter()
-                    .filter_map(|v| v.as_str())
-                    .collect::<Vec<_>>()
-                    .join(" "))
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
                 .unwrap_or_default();
             Some(format!("{} {}", cmd, args).trim().to_string())
         } else {
@@ -158,10 +167,18 @@ mod tests {
         let result = read_mcp_servers(&file, "test").unwrap();
         assert_eq!(result.len(), 2);
 
-        let pw = result.iter().find(|m| m.server_name == "playwright").unwrap();
+        let pw = result
+            .iter()
+            .find(|m| m.server_name == "playwright")
+            .unwrap();
         assert_eq!(pw.command, Some("npx".to_string()));
         assert_eq!(pw.source, "test");
-        assert!(pw.description.as_ref().unwrap().contains("@anthropic/mcp-playwright"));
+        assert!(
+            pw.description
+                .as_ref()
+                .unwrap()
+                .contains("@anthropic/mcp-playwright")
+        );
     }
 
     #[test]
@@ -225,7 +242,10 @@ mod tests {
 
         let result = read_mcp_servers(&file, "test").unwrap();
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].url, Some("https://mcp.example.com/sse".to_string()));
+        assert_eq!(
+            result[0].url,
+            Some("https://mcp.example.com/sse".to_string())
+        );
         assert_eq!(result[0].command, None);
     }
 }

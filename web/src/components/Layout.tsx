@@ -1,16 +1,16 @@
-import { ReactNode, useCallback, useEffect, useState } from "react";
-import { useLocation, type Location } from "react-router-dom";
-import { IconRail } from "./sidebar/IconRail";
-import { SidebarPanel } from "./sidebar/SidebarPanel";
-import { UpdateBanner } from "./UpdateBanner";
+import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { useLocation, type Location } from 'react-router-dom';
+import { IconRail } from './sidebar/IconRail';
+import { SidebarPanel } from './sidebar/SidebarPanel';
+import { UpdateBanner } from './UpdateBanner';
 import {
   loadSidebarCollapsed,
   loadSidebarWidth,
   saveSidebarCollapsed,
   saveSidebarWidth,
   SIDEBAR_BOUNDS,
-} from "@/lib/sidebar-state";
-import { useDragResize } from "@/lib/use-drag-resize";
+} from '@/lib/sidebar-state';
+import { useDragResize } from '@/lib/use-drag-resize';
 
 interface LayoutProps {
   children: ReactNode;
@@ -45,8 +45,8 @@ function isFullBleedRoute(pathname: string): boolean {
  *  used to render a "brand + blurb" DefaultPanel that took 260px
  *  for no reason — they no longer mount the panel at all. */
 function shouldShowSidebarPanel(pathname: string): boolean {
-  if (pathname.startsWith("/sessions")) return true;
-  if (pathname === "/favorites") return true;
+  if (pathname.startsWith('/sessions')) return true;
+  if (pathname === '/favorites') return true;
   return false;
 }
 
@@ -73,8 +73,7 @@ export default function Layout({ children, overlay }: LayoutProps) {
   const state = location.state as { backgroundLocation?: Location } | null;
   const effectivePath = state?.backgroundLocation?.pathname || location.pathname;
   const fullBleed = isFullBleedRoute(effectivePath);
-  const sidebarPanelVisible =
-    !collapsed && shouldShowSidebarPanel(effectivePath);
+  const sidebarPanelVisible = !collapsed && shouldShowSidebarPanel(effectivePath);
 
   useEffect(() => saveSidebarCollapsed(collapsed), [collapsed]);
 
@@ -124,9 +123,7 @@ export default function Layout({ children, overlay }: LayoutProps) {
           </div>
         )}
         {overlay && (
-          <div className="absolute inset-0 z-30 flex flex-col bg-background">
-            {overlay}
-          </div>
+          <div className="absolute inset-0 z-30 flex flex-col bg-background">{overlay}</div>
         )}
       </main>
     </div>

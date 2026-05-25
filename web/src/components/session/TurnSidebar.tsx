@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronRight, AlertTriangle, MessageSquare, Hammer, PanelLeftClose, PanelLeftOpen, Bot } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { TurnEntry } from "@/lib/turn-grouping";
+import { useEffect, useRef, useState } from 'react';
+import {
+  ChevronRight,
+  AlertTriangle,
+  MessageSquare,
+  Hammer,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Bot,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { TurnEntry } from '@/lib/turn-grouping';
 
 interface Props {
   turns: TurnEntry[];
@@ -28,7 +36,7 @@ export function TurnSidebar({ turns, activeTurnIndex, onSelectTurn, onCollapse }
     const ct = container.getBoundingClientRect();
     const tt = target.getBoundingClientRect();
     if (tt.top < ct.top || tt.bottom > ct.bottom) {
-      target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [activeTurnIndex]);
 
@@ -83,7 +91,12 @@ interface MiniTurnRailProps {
   onExpand: () => void;
 }
 
-export function MiniTurnRail({ turns, activeTurnIndex, onSelectTurn, onExpand }: MiniTurnRailProps) {
+export function MiniTurnRail({
+  turns,
+  activeTurnIndex,
+  onSelectTurn,
+  onExpand,
+}: MiniTurnRailProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
 
@@ -94,7 +107,7 @@ export function MiniTurnRail({ turns, activeTurnIndex, onSelectTurn, onExpand }:
     const ct = container.getBoundingClientRect();
     const tt = target.getBoundingClientRect();
     if (tt.top < ct.top || tt.bottom > ct.bottom) {
-      target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [activeTurnIndex]);
 
@@ -109,7 +122,10 @@ export function MiniTurnRail({ turns, activeTurnIndex, onSelectTurn, onExpand }:
           <PanelLeftOpen className="size-3.5" />
         </button>
       </div>
-      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden py-1 scrollbar-none">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden py-1 scrollbar-none"
+      >
         {turns.map((t) => {
           const active = t.index === activeTurnIndex;
           return (
@@ -119,10 +135,10 @@ export function MiniTurnRail({ turns, activeTurnIndex, onSelectTurn, onExpand }:
               onClick={() => onSelectTurn(t)}
               title={t.preview || `轮次 ${t.index + 1}`}
               className={cn(
-                "mx-auto my-px flex size-5 items-center justify-center rounded text-[10px] font-mono tabular-nums transition-colors",
+                'mx-auto my-px flex size-5 items-center justify-center rounded text-[10px] font-mono tabular-nums transition-colors',
                 active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-fg",
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-fg',
               )}
             >
               {t.index + 1}
@@ -150,19 +166,17 @@ function TurnRow({
       ref={btnRef}
       onClick={onClick}
       className={cn(
-        "group flex w-full items-start gap-2 px-2.5 py-1.5 text-left transition-colors",
-        active
-          ? "bg-accent/12 text-fg"
-          : "text-muted-foreground hover:bg-secondary hover:text-fg",
+        'group flex w-full items-start gap-2 px-2.5 py-1.5 text-left transition-colors',
+        active ? 'bg-accent/12 text-fg' : 'text-muted-foreground hover:bg-secondary hover:text-fg',
       )}
-      title={turn.preview || "(空)"}
+      title={turn.preview || '(空)'}
     >
       <span
         className={cn(
-          "mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-mono tabular-nums",
+          'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-mono tabular-nums',
           active
-            ? "bg-accent text-accent-foreground"
-            : "bg-secondary text-muted-foreground group-hover:text-muted-foreground",
+            ? 'bg-accent text-accent-foreground'
+            : 'bg-secondary text-muted-foreground group-hover:text-muted-foreground',
         )}
       >
         {turn.index + 1}
@@ -183,7 +197,10 @@ function TurnRow({
             </span>
           )}
           {turn.subagentCount > 0 && (
-            <span className="inline-flex items-center gap-0.5 text-cyan-400" title={`${turn.subagentCount} 个 Subagent`}>
+            <span
+              className="inline-flex items-center gap-0.5 text-cyan-400"
+              title={`${turn.subagentCount} 个 Subagent`}
+            >
               <Bot className="size-2.5" />
               {turn.subagentCount}
             </span>

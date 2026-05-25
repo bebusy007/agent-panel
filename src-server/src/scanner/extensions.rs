@@ -67,7 +67,9 @@ fn scan_hooks_from_file(path: &Path, scope: &str) -> Vec<HookEntry> {
         let commands: Vec<String> = if let Some(arr) = config.as_array() {
             arr.iter()
                 .filter_map(|v| {
-                    v.get("command").and_then(|c| c.as_str()).map(|s| s.to_string())
+                    v.get("command")
+                        .and_then(|c| c.as_str())
+                        .map(|s| s.to_string())
                 })
                 .collect()
         } else if let Some(obj) = config.as_object() {
@@ -112,7 +114,8 @@ pub fn scan_agents() -> Vec<AgentEntry> {
                 continue;
             }
 
-            let name = path.file_stem()
+            let name = path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_string();
@@ -140,7 +143,10 @@ pub fn scan_plugins() -> Vec<PluginEntry> {
         None => return vec![],
     };
 
-    let installed_file = home.join(".claude").join("plugins").join("installed_plugins.json");
+    let installed_file = home
+        .join(".claude")
+        .join("plugins")
+        .join("installed_plugins.json");
     let content = match fs::read_to_string(&installed_file) {
         Ok(c) => c,
         Err(_) => return vec![],
@@ -161,9 +167,19 @@ pub fn scan_plugins() -> Vec<PluginEntry> {
     for (name, entries) in plugins {
         if let Some(arr) = entries.as_array() {
             for entry in arr {
-                let scope = entry.get("scope").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-                let version = entry.get("version").and_then(|v| v.as_str()).map(|s| s.to_string());
-                let install_path = entry.get("installPath").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let scope = entry
+                    .get("scope")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let version = entry
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let install_path = entry
+                    .get("installPath")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
 
                 results.push(PluginEntry {
                     name: name.clone(),
@@ -248,7 +264,11 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let agents_dir = dir.path().join("agents");
         fs::create_dir_all(&agents_dir).unwrap();
-        fs::write(agents_dir.join("reviewer.md"), "# Reviewer\n\nReviews code changes.\n").unwrap();
+        fs::write(
+            agents_dir.join("reviewer.md"),
+            "# Reviewer\n\nReviews code changes.\n",
+        )
+        .unwrap();
         fs::write(agents_dir.join("tester.md"), "Runs tests automatically.\n").unwrap();
 
         // Can't test scan_agents directly (hardcoded home), but test extraction
@@ -259,7 +279,8 @@ mod tests {
 
     #[test]
     fn test_extract_first_paragraph_with_frontmatter() {
-        let content = "---\nname: test\n---\n\n# Title\n\nFirst real paragraph here.\n\nSecond para.";
+        let content =
+            "---\nname: test\n---\n\n# Title\n\nFirst real paragraph here.\n\nSecond para.";
         let desc = extract_first_paragraph(content);
         assert_eq!(desc, Some("First real paragraph here.".to_string()));
     }

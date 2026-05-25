@@ -1,26 +1,26 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { Route, Routes, useLocation, type Location } from "react-router-dom";
-import Layout from "./components/Layout";
-import { GlobalLoading } from "./components/GlobalLoading";
-import { api } from "./lib/api";
-import { logger } from "./lib/logger";
-import { BOOT_MIN_DISPLAY_MS, BOOT_TIMEOUT_MS } from "./lib/constants";
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Route, Routes, useLocation, type Location } from 'react-router-dom';
+import Layout from './components/Layout';
+import { GlobalLoading } from './components/GlobalLoading';
+import { api } from './lib/api';
+import { logger } from './lib/logger';
+import { BOOT_MIN_DISPLAY_MS, BOOT_TIMEOUT_MS } from './lib/constants';
 
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const SkillsView = lazy(() => import("./pages/SkillsView"));
-const SkillDetailView = lazy(() => import("./pages/SkillDetailView"));
-const MCPsView = lazy(() => import("./pages/MCPsView"));
-const MCPDetailView = lazy(() => import("./pages/MCPDetailView"));
-const ExtensionsView = lazy(() => import("./pages/ExtensionsView"));
-const AgentDetailView = lazy(() => import("./pages/AgentDetailView"));
-const UsageView = lazy(() => import("./pages/UsageView"));
-const SessionsView = lazy(() => import("./pages/SessionsView"));
-const SessionsTrashView = lazy(() => import("./pages/SessionsTrashView"));
-const SessionDetailView = lazy(() => import("./pages/SessionDetailView"));
-const FavoritesView = lazy(() => import("./pages/FavoritesView"));
-const SettingsView = lazy(() => import("./pages/SettingsView"));
-const LogsView = lazy(() => import("./pages/LogsView"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const SkillsView = lazy(() => import('./pages/SkillsView'));
+const SkillDetailView = lazy(() => import('./pages/SkillDetailView'));
+const MCPsView = lazy(() => import('./pages/MCPsView'));
+const MCPDetailView = lazy(() => import('./pages/MCPDetailView'));
+const ExtensionsView = lazy(() => import('./pages/ExtensionsView'));
+const AgentDetailView = lazy(() => import('./pages/AgentDetailView'));
+const UsageView = lazy(() => import('./pages/UsageView'));
+const SessionsView = lazy(() => import('./pages/SessionsView'));
+const SessionsTrashView = lazy(() => import('./pages/SessionsTrashView'));
+const SessionDetailView = lazy(() => import('./pages/SessionDetailView'));
+const FavoritesView = lazy(() => import('./pages/FavoritesView'));
+const SettingsView = lazy(() => import('./pages/SettingsView'));
+const LogsView = lazy(() => import('./pages/LogsView'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 /**
  * Modal Route Pattern (React Router's recommended way to do
@@ -51,10 +51,7 @@ export default function App() {
     const startTime = Date.now();
     const boot = async () => {
       try {
-        await Promise.all([
-          api.health(),
-          api.stats(),
-        ]);
+        await Promise.all([api.health(), api.stats()]);
       } catch {
         // Server not available — proceed after timeout
       }
@@ -80,7 +77,7 @@ function AppRoutes() {
 
   useEffect(() => {
     if (location.pathname !== prevPath.current) {
-      logger.info("navigation", `Navigate to ${location.pathname}`);
+      logger.info('navigation', `Navigate to ${location.pathname}`);
       prevPath.current = location.pathname;
     }
   }, [location.pathname]);
@@ -90,9 +87,7 @@ function AppRoutes() {
       overlay={
         background ? (
           <Suspense
-            fallback={
-              <div className="p-12 text-center text-muted-foreground text-sm">加载中…</div>
-            }
+            fallback={<div className="p-12 text-center text-muted-foreground text-sm">加载中…</div>}
           >
             <Routes>
               <Route path="/sessions/:id" element={<SessionDetailView />} />
@@ -105,9 +100,7 @@ function AppRoutes() {
       }
     >
       <Suspense
-        fallback={
-          <div className="p-12 text-center text-muted-foreground text-sm">加载中…</div>
-        }
+        fallback={<div className="p-12 text-center text-muted-foreground text-sm">加载中…</div>}
       >
         {/* Base routes — driven by background location when present
          *  so the list page stays mounted while detail overlays. */}

@@ -114,6 +114,9 @@ importers:
       postcss:
         specifier: ^8.4.49
         version: 8.5.14
+      prettier:
+        specifier: ^3.6.0
+        version: 3.8.3
       tailwind-merge:
         specifier: ^2.5.5
         version: 2.6.1
@@ -1968,6 +1971,11 @@ packages:
   postcss@8.5.14:
     resolution: {integrity: sha1-pmwteAj632nrtbhKA/i6/XbEkZw=, tarball: http://r.npm.sankuai.com/postcss/download/postcss-8.5.14.tgz}
     engines: {node: ^10 || ^12 || >=14}
+
+  prettier@3.8.3:
+    resolution: {integrity: sha1-Vg8t5VvwG0wFA7xinV35m5odCbA=, tarball: http://r.npm.sankuai.com/prettier/download/prettier-3.8.3.tgz}
+    engines: {node: '>=14'}
+    hasBin: true
 
   pretty-format@27.5.1:
     resolution: {integrity: sha1-IYGHn96lGnpYUfs52SD6pj8B2I4=, tarball: http://r.npm.sankuai.com/pretty-format/download/pretty-format-27.5.1.tgz}
@@ -4383,6 +4391,8 @@ snapshots:
       nanoid: 3.3.12
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  prettier@3.8.3: {}
 
   pretty-format@27.5.1:
     dependencies:

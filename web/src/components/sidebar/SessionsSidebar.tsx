@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
-import { Search, Plus, X, RotateCw, Layers, ChevronsDownUp } from "lucide-react";
-import { api } from "@/lib/api";
-import { SIDEBAR_SESSION_LIMIT } from "@/lib/constants";
-import { invalidateAsyncCache, useCachedAsync } from "@/lib/hooks";
-import { useAppEvent } from "@/lib/events";
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { Search, Plus, X, RotateCw, Layers, ChevronsDownUp } from 'lucide-react';
+import { api } from '@/lib/api';
+import { SIDEBAR_SESSION_LIMIT } from '@/lib/constants';
+import { invalidateAsyncCache, useCachedAsync } from '@/lib/hooks';
+import { useAppEvent } from '@/lib/events';
 import {
   buildProjectFolders,
   autoExpandForSession,
   normalizeCwd,
   folderHasSource,
-} from "@/lib/sidebar-groups";
+} from '@/lib/sidebar-groups';
 import {
   loadExpandedProjects,
   saveExpandedProjects,
@@ -18,16 +18,12 @@ import {
   savePinnedCwds,
   loadRemovedCwds,
   saveRemovedCwds,
-} from "@/lib/sidebar-state";
-import { ProjectFolderItem } from "./ProjectFolderItem";
-import { cn, describeSessionSource } from "@/lib/utils";
-import type { SessionSource } from "@/lib/api";
+} from '@/lib/sidebar-state';
+import { ProjectFolderItem } from './ProjectFolderItem';
+import { cn, describeSessionSource } from '@/lib/utils';
+import type { SessionSource } from '@/lib/api';
 
-const ALL_SOURCES: SessionSource[] = [
-  "claude-code",
-  "cursor-agent",
-  "codex",
-];
+const ALL_SOURCES: SessionSource[] = ['claude-code', 'cursor-agent', 'codex'];
 
 export function SessionsSidebar() {
   const navigate = useNavigate();
@@ -35,17 +31,18 @@ export function SessionsSidebar() {
   const [searchParams] = useSearchParams();
   // SessionsView uses `?id=` to open the drawer; we treat it as "the focused
   // session" so the sidebar can highlight + auto-expand the right folder.
-  const focusedSessionId = searchParams.get("id") || undefined;
+  const focusedSessionId = searchParams.get('id') || undefined;
 
   // Server data — cached so the sidebar mounts instantly on
   // /sessions after a detail-page round trip (no spinner / re-fetch
   // flash).
   const { data: sessionsData, refetch } = useCachedAsync(
-    "sidebar:sessions",
-    () => api.sessionsList({ limit: SIDEBAR_SESSION_LIMIT }), [],
+    'sidebar:sessions',
+    () => api.sessionsList({ limit: SIDEBAR_SESSION_LIMIT }),
+    [],
   );
   const { data: favoritesData, refetch: refetchFavs } = useCachedAsync(
-    "sidebar:favorites",
+    'sidebar:favorites',
     () => api.favoritesList(),
     [],
   );
@@ -54,13 +51,13 @@ export function SessionsSidebar() {
   // (SessionsView, SessionDetailView, FavoritesView) reports a mutation.
   // Prevents the "I deleted in detail view, sidebar still shows the row
   // until I refresh manually" problem the user flagged.
-  useAppEvent("sessions:changed", () => {
-    invalidateAsyncCache("sidebar:sessions");
+  useAppEvent('sessions:changed', () => {
+    invalidateAsyncCache('sidebar:sessions');
     refetch();
     refetchFavs();
   });
-  useAppEvent("favorites:changed", () => {
-    invalidateAsyncCache("sidebar:favorites");
+  useAppEvent('favorites:changed', () => {
+    invalidateAsyncCache('sidebar:favorites');
     refetchFavs();
   });
 
@@ -72,7 +69,7 @@ export function SessionsSidebar() {
   const [expanded, setExpanded] = useState<Set<string>>(() => loadExpandedProjects());
   const [pinned, setPinned] = useState<string[]>(() => loadPinnedCwds());
   const [removed, setRemoved] = useState<string[]>(() => loadRemovedCwds());
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [activeSources, setActiveSources] = useState<Set<SessionSource>>(
     () => new Set(ALL_SOURCES),
   );
@@ -86,9 +83,7 @@ export function SessionsSidebar() {
   // doesn't block future sessions under that cwd from appearing.
   useEffect(() => {
     if (!sessionsData?.sessions?.length || removed.length === 0) return;
-    const liveCwds = new Set(
-      sessionsData.sessions.map((s) => normalizeCwd(s.cwd)),
-    );
+    const liveCwds = new Set(sessionsData.sessions.map((s) => normalizeCwd(s.cwd)));
     const stale = removed.filter((cwd) => !liveCwds.has(cwd));
     if (stale.length > 0) {
       setRemoved((prev) => prev.filter((c) => !stale.includes(c)));
@@ -114,10 +109,11 @@ export function SessionsSidebar() {
     // users can still browse; for partially-matching ones we filter convos.
     const out: typeof all = [];
     for (const f of all) {
-      const folderHit = (f.label + " " + f.cwd).toLowerCase().includes(q);
-      const matched = f.conversations.filter((c) =>
-        c.title.toLowerCase().includes(q) ||
-        c.sessions.some((s) => (s.firstUserMessage ?? "").toLowerCase().includes(q)),
+      const folderHit = (f.label + ' ' + f.cwd).toLowerCase().includes(q);
+      const matched = f.conversations.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.sessions.some((s) => (s.firstUserMessage ?? '').toLowerCase().includes(q)),
       );
       if (folderHit) {
         out.push(f);
@@ -176,8 +172,8 @@ export function SessionsSidebar() {
 
   const onAllProjects = () => {
     // Clear `?id=` (close any open drawer) and land on /sessions.
-    if (location.pathname !== "/sessions" || location.search) {
-      navigate("/sessions");
+    if (location.pathname !== '/sessions' || location.search) {
+      navigate('/sessions');
     }
   };
 
@@ -230,7 +226,7 @@ export function SessionsSidebar() {
           />
           {query && (
             <button
-              onClick={() => setQuery("")}
+              onClick={() => setQuery('')}
               title="清空"
               className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-muted-foreground"
             >
@@ -249,10 +245,10 @@ export function SessionsSidebar() {
               key={s}
               onClick={() => toggleSource(s)}
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors",
+                'rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors',
                 on
-                  ? "bg-accent/15 text-fg ring-1 ring-inset ring-accent/30"
-                  : "bg-secondary/40 text-muted-foreground hover:bg-secondary",
+                  ? 'bg-accent/15 text-fg ring-1 ring-inset ring-accent/30'
+                  : 'bg-secondary/40 text-muted-foreground hover:bg-secondary',
               )}
               title={on ? `隐藏 ${describeSessionSource(s)}` : `显示 ${describeSessionSource(s)}`}
             >
@@ -266,8 +262,8 @@ export function SessionsSidebar() {
       <button
         onClick={onAllProjects}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-fg",
-          location.pathname === "/sessions" && !focusedSessionId && "bg-secondary/60 text-fg",
+          'flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-fg',
+          location.pathname === '/sessions' && !focusedSessionId && 'bg-secondary/60 text-fg',
         )}
       >
         <Layers className="size-3.5 text-muted-foreground" />
@@ -278,7 +274,7 @@ export function SessionsSidebar() {
       <div className="flex-1 overflow-y-auto py-1">
         {folders.length === 0 ? (
           <div className="px-3 py-6 text-center text-[11px] text-muted-foreground">
-            {query ? "无匹配项目" : "无会话"}
+            {query ? '无匹配项目' : '无会话'}
           </div>
         ) : (
           <div className="space-y-0.5">
@@ -318,13 +314,14 @@ export function SessionsSidebar() {
 
 function sourceShortLabel(s: SessionSource): string {
   switch (s) {
-    case "claude-code":
-      return "CC";
-    case "cursor-agent":
-      return "Cursor·agent";
-    case "codex":
-      return "Codex";
+    case 'claude-code':
+      return 'CC';
+    case 'cursor-agent':
+      return 'Cursor·agent';
+    case 'codex':
+      return 'Codex';
 
-    default: return s;
+    default:
+      return s;
   }
 }

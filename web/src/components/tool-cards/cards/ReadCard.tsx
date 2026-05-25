@@ -1,9 +1,14 @@
-import { useMemo } from "react";
-import hljs from "highlight.js";
-import { extractOutputText, getLanguageFromPath, isImagePath, shortenPath } from "@/lib/tool-rendering";
-import type { Message } from "@/lib/api";
-import { CopyButton } from "../ToolCardHeader";
-import { HIGHLIGHT_SIZE_LIMIT, HIGHLIGHT_LINE_LIMIT } from "@/lib/constants";
+import { useMemo } from 'react';
+import hljs from 'highlight.js';
+import {
+  extractOutputText,
+  getLanguageFromPath,
+  isImagePath,
+  shortenPath,
+} from '@/lib/tool-rendering';
+import type { Message } from '@/lib/api';
+import { CopyButton } from '../ToolCardHeader';
+import { HIGHLIGHT_SIZE_LIMIT, HIGHLIGHT_LINE_LIMIT } from '@/lib/constants';
 
 interface Props {
   tool: Message;
@@ -12,7 +17,8 @@ interface Props {
 
 export function ReadCard({ tool, result }: Props) {
   const input = (tool.toolInput as Record<string, unknown> | undefined) ?? {};
-  const filePath = (input.file_path as string) || (input.path as string) || (input.filePath as string) || "";
+  const filePath =
+    (input.file_path as string) || (input.path as string) || (input.filePath as string) || '';
   const lang = getLanguageFromPath(filePath);
   const output = result?.toolOutput ?? extractOutputText(tool.toolOutput);
   const startLine = numberFrom(input.offset) ?? numberFrom(input.start_line) ?? 1;
@@ -26,7 +32,7 @@ export function ReadCard({ tool, result }: Props) {
     return tur?.file;
   }, [result]);
 
-  const content = structured?.content ?? output ?? "";
+  const content = structured?.content ?? output ?? '';
   const realStartLine = structured?.startLine ?? startLine;
   const totalLines = structured?.totalLines;
 
@@ -56,24 +62,32 @@ export function ReadCard({ tool, result }: Props) {
 }
 
 function numberFrom(v: unknown): number | undefined {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
     const n = parseInt(v, 10);
     return Number.isFinite(n) ? n : undefined;
   }
   return undefined;
 }
 
-function CodeWithLineNumbers({ code, lang, startLine }: { code: string; lang: string; startLine: number }) {
+function CodeWithLineNumbers({
+  code,
+  lang,
+  startLine,
+}: {
+  code: string;
+  lang: string;
+  startLine: number;
+}) {
   const html = useMemo(() => renderCode(code, lang), [code, lang]);
-  const lineCount = code.split("\n").length;
+  const lineCount = code.split('\n').length;
 
   return (
     <div className="overflow-auto rounded-md border border-border bg-background/60 font-mono text-[11px] leading-snug">
       <table className="w-full border-collapse">
         <tbody>
           {Array.from({ length: lineCount }).map((_, i) => {
-            const lineHtml = html[i] ?? "";
+            const lineHtml = html[i] ?? '';
             return (
               <tr key={i}>
                 <td className="select-none whitespace-nowrap border-r border-border/40 bg-background/40 px-2 py-px text-right text-muted-foreground tabular-nums">
@@ -81,7 +95,7 @@ function CodeWithLineNumbers({ code, lang, startLine }: { code: string; lang: st
                 </td>
                 <td
                   className="whitespace-pre-wrap break-all px-2 py-px text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: lineHtml || "&nbsp;" }}
+                  dangerouslySetInnerHTML={{ __html: lineHtml || '&nbsp;' }}
                 />
               </tr>
             );
@@ -94,21 +108,18 @@ function CodeWithLineNumbers({ code, lang, startLine }: { code: string; lang: st
 
 function renderCode(code: string, lang: string): string[] {
   const escaped = escape(code);
-  if (!lang || !hljs.getLanguage(lang)) return escaped.split("\n");
-  if (code.length > HIGHLIGHT_SIZE_LIMIT || code.split("\n").length > HIGHLIGHT_LINE_LIMIT) {
+  if (!lang || !hljs.getLanguage(lang)) return escaped.split('\n');
+  if (code.length > HIGHLIGHT_SIZE_LIMIT || code.split('\n').length > HIGHLIGHT_LINE_LIMIT) {
     // Skip highlighting for huge files — keep page snappy.
-    return escaped.split("\n");
+    return escaped.split('\n');
   }
   try {
-    return hljs.highlight(code, { language: lang }).value.split("\n");
+    return hljs.highlight(code, { language: lang }).value.split('\n');
   } catch {
-    return escaped.split("\n");
+    return escaped.split('\n');
   }
 }
 
 function escape(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

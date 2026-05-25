@@ -1,9 +1,7 @@
 use std::fs;
 use std::path::Path;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{
-    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer,
-};
+use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 pub struct LogGuards {
     _file_guard: WorkerGuard,

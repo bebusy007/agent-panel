@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { ChevronDown, ChevronUp, Search as SearchIcon, X } from "lucide-react";
-import { centerMarkInScroller, highlightDom } from "@/lib/highlight";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { ChevronDown, ChevronUp, Search as SearchIcon, X } from 'lucide-react';
+import { centerMarkInScroller, highlightDom } from '@/lib/highlight';
+import { cn } from '@/lib/utils';
 
 interface UseInPaneSearchOpts {
   /** Element whose descendants should be searched & highlighted. */
@@ -21,7 +21,7 @@ interface InPaneSearchState {
   setQuery: (q: string) => void;
   total: number;
   activeIndex: number;
-  navigate: (dir: "next" | "prev") => void;
+  navigate: (dir: 'next' | 'prev') => void;
   reset: () => void;
 }
 
@@ -36,7 +36,7 @@ export function useInPaneSearch({
   contentKey,
 }: UseInPaneSearchOpts): InPaneSearchState {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [total, setTotal] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -58,9 +58,7 @@ export function useInPaneSearch({
     const container = containerRef.current;
     if (!container || !query.trim()) return;
     const result = highlightDom(container, query);
-    const marks = Array.from(
-      container.querySelectorAll<HTMLElement>("mark.search-mark")
-    );
+    const marks = Array.from(container.querySelectorAll<HTMLElement>('mark.search-mark'));
     marksRef.current = marks;
     cleanupRef.current = result.cleanup;
     setTotal(marks.length);
@@ -77,48 +75,48 @@ export function useInPaneSearch({
     const container = containerRef.current;
     if (!container) return;
     container
-      .querySelectorAll<HTMLElement>("mark.search-mark-active")
-      .forEach((el) => el.classList.remove("search-mark-active"));
+      .querySelectorAll<HTMLElement>('mark.search-mark-active')
+      .forEach((el) => el.classList.remove('search-mark-active'));
     if (activeIndex < 0) return;
     const target = marksRef.current[activeIndex];
     if (!target) return;
-    target.classList.add("search-mark-active");
+    target.classList.add('search-mark-active');
     centerMarkInScroller(target);
   }, [activeIndex, containerRef]);
 
   // Cmd+F / Ctrl+F to open, Escape to close.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
         // Only intercept when the drawer we belong to is actually rendered.
         if (!containerRef.current) return;
         e.preventDefault();
         setOpen(true);
       }
-      if (e.key === "Escape" && open) {
+      if (e.key === 'Escape' && open) {
         setOpen(false);
-        setQuery("");
+        setQuery('');
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, containerRef]);
 
   const navigate = useCallback(
-    (dir: "next" | "prev") => {
+    (dir: 'next' | 'prev') => {
       if (total <= 0) return;
       setActiveIndex((cur) => {
         if (cur < 0) return 0;
-        if (dir === "next") return cur + 1 >= total ? 0 : cur + 1;
+        if (dir === 'next') return cur + 1 >= total ? 0 : cur + 1;
         return cur - 1 < 0 ? total - 1 : cur - 1;
       });
     },
-    [total]
+    [total],
   );
 
   const reset = useCallback(() => {
     setOpen(false);
-    setQuery("");
+    setQuery('');
   }, []);
 
   return { open, setOpen, query, setQuery, total, activeIndex, navigate, reset };
@@ -131,7 +129,7 @@ export function useInPaneSearch({
 export function InPaneSearchBar({
   state,
   inputId,
-  placeholder = "在此内容里搜索…",
+  placeholder = '在此内容里搜索…',
 }: {
   state: InPaneSearchState;
   inputId?: string;
@@ -144,10 +142,10 @@ export function InPaneSearchBar({
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5 border transition-colors",
+          'inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5 border transition-colors',
           open
-            ? "border-accent/50 bg-accent/10 text-accent"
-            : "border-border text-muted-foreground hover:border-border"
+            ? 'border-accent/50 bg-accent/10 text-accent'
+            : 'border-border text-muted-foreground hover:border-border',
         )}
         title="在此详情内搜索 (Cmd+F)"
       >
@@ -161,9 +159,9 @@ export function InPaneSearchBar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === 'Enter') {
                 e.preventDefault();
-                navigate(e.shiftKey ? "prev" : "next");
+                navigate(e.shiftKey ? 'prev' : 'next');
               }
             }}
             placeholder={placeholder}
@@ -178,7 +176,7 @@ export function InPaneSearchBar({
             <span className="text-[11px] text-muted-foreground whitespace-nowrap">无匹配</span>
           )}
           <button
-            onClick={() => navigate("prev")}
+            onClick={() => navigate('prev')}
             disabled={total === 0}
             className="p-1 rounded hover:bg-secondary text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="上一个 (Shift+Enter)"
@@ -186,7 +184,7 @@ export function InPaneSearchBar({
             <ChevronUp className="size-4" />
           </button>
           <button
-            onClick={() => navigate("next")}
+            onClick={() => navigate('next')}
             disabled={total === 0}
             className="p-1 rounded hover:bg-secondary text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="下一个 (Enter)"

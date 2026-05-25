@@ -5,61 +5,71 @@
  */
 
 const LANG_BY_EXT: Record<string, string> = {
-  ts: "typescript",
-  tsx: "typescript",
-  js: "javascript",
-  jsx: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  json: "json",
-  jsonc: "json",
-  md: "markdown",
-  markdown: "markdown",
-  py: "python",
-  go: "go",
-  rs: "rust",
-  java: "java",
-  kt: "kotlin",
-  swift: "swift",
-  m: "objectivec",
-  mm: "objectivec",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  hpp: "cpp",
-  cc: "cpp",
-  cs: "csharp",
-  rb: "ruby",
-  php: "php",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  fish: "bash",
-  yml: "yaml",
-  yaml: "yaml",
-  toml: "toml",
-  xml: "xml",
-  html: "xml",
-  htm: "xml",
-  css: "css",
-  scss: "scss",
-  sass: "scss",
-  less: "less",
-  sql: "sql",
-  svelte: "xml",
-  vue: "xml",
-  proto: "protobuf",
+  ts: 'typescript',
+  tsx: 'typescript',
+  js: 'javascript',
+  jsx: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  json: 'json',
+  jsonc: 'json',
+  md: 'markdown',
+  markdown: 'markdown',
+  py: 'python',
+  go: 'go',
+  rs: 'rust',
+  java: 'java',
+  kt: 'kotlin',
+  swift: 'swift',
+  m: 'objectivec',
+  mm: 'objectivec',
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  hpp: 'cpp',
+  cc: 'cpp',
+  cs: 'csharp',
+  rb: 'ruby',
+  php: 'php',
+  sh: 'bash',
+  bash: 'bash',
+  zsh: 'bash',
+  fish: 'bash',
+  yml: 'yaml',
+  yaml: 'yaml',
+  toml: 'toml',
+  xml: 'xml',
+  html: 'xml',
+  htm: 'xml',
+  css: 'css',
+  scss: 'scss',
+  sass: 'scss',
+  less: 'less',
+  sql: 'sql',
+  svelte: 'xml',
+  vue: 'xml',
+  proto: 'protobuf',
 };
 
 export function getLanguageFromPath(path?: string): string {
-  if (!path) return "";
+  if (!path) return '';
   const m = path.match(/\.([a-zA-Z0-9]+)$/);
-  if (!m) return "";
-  return LANG_BY_EXT[m[1].toLowerCase()] ?? "";
+  if (!m) return '';
+  return LANG_BY_EXT[m[1].toLowerCase()] ?? '';
 }
 
 const IMAGE_EXTS = new Set([
-  "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif", "tiff", "tif",
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'svg',
+  'bmp',
+  'ico',
+  'avif',
+  'tiff',
+  'tif',
 ]);
 
 export function isImagePath(path?: string): boolean {
@@ -71,22 +81,24 @@ export function isImagePath(path?: string): boolean {
 
 /** Best-effort: render any tool output into a single string. */
 export function extractOutputText(output: unknown): string {
-  if (!output) return "";
-  if (typeof output === "string") return output;
+  if (!output) return '';
+  if (typeof output === 'string') return output;
   if (Array.isArray(output)) {
     return output
       .map((x) =>
-        x && typeof x === "object" && typeof (x as Record<string, unknown>).text === "string"
+        x && typeof x === 'object' && typeof (x as Record<string, unknown>).text === 'string'
           ? ((x as Record<string, unknown>).text as string)
-          : typeof x === "string" ? x : "",
+          : typeof x === 'string'
+            ? x
+            : '',
       )
       .filter(Boolean)
-      .join("\n");
+      .join('\n');
   }
-  if (typeof output === "object") {
+  if (typeof output === 'object') {
     const o = output as Record<string, unknown>;
-    if (typeof o.text === "string") return o.text;
-    if (typeof o.content === "string") return o.content;
+    if (typeof o.text === 'string') return o.text;
+    if (typeof o.content === 'string') return o.content;
     if (Array.isArray(o.content)) return extractOutputText(o.content);
     try {
       return JSON.stringify(o, null, 2);
@@ -100,8 +112,8 @@ export function extractOutputText(output: unknown): string {
 /** Strip the trailing "/Users/foo/bar" prefix down to the last 2 segments
  *  for a more compact path label. */
 export function shortenPath(p: string): string {
-  if (!p) return "";
-  const parts = p.split("/").filter(Boolean);
+  if (!p) return '';
+  const parts = p.split('/').filter(Boolean);
   if (parts.length <= 2) return p;
-  return "…/" + parts.slice(-2).join("/");
+  return '…/' + parts.slice(-2).join('/');
 }

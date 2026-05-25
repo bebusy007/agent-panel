@@ -1,21 +1,41 @@
-import { useState } from "react";
-import { cn, copyToClipboard } from "@/lib/utils";
-import { parseXmlTag, type ParsedXmlBlock } from "@/lib/xml-tag-parser";
-import { xmlTagRegistry, resolveDisplay, type XmlTagConfig } from "@/lib/xml-tag-registry";
-import { MarkdownWithHighlight } from "./MarkdownWithHighlight";
-import { COPY_FEEDBACK_MS } from "@/lib/constants";
-import { Check, Copy, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { useState } from 'react';
+import { cn, copyToClipboard } from '@/lib/utils';
+import { parseXmlTag, type ParsedXmlBlock } from '@/lib/xml-tag-parser';
+import { xmlTagRegistry, resolveDisplay, type XmlTagConfig } from '@/lib/xml-tag-registry';
+import { MarkdownWithHighlight } from './MarkdownWithHighlight';
+import { COPY_FEEDBACK_MS } from '@/lib/constants';
+import { Check, Copy, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 
 const COLOR_MAP: Record<string, { bg: string; border: string; text: string; badgeBg: string }> = {
-  blue: { bg: "bg-blue-500/5", border: "border-blue-500/20", text: "text-blue-400", badgeBg: "bg-blue-500/15" },
-  amber: { bg: "bg-amber-500/5", border: "border-amber-500/20", text: "text-amber-400", badgeBg: "bg-amber-500/15" },
-  cyan: { bg: "bg-cyan-500/5", border: "border-cyan-500/20", text: "text-cyan-400", badgeBg: "bg-cyan-500/15" },
-  green: { bg: "bg-emerald-500/5", border: "border-emerald-500/20", text: "text-emerald-400", badgeBg: "bg-emerald-500/15" },
+  blue: {
+    bg: 'bg-blue-500/5',
+    border: 'border-blue-500/20',
+    text: 'text-blue-400',
+    badgeBg: 'bg-blue-500/15',
+  },
+  amber: {
+    bg: 'bg-amber-500/5',
+    border: 'border-amber-500/20',
+    text: 'text-amber-400',
+    badgeBg: 'bg-amber-500/15',
+  },
+  cyan: {
+    bg: 'bg-cyan-500/5',
+    border: 'border-cyan-500/20',
+    text: 'text-cyan-400',
+    badgeBg: 'bg-cyan-500/15',
+  },
+  green: {
+    bg: 'bg-emerald-500/5',
+    border: 'border-emerald-500/20',
+    text: 'text-emerald-400',
+    badgeBg: 'bg-emerald-500/15',
+  },
 };
 
 function MetaPill({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
-  const short = value.length > 16 ? value.slice(0, 14) + "…" : value;
+  const short = value.length > 16 ? value.slice(0, 14) + '…' : value;
   return (
     <button
       title={`${label}:${value}`}
@@ -28,14 +48,18 @@ function MetaPill({ label, value }: { label: string; value: string }) {
     >
       <span className="opacity-60">{label}:</span>
       <span className="max-w-[100px] truncate">{short}</span>
-      {copied ? <Check className="ml-0.5 size-2.5 text-emerald-400" /> : <Copy className="ml-0.5 size-2.5 opacity-30" />}
+      {copied ? (
+        <Check className="ml-0.5 size-2.5 text-emerald-400" />
+      ) : (
+        <Copy className="ml-0.5 size-2.5 opacity-30" />
+      )}
     </button>
   );
 }
 
 function parseUsage(text: string): Record<string, string> {
   const result: Record<string, string> = {};
-  for (const line of text.split("\n")) {
+  for (const line of text.split('\n')) {
     const m = line.match(/^\s*<([\w_]+)>(.*?)<\/\1>/);
     if (m) {
       result[m[1]] = m[2].trim();
@@ -60,12 +84,20 @@ function UsageStats({ text }: { text: string }) {
   if (items.length === 0) return null;
   return (
     <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-t border-border/30">
-      {items.join(" · ")}
+      {items.join(' · ')}
     </div>
   );
 }
 
-function MarkdownSection({ label, content, highlight }: { label: string; content: string; highlight?: string }) {
+function MarkdownSection({
+  label,
+  content,
+  highlight,
+}: {
+  label: string;
+  content: string;
+  highlight?: string;
+}) {
   const [open, setOpen] = useState(content.length < 500);
   return (
     <div className="px-3 py-2">
@@ -118,17 +150,15 @@ function SingleBlock({
     .map((f) => sectionMap.get(f))
     .filter((x): x is string => !!x);
 
-  const plainTexts = block.sections
-    .filter((s) => s.tag === "__text__")
-    .map((s) => s.content);
+  const plainTexts = block.sections.filter((s) => s.tag === '__text__').map((s) => s.content);
 
   const hasNoSubTags = config.markdownFields.length === 0;
 
   return (
-    <div className={cn("rounded-md border overflow-hidden", palette.border, palette.bg)}>
-      <div className={cn("flex items-center gap-2 px-3 py-1.5 border-b", palette.border)}>
-        <Icon className={cn("size-3", palette.text)} />
-        <span className={cn("text-[11px] font-medium", palette.text)}>{name}</span>
+    <div className={cn('rounded-md border overflow-hidden', palette.border, palette.bg)}>
+      <div className={cn('flex items-center gap-2 px-3 py-1.5 border-b', palette.border)}>
+        <Icon className={cn('size-3', palette.text)} />
+        <span className={cn('text-[11px] font-medium', palette.text)}>{name}</span>
       </div>
 
       {metaItems.length > 0 && (
@@ -139,7 +169,7 @@ function SingleBlock({
         </div>
       )}
 
-      {(hasNoSubTags) && plainTexts.length > 0 && (
+      {hasNoSubTags && plainTexts.length > 0 && (
         <div className="px-3 py-2 text-sm">
           {plainTexts.map((txt, i) => (
             <PlainTextOrJson key={i} text={txt} highlight={highlight} />
@@ -148,7 +178,12 @@ function SingleBlock({
       )}
 
       {mdItems.map((item) => (
-        <MarkdownSection key={item.label} label={item.label} content={item.content} highlight={highlight} />
+        <MarkdownSection
+          key={item.label}
+          label={item.label}
+          content={item.content}
+          highlight={highlight}
+        />
       ))}
 
       {statsItems.map((s, i) => (
@@ -161,38 +196,38 @@ function SingleBlock({
 /** Render plain text sections: detect JSON events for special rendering. */
 function PlainTextOrJson({ text, highlight }: { text: string; highlight?: string }) {
   const trimmed = text.trim();
-  if (trimmed.startsWith("{")) {
+  if (trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(trimmed);
-      if (parsed && typeof parsed === "object" && "type" in parsed) {
+      if (parsed && typeof parsed === 'object' && 'type' in parsed) {
         const eventType = parsed.type as string;
-        if (eventType === "idle_notification") {
+        if (eventType === 'idle_notification') {
           return (
             <div className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-[11px] text-muted-foreground">
               <Clock className="size-3" /> 空闲中
             </div>
           );
         }
-        if (eventType === "teammate_terminated") {
+        if (eventType === 'teammate_terminated') {
           return (
             <div className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-[11px] text-muted-foreground">
               <Clock className="size-3" /> 已退出
             </div>
           );
         }
-        if (eventType === "shutdown_approved") {
+        if (eventType === 'shutdown_approved') {
           return (
             <div className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-[11px] text-muted-foreground">
               <Clock className="size-3" /> 已关闭
             </div>
           );
         }
-        if (eventType === "task_assignment") {
-          const subject = parsed.subject ?? parsed.task?.subject ?? "";
-          const assignee = parsed.assignee ?? parsed.task?.assignee ?? "";
+        if (eventType === 'task_assignment') {
+          const subject = parsed.subject ?? parsed.task?.subject ?? '';
+          const assignee = parsed.assignee ?? parsed.task?.assignee ?? '';
           return (
             <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-2">
-              <div className="text-[11px] font-medium text-fg">{subject || "Task Assignment"}</div>
+              <div className="text-[11px] font-medium text-fg">{subject || 'Task Assignment'}</div>
               {assignee && (
                 <div className="mt-0.5 text-[10px] text-muted-foreground">assignee: {assignee}</div>
               )}

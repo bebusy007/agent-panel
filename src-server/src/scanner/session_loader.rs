@@ -81,7 +81,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         }
 
         let uuid = entry.get("uuid").and_then(|v| v.as_str()).unwrap_or("");
-        let timestamp = entry.get("timestamp").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let timestamp = entry
+            .get("timestamp")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         // Codex format: {"type":"event_msg"|"response_item", "payload":{...}, "timestamp":"..."}
         if matches!(msg_type, "event_msg" | "response_item") {
@@ -92,7 +95,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         }
 
         // Non-message metadata entries → emit as role="meta"
-        if !matches!(msg_type, "user" | "assistant" | "tool_use" | "tool_result" | "system") {
+        if !matches!(
+            msg_type,
+            "user" | "assistant" | "tool_use" | "tool_result" | "system"
+        ) {
             idx += 1;
             let meta_text = extract_meta_summary(msg_type, &entry);
             messages.push(Message {
@@ -147,7 +153,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     let duration = entry.get("durationMs").and_then(|v| v.as_u64());
                     let msg_count = entry.get("messageCount").and_then(|v| v.as_u64());
                     match (duration, msg_count) {
-                        (Some(d), Some(c)) => format!("system/{st}: {c} msgs, {:.1}s", d as f64 / crate::constants::MS_PER_SECOND),
+                        (Some(d), Some(c)) => format!(
+                            "system/{st}: {c} msgs, {:.1}s",
+                            d as f64 / crate::constants::MS_PER_SECOND
+                        ),
                         _ => format!("system/{st}"),
                     }
                 }
@@ -158,7 +167,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 id: format!("{}-{}", uuid, idx),
                 role: "meta".to_string(),
                 text: Some(summary),
-                tool_name: Some(format!("system{}", subtype.map(|s| format!("/{s}")).unwrap_or_default())),
+                tool_name: Some(format!(
+                    "system{}",
+                    subtype.map(|s| format!("/{s}")).unwrap_or_default()
+                )),
                 tool_input: None,
                 tool_output: None,
                 tool_use_id: None,
@@ -174,7 +186,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
 
         let message_obj = entry.get("message");
         let content = message_obj.and_then(|m| m.get("content"));
-        let model = message_obj.and_then(|m| m.get("model")).and_then(|v| v.as_str()).map(|s| s.to_string());
+        let model = message_obj
+            .and_then(|m| m.get("model"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         // Extract content blocks
         let blocks = extract_blocks(content);
@@ -235,16 +250,26 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         // all text blocks are just `[Image: source: /path]` lines.
         // If so, back-fill paths onto the preceding message's images
         // and skip creating new Messages.
-        let all_paths: Vec<String> = blocks.iter()
-            .filter_map(|b| match b { ContentBlock::Text(t) => Some(t.as_str()), _ => None })
+        let all_paths: Vec<String> = blocks
+            .iter()
+            .filter_map(|b| match b {
+                ContentBlock::Text(t) => Some(t.as_str()),
+                _ => None,
+            })
             .flat_map(|t| extract_image_source_paths(t))
             .collect();
-        let text_blocks: Vec<&str> = blocks.iter()
-            .filter_map(|b| match b { ContentBlock::Text(t) => Some(t.as_str()), _ => None })
+        let text_blocks: Vec<&str> = blocks
+            .iter()
+            .filter_map(|b| match b {
+                ContentBlock::Text(t) => Some(t.as_str()),
+                _ => None,
+            })
             .collect();
         let is_pure_image_ref_entry = !text_blocks.is_empty()
             && !all_paths.is_empty()
-            && text_blocks.iter().all(|t| t.trim().starts_with("[Image: source:") && t.trim().ends_with(']'));
+            && text_blocks
+                .iter()
+                .all(|t| t.trim().starts_with("[Image: source:") && t.trim().ends_with(']'));
 
         if is_pure_image_ref_entry {
             // Back-fill cache_path onto the most recent message that has images
@@ -264,7 +289,8 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         // Multiple blocks: emit one Message per block.
         // Image blocks are back-filled onto the most recently emitted
         // Message (typically the preceding Text block).
-        let agent_hash_from_entry: Option<String> = entry.get("toolUseResult")
+        let agent_hash_from_entry: Option<String> = entry
+            .get("toolUseResult")
             .and_then(|tur| tur.get("agentId"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
@@ -274,7 +300,10 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
 
         for block in blocks {
             match block {
-                ContentBlock::Image { media_type, source_type } => {
+                ContentBlock::Image {
+                    media_type,
+                    source_type,
+                } => {
                     let meta = ImageMeta {
                         index: image_counter,
                         media_type,
@@ -290,12 +319,27 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 ContentBlock::Text(text) => {
                     idx += 1;
                     let id = format!("{}-b{}", uuid, idx);
-                    let role = if msg_type == "user" { "user" } else { "assistant" };
+                    let role = if msg_type == "user" {
+                        "user"
+                    } else {
+                        "assistant"
+                    };
                     let cursor_images: Vec<ImageMeta> = parse_cursor_image_refs(&text)
                         .into_iter()
-                        .map(|mut img| { img.index = { let i = image_counter; image_counter += 1; i }; img })
+                        .map(|mut img| {
+                            img.index = {
+                                let i = image_counter;
+                                image_counter += 1;
+                                i
+                            };
+                            img
+                        })
                         .collect();
-                    let images = if cursor_images.is_empty() { None } else { Some(cursor_images) };
+                    let images = if cursor_images.is_empty() {
+                        None
+                    } else {
+                        Some(cursor_images)
+                    };
                     messages.push(Message {
                         id,
                         role: role.to_string(),
@@ -312,7 +356,11 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                         agent_hash: None,
                     });
                 }
-                ContentBlock::ToolUse { name, input, tool_use_id } => {
+                ContentBlock::ToolUse {
+                    name,
+                    input,
+                    tool_use_id,
+                } => {
                     idx += 1;
                     let id = format!("{}-b{}", uuid, idx);
                     messages.push(Message {
@@ -331,7 +379,11 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                         agent_hash: None,
                     });
                 }
-                ContentBlock::ToolResult { content, tool_use_id, is_error } => {
+                ContentBlock::ToolResult {
+                    content,
+                    tool_use_id,
+                    is_error,
+                } => {
                     idx += 1;
                     let id = format!("{}-b{}", uuid, idx);
                     messages.push(Message {
@@ -342,7 +394,11 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                         tool_input: None,
                         tool_output: Some(content),
                         tool_use_id: Some(tool_use_id),
-                        tool_status: if is_error { Some("error".to_string()) } else { None },
+                        tool_status: if is_error {
+                            Some("error".to_string())
+                        } else {
+                            None
+                        },
                         timestamp: timestamp.clone(),
                         model: None,
                         images: None,
@@ -377,8 +433,11 @@ fn parse_codex_entry(
         match sub_type {
             "user_message" => {
                 let text = payload.get("message").and_then(|m| {
-                    m.as_str().map(|s| s.to_string())
-                        .or_else(|| m.get("content").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                    m.as_str().map(|s| s.to_string()).or_else(|| {
+                        m.get("content")
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.to_string())
+                    })
                 });
                 if let Some(t) = text {
                     if !t.trim().is_empty() {
@@ -387,10 +446,15 @@ fn parse_codex_entry(
                             id: format!("codex-{}", idx),
                             role: "user".to_string(),
                             text: Some(t),
-                            tool_name: None, tool_input: None, tool_output: None,
-                            tool_use_id: None, tool_status: None,
+                            tool_name: None,
+                            tool_input: None,
+                            tool_output: None,
+                            tool_use_id: None,
+                            tool_status: None,
                             timestamp: timestamp.clone(),
-                            model: None, images: None, raw: None,
+                            model: None,
+                            images: None,
+                            raw: None,
                             agent_hash: None,
                         });
                     }
@@ -400,15 +464,24 @@ fn parse_codex_entry(
                 let text = payload.get("message").and_then(|v| v.as_str());
                 if let Some(t) = text {
                     *idx += 1;
-                    let role = if sub_type == "agent_reasoning" { "meta" } else { "assistant" };
+                    let role = if sub_type == "agent_reasoning" {
+                        "meta"
+                    } else {
+                        "assistant"
+                    };
                     msgs.push(Message {
                         id: format!("codex-{}", idx),
                         role: role.to_string(),
                         text: Some(t.to_string()),
-                        tool_name: None, tool_input: None, tool_output: None,
-                        tool_use_id: None, tool_status: None,
+                        tool_name: None,
+                        tool_input: None,
+                        tool_output: None,
+                        tool_use_id: None,
+                        tool_status: None,
                         timestamp: timestamp.clone(),
-                        model: None, images: None, raw: None,
+                        model: None,
+                        images: None,
+                        raw: None,
                         agent_hash: None,
                     });
                 }
@@ -425,16 +498,23 @@ fn parse_codex_entry(
                     match block_type {
                         "output_text" | "input_text" => {
                             let text = block.get("text").and_then(|v| v.as_str()).unwrap_or("");
-                            if text.is_empty() || text.starts_with('<') { continue; }
+                            if text.is_empty() || text.starts_with('<') {
+                                continue;
+                            }
                             *idx += 1;
                             msgs.push(Message {
                                 id: format!("codex-{}", idx),
                                 role: role.to_string(),
                                 text: Some(text.to_string()),
-                                tool_name: None, tool_input: None, tool_output: None,
-                                tool_use_id: None, tool_status: None,
+                                tool_name: None,
+                                tool_input: None,
+                                tool_output: None,
+                                tool_use_id: None,
+                                tool_status: None,
                                 timestamp: timestamp.clone(),
-                                model: None, images: None, raw: None,
+                                model: None,
+                                images: None,
+                                raw: None,
                                 agent_hash: None,
                             });
                         }
@@ -454,7 +534,11 @@ fn parse_codex_entry(
 /// Content blocks are `{"type": "text", "text": "..."}` or `{"type": "tool_use", "name": "...", "input": {...}}`.
 fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> Vec<Message> {
     let mut msgs = Vec::new();
-    let content = match entry.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
+    let content = match entry
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .and_then(|c| c.as_array())
+    {
         Some(arr) => arr,
         None => return msgs,
     };
@@ -464,7 +548,9 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
         match block_type {
             "text" => {
                 let text = block.get("text").and_then(|v| v.as_str()).unwrap_or("");
-                if text.is_empty() { continue; }
+                if text.is_empty() {
+                    continue;
+                }
                 *idx += 1;
                 let cleaned = strip_cursor_tags(text);
                 msgs.push(Message {
@@ -484,9 +570,18 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                 });
             }
             "tool_use" => {
-                let name = block.get("name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-                let input = block.get("input").cloned().unwrap_or(serde_json::Value::Null);
-                let tool_use_id = block.get("id").and_then(|v| v.as_str())
+                let name = block
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let input = block
+                    .get("input")
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
+                let tool_use_id = block
+                    .get("id")
+                    .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
                 *idx += 1;
@@ -497,7 +592,11 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     tool_name: Some(name),
                     tool_input: Some(input),
                     tool_output: None,
-                    tool_use_id: if tool_use_id.is_empty() { None } else { Some(tool_use_id) },
+                    tool_use_id: if tool_use_id.is_empty() {
+                        None
+                    } else {
+                        Some(tool_use_id)
+                    },
                     tool_status: None,
                     timestamp: None,
                     model: None,
@@ -507,21 +606,37 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                 });
             }
             "tool_result" => {
-                let output = block.get("content")
+                let output = block
+                    .get("content")
                     .and_then(|c| {
-                        if let Some(s) = c.as_str() { return Some(s.to_string()); }
+                        if let Some(s) = c.as_str() {
+                            return Some(s.to_string());
+                        }
                         if let Some(arr) = c.as_array() {
-                            let texts: Vec<String> = arr.iter()
-                                .filter_map(|b| b.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()))
+                            let texts: Vec<String> = arr
+                                .iter()
+                                .filter_map(|b| {
+                                    b.get("text")
+                                        .and_then(|t| t.as_str())
+                                        .map(|s| s.to_string())
+                                })
                                 .collect();
-                            if !texts.is_empty() { return Some(texts.join("\n")); }
+                            if !texts.is_empty() {
+                                return Some(texts.join("\n"));
+                            }
                         }
                         None
                     })
                     .unwrap_or_default();
-                let tool_use_id = block.get("tool_use_id").and_then(|v| v.as_str())
-                    .unwrap_or("").to_string();
-                let is_error = block.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
+                let tool_use_id = block
+                    .get("tool_use_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let is_error = block
+                    .get("is_error")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 *idx += 1;
                 msgs.push(Message {
                     id: format!("cursor-{}", idx),
@@ -530,8 +645,16 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     tool_name: None,
                     tool_input: None,
                     tool_output: Some(output),
-                    tool_use_id: if tool_use_id.is_empty() { None } else { Some(tool_use_id) },
-                    tool_status: if is_error { Some("error".to_string()) } else { None },
+                    tool_use_id: if tool_use_id.is_empty() {
+                        None
+                    } else {
+                        Some(tool_use_id)
+                    },
+                    tool_status: if is_error {
+                        Some("error".to_string())
+                    } else {
+                        None
+                    },
                     timestamp: None,
                     model: None,
                     images: None,
@@ -548,23 +671,34 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
 /// Strip Cursor prompt-wrapping XML tags from text content.
 pub fn strip_cursor_tags(text: &str) -> String {
     let tags = [
-        "<user_query>", "</user_query>",
-        "<additional_data>", "</additional_data>",
-        "<attached_context>", "</attached_context>",
-        "<repo_instruction>", "</repo_instruction>",
+        "<user_query>",
+        "</user_query>",
+        "<additional_data>",
+        "</additional_data>",
+        "<attached_context>",
+        "</attached_context>",
+        "<repo_instruction>",
+        "</repo_instruction>",
     ];
     let mut result = text.to_string();
     for tag in &tags {
         result = result.replace(tag, "");
     }
     let trimmed = result.trim();
-    if trimmed.is_empty() { text.to_string() } else { trimmed.to_string() }
+    if trimmed.is_empty() {
+        text.to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn extract_meta_summary(msg_type: &str, entry: &serde_json::Value) -> String {
     match msg_type {
         "permission-mode" => {
-            let mode = entry.get("permissionMode").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let mode = entry
+                .get("permissionMode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
             format!("permission-mode: {mode}")
         }
         "ai-title" => {
@@ -573,7 +707,10 @@ fn extract_meta_summary(msg_type: &str, entry: &serde_json::Value) -> String {
         }
         "attachment" => {
             let cwd = entry.get("cwd").and_then(|v| v.as_str()).unwrap_or("");
-            let branch = entry.get("gitBranch").and_then(|v| v.as_str()).unwrap_or("");
+            let branch = entry
+                .get("gitBranch")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if branch.is_empty() {
                 format!("attachment: {cwd}")
             } else {
@@ -582,7 +719,10 @@ fn extract_meta_summary(msg_type: &str, entry: &serde_json::Value) -> String {
         }
         "last-prompt" => "last-prompt".to_string(),
         "queue-operation" => {
-            let op = entry.get("operation").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let op = entry
+                .get("operation")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
             format!("queue: {op}")
         }
         other => other.to_string(),
@@ -597,16 +737,26 @@ fn is_thinking_only(content: Option<&serde_json::Value>) -> bool {
     if arr.is_empty() {
         return false;
     }
-    arr.iter().all(|item| {
-        item.get("type").and_then(|v| v.as_str()) == Some("thinking")
-    })
+    arr.iter()
+        .all(|item| item.get("type").and_then(|v| v.as_str()) == Some("thinking"))
 }
 
 enum ContentBlock {
     Text(String),
-    Image { media_type: String, source_type: String },
-    ToolUse { name: String, input: serde_json::Value, tool_use_id: String },
-    ToolResult { content: String, tool_use_id: String, is_error: bool },
+    Image {
+        media_type: String,
+        source_type: String,
+    },
+    ToolUse {
+        name: String,
+        input: serde_json::Value,
+        tool_use_id: String,
+    },
+    ToolResult {
+        content: String,
+        tool_use_id: String,
+        is_error: bool,
+    },
 }
 
 fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
@@ -628,26 +778,51 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
                 }
             }
             "tool_use" => {
-                let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-                let input = item.get("input").cloned().unwrap_or(serde_json::Value::Null);
-                let tool_use_id = item.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                blocks.push(ContentBlock::ToolUse { name, input, tool_use_id });
+                let name = item
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let input = item
+                    .get("input")
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
+                let tool_use_id = item
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                blocks.push(ContentBlock::ToolUse {
+                    name,
+                    input,
+                    tool_use_id,
+                });
             }
             "tool_result" => {
                 let content_val = item.get("content");
                 let content_str = match content_val {
                     Some(serde_json::Value::String(s)) => s.clone(),
-                    Some(serde_json::Value::Array(arr)) => {
-                        arr.iter()
-                            .filter_map(|v| v.get("text").and_then(|t| t.as_str()))
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                    }
+                    Some(serde_json::Value::Array(arr)) => arr
+                        .iter()
+                        .filter_map(|v| v.get("text").and_then(|t| t.as_str()))
+                        .collect::<Vec<_>>()
+                        .join("\n"),
                     _ => String::new(),
                 };
-                let tool_use_id = item.get("tool_use_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let is_error = item.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
-                blocks.push(ContentBlock::ToolResult { content: content_str, tool_use_id, is_error });
+                let tool_use_id = item
+                    .get("tool_use_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let is_error = item
+                    .get("is_error")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                blocks.push(ContentBlock::ToolResult {
+                    content: content_str,
+                    tool_use_id,
+                    is_error,
+                });
             }
             "image" => {
                 let source = item.get("source");
@@ -661,7 +836,10 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
                     .and_then(|v| v.as_str())
                     .unwrap_or("base64")
                     .to_string();
-                blocks.push(ContentBlock::Image { media_type, source_type });
+                blocks.push(ContentBlock::Image {
+                    media_type,
+                    source_type,
+                });
             }
             _ => {}
         }
@@ -753,12 +931,15 @@ pub fn resolve_image(
             let cache_dir = home.join(".claude").join("image-cache").join(raw_id);
             if cache_dir.is_dir() {
                 // Count all image blocks up to target to get global number
-                if let Ok(global_num) = compute_global_image_number(jsonl_path, message_uuid, image_index) {
+                if let Ok(global_num) =
+                    compute_global_image_number(jsonl_path, message_uuid, image_index)
+                {
                     // Try common extensions
                     for ext in &["png", "jpg", "jpeg", "gif", "webp"] {
                         let cache_file = cache_dir.join(format!("{}.{}", global_num, ext));
                         if cache_file.is_file() {
-                            let bytes = fs::read(&cache_file).map_err(|e| format!("read cache: {e}"))?;
+                            let bytes =
+                                fs::read(&cache_file).map_err(|e| format!("read cache: {e}"))?;
                             let media = match *ext {
                                 "png" => "image/png",
                                 "jpg" | "jpeg" => "image/jpeg",
@@ -782,16 +963,21 @@ pub fn resolve_image(
             Ok(l) => l,
             Err(_) => continue,
         };
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         let entry: serde_json::Value = match serde_json::from_str(&line) {
             Ok(v) => v,
             Err(_) => continue,
         };
         let uuid = entry.get("uuid").and_then(|v| v.as_str()).unwrap_or("");
-        if uuid != message_uuid { continue; }
+        if uuid != message_uuid {
+            continue;
+        }
 
         // Found the entry — extract the image
-        let content = entry.get("message")
+        let content = entry
+            .get("message")
             .and_then(|m| m.get("content"))
             .and_then(|c| c.as_array());
         let content = match content {
@@ -805,11 +991,20 @@ pub fn resolve_image(
             if item_type == "image" {
                 if img_idx == image_index {
                     let source = item.get("source");
-                    let src_type = source.and_then(|s| s.get("type")).and_then(|v| v.as_str()).unwrap_or("");
-                    let media_type = source.and_then(|s| s.get("media_type")).and_then(|v| v.as_str()).unwrap_or("image/png");
+                    let src_type = source
+                        .and_then(|s| s.get("type"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let media_type = source
+                        .and_then(|s| s.get("media_type"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("image/png");
 
                     if src_type == "base64" {
-                        let data = source.and_then(|s| s.get("data")).and_then(|v| v.as_str()).unwrap_or("");
+                        let data = source
+                            .and_then(|s| s.get("data"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
                         use base64::Engine;
                         let bytes = base64::engine::general_purpose::STANDARD
                             .decode(data)
@@ -827,7 +1022,8 @@ pub fn resolve_image(
                         if let Some(fp) = &cref.file_path {
                             let path = Path::new(fp);
                             if path.is_file() {
-                                let bytes = fs::read(path).map_err(|e| format!("read file_ref: {e}"))?;
+                                let bytes =
+                                    fs::read(path).map_err(|e| format!("read file_ref: {e}"))?;
                                 return Ok((bytes, cref.media_type.clone()));
                             } else {
                                 return Err(format!("file_ref not found: {fp}"));
@@ -844,16 +1040,31 @@ pub fn resolve_image(
 }
 
 /// Count all image blocks in JSONL up to (and including) the target to get a 1-based global number.
-fn compute_global_image_number(jsonl_path: &Path, target_uuid: &str, target_index: u32) -> Result<u32, String> {
+fn compute_global_image_number(
+    jsonl_path: &Path,
+    target_uuid: &str,
+    target_index: u32,
+) -> Result<u32, String> {
     let file = fs::File::open(jsonl_path).map_err(|e| format!("{e}"))?;
     let reader = BufReader::new(file);
     let mut global: u32 = 0;
     for line in reader.lines() {
-        let line = match line { Ok(l) => l, Err(_) => continue };
-        if line.is_empty() { continue; }
-        let entry: serde_json::Value = match serde_json::from_str(&line) { Ok(v) => v, Err(_) => continue };
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => continue,
+        };
+        if line.is_empty() {
+            continue;
+        }
+        let entry: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
         let uuid = entry.get("uuid").and_then(|v| v.as_str()).unwrap_or("");
-        let content = entry.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array());
+        let content = entry
+            .get("message")
+            .and_then(|m| m.get("content"))
+            .and_then(|c| c.as_array());
         if let Some(arr) = content {
             let mut local_idx: u32 = 0;
             for item in arr {
@@ -935,11 +1146,13 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
         if meta_path.exists() {
             if let Ok(content) = std::fs::read_to_string(&meta_path) {
                 if let Ok(meta) = serde_json::from_str::<serde_json::Value>(&content) {
-                    agent_type = meta.get("agentType")
+                    agent_type = meta
+                        .get("agentType")
                         .and_then(|v| v.as_str())
                         .unwrap_or("unknown")
                         .to_string();
-                    description = meta.get("description")
+                    description = meta
+                        .get("description")
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
@@ -952,16 +1165,29 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
             if let Ok(file) = std::fs::File::open(&path) {
                 let reader = std::io::BufReader::new(file);
                 for line in reader.lines().take(3).flatten() {
-                    if line.is_empty() { continue; }
+                    if line.is_empty() {
+                        continue;
+                    }
                     if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line) {
                         if let Some(at) = obj.get("agentType").and_then(|v| v.as_str()) {
                             agent_type = at.to_string();
                         }
-                        if let Some(at) = obj.get("agentId").and_then(|_| obj.get("agentType")).and_then(|v| v.as_str()) {
+                        if let Some(at) = obj
+                            .get("agentId")
+                            .and_then(|_| obj.get("agentType"))
+                            .and_then(|v| v.as_str())
+                        {
                             agent_type = at.to_string();
                         }
-                        if let Some(msg) = obj.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_str()) {
-                            description = msg.chars().take(crate::constants::SUBAGENT_DESC_MAX_LEN).collect();
+                        if let Some(msg) = obj
+                            .get("message")
+                            .and_then(|m| m.get("content"))
+                            .and_then(|c| c.as_str())
+                        {
+                            description = msg
+                                .chars()
+                                .take(crate::constants::SUBAGENT_DESC_MAX_LEN)
+                                .collect();
                             break;
                         }
                     }
@@ -993,7 +1219,9 @@ pub fn search_in_messages(messages: &[Message], query: &str, limit: usize) -> Ve
     let mut hits = Vec::new();
 
     for msg in messages {
-        let text = msg.text.as_deref()
+        let text = msg
+            .text
+            .as_deref()
             .or(msg.tool_output.as_deref())
             .unwrap_or("");
 
@@ -1046,7 +1274,14 @@ fn make_snippet(text: &str, match_start: usize, match_end: usize) -> String {
     let ms = match_start - start;
     let me = match_end - start;
 
-    format!("{}{}<mark>{}</mark>{}{}", prefix, &slice[..ms], &slice[ms..me], &slice[me..], suffix)
+    format!(
+        "{}{}<mark>{}</mark>{}{}",
+        prefix,
+        &slice[..ms],
+        &slice[ms..me],
+        &slice[me..],
+        suffix
+    )
 }
 
 #[cfg(test)]
@@ -1067,10 +1302,13 @@ mod tests {
     #[test]
     fn test_load_simple_messages() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"user","content":"Hello"}}"#,
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:01:00Z","message":{"role":"assistant","model":"claude-sonnet-4","content":[{"type":"text","text":"Hi there!"}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"user","content":"Hello"}}"#,
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:01:00Z","message":{"role":"assistant","model":"claude-sonnet-4","content":[{"type":"text","text":"Hi there!"}]}}"#,
+            ],
+        );
 
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 2);
@@ -1083,9 +1321,12 @@ mod tests {
     #[test]
     fn test_load_tool_use_messages() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu1","name":"Bash","input":{"command":"ls -la"}}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu1","name":"Bash","input":{"command":"ls -la"}}]}}"#,
+            ],
+        );
 
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
@@ -1097,23 +1338,71 @@ mod tests {
     #[test]
     fn test_load_tool_result() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":"file1.txt\nfile2.txt"}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":"file1.txt\nfile2.txt"}]}}"#,
+            ],
+        );
 
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "tool_result");
         assert_eq!(msgs[0].tool_use_id, Some("tu1".to_string()));
-        assert_eq!(msgs[0].tool_output, Some("file1.txt\nfile2.txt".to_string()));
+        assert_eq!(
+            msgs[0].tool_output,
+            Some("file1.txt\nfile2.txt".to_string())
+        );
     }
 
     #[test]
     fn test_search_in_messages() {
         let messages = vec![
-            Message { id: "1".into(), role: "user".into(), text: Some("How do I use Rust?".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
-            Message { id: "2".into(), role: "assistant".into(), text: Some("Rust is great for systems programming.".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
-            Message { id: "3".into(), role: "user".into(), text: Some("What about Python?".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
+            Message {
+                id: "1".into(),
+                role: "user".into(),
+                text: Some("How do I use Rust?".into()),
+                tool_name: None,
+                tool_input: None,
+                tool_output: None,
+                tool_use_id: None,
+                tool_status: None,
+                timestamp: None,
+                model: None,
+                images: None,
+                raw: None,
+                agent_hash: None,
+            },
+            Message {
+                id: "2".into(),
+                role: "assistant".into(),
+                text: Some("Rust is great for systems programming.".into()),
+                tool_name: None,
+                tool_input: None,
+                tool_output: None,
+                tool_use_id: None,
+                tool_status: None,
+                timestamp: None,
+                model: None,
+                images: None,
+                raw: None,
+                agent_hash: None,
+            },
+            Message {
+                id: "3".into(),
+                role: "user".into(),
+                text: Some("What about Python?".into()),
+                tool_name: None,
+                tool_input: None,
+                tool_output: None,
+                tool_use_id: None,
+                tool_status: None,
+                timestamp: None,
+                model: None,
+                images: None,
+                raw: None,
+                agent_hash: None,
+            },
         ];
 
         let hits = search_in_messages(&messages, "Rust", 10);
@@ -1123,12 +1412,23 @@ mod tests {
 
     #[test]
     fn test_search_limit() {
-        let messages: Vec<Message> = (0..20).map(|i| Message {
-            id: format!("{i}"), role: "user".into(), text: Some(format!("match keyword {i}")),
-            tool_name: None, tool_input: None, tool_output: None, tool_use_id: None,
-            tool_status: None, timestamp: None, model: None, images: None, raw: None,
-            agent_hash: None,
-        }).collect();
+        let messages: Vec<Message> = (0..20)
+            .map(|i| Message {
+                id: format!("{i}"),
+                role: "user".into(),
+                text: Some(format!("match keyword {i}")),
+                tool_name: None,
+                tool_input: None,
+                tool_output: None,
+                tool_use_id: None,
+                tool_status: None,
+                timestamp: None,
+                model: None,
+                images: None,
+                raw: None,
+                agent_hash: None,
+            })
+            .collect();
 
         let hits = search_in_messages(&messages, "keyword", 5);
         assert_eq!(hits.len(), 5);
@@ -1147,9 +1447,12 @@ mod tests {
     #[test]
     fn test_meta_permission_mode() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"permission-mode","uuid":"p1","timestamp":"2026-05-01T10:00:00Z","permissionMode":"auto","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"permission-mode","uuid":"p1","timestamp":"2026-05-01T10:00:00Z","permissionMode":"auto","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1160,9 +1463,12 @@ mod tests {
     #[test]
     fn test_meta_ai_title() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"ai-title","uuid":"t1","timestamp":"2026-05-01T10:00:00Z","aiTitle":"Fix login bug","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"ai-title","uuid":"t1","timestamp":"2026-05-01T10:00:00Z","aiTitle":"Fix login bug","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1173,31 +1479,46 @@ mod tests {
     #[test]
     fn test_meta_attachment() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"attachment","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","cwd":"/home/user/project","gitBranch":"main","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"attachment","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","cwd":"/home/user/project","gitBranch":"main","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
-        assert_eq!(msgs[0].text, Some("attachment: /home/user/project @ main".to_string()));
+        assert_eq!(
+            msgs[0].text,
+            Some("attachment: /home/user/project @ main".to_string())
+        );
     }
 
     #[test]
     fn test_meta_attachment_no_branch() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"attachment","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","cwd":"/home/user/project","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"attachment","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","cwd":"/home/user/project","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
-        assert_eq!(msgs[0].text, Some("attachment: /home/user/project".to_string()));
+        assert_eq!(
+            msgs[0].text,
+            Some("attachment: /home/user/project".to_string())
+        );
     }
 
     #[test]
     fn test_meta_last_prompt() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"last-prompt","uuid":"l1","timestamp":"2026-05-01T10:00:00Z","lastPrompt":"test","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"last-prompt","uuid":"l1","timestamp":"2026-05-01T10:00:00Z","lastPrompt":"test","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1207,9 +1528,12 @@ mod tests {
     #[test]
     fn test_meta_queue_operation() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"queue-operation","uuid":"q1","timestamp":"2026-05-01T10:00:00Z","operation":"enqueue","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"queue-operation","uuid":"q1","timestamp":"2026-05-01T10:00:00Z","operation":"enqueue","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1219,9 +1543,12 @@ mod tests {
     #[test]
     fn test_meta_unknown_type() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"some-future-type","uuid":"x1","timestamp":"2026-05-01T10:00:00Z","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"some-future-type","uuid":"x1","timestamp":"2026-05-01T10:00:00Z","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1231,9 +1558,12 @@ mod tests {
     #[test]
     fn test_thinking_only_assistant() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":""}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":""}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
@@ -1243,9 +1573,12 @@ mod tests {
     #[test]
     fn test_thinking_with_text_assistant() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
@@ -1255,9 +1588,12 @@ mod tests {
     #[test]
     fn test_empty_assistant_no_content_skipped() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant"}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant"}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 0, "assistant with no content should be skipped");
     }
@@ -1265,9 +1601,10 @@ mod tests {
     #[test]
     fn test_file_history_snapshot_skipped() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"file-history-snapshot","uuid":"f1","timestamp":"2026-05-01T10:00:00Z"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[r#"{"type":"file-history-snapshot","uuid":"f1","timestamp":"2026-05-01T10:00:00Z"}"#],
+        );
         let msgs = load_messages(&file).unwrap();
         assert!(msgs.is_empty());
     }
@@ -1275,22 +1612,31 @@ mod tests {
     #[test]
     fn test_system_turn_duration_becomes_meta() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","subtype":"turn_duration","durationMs":5000,"messageCount":10,"sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","subtype":"turn_duration","durationMs":5000,"messageCount":10,"sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
-        assert_eq!(msgs[0].text, Some("system/turn_duration: 10 msgs, 5.0s".to_string()));
+        assert_eq!(
+            msgs[0].text,
+            Some("system/turn_duration: 10 msgs, 5.0s".to_string())
+        );
         assert_eq!(msgs[0].tool_name, Some("system/turn_duration".to_string()));
     }
 
     #[test]
     fn test_system_with_content_stays_system() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","content":"You asked me to do X","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","content":"You asked me to do X","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "system");
@@ -1300,9 +1646,12 @@ mod tests {
     #[test]
     fn test_system_away_summary_with_content_stays_system() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","subtype":"away_summary","content":"Session recap text here","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","subtype":"away_summary","content":"Session recap text here","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "system");
@@ -1313,9 +1662,12 @@ mod tests {
     #[test]
     fn test_system_empty_no_subtype_becomes_meta() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1324,12 +1676,15 @@ mod tests {
     #[test]
     fn test_mixed_messages_and_meta() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"permission-mode","uuid":"p1","timestamp":"2026-05-01T10:00:00Z","permissionMode":"auto","sessionId":"s1"}"#,
-            r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:01Z","message":{"role":"user","content":"Hello"}}"#,
-            r#"{"type":"ai-title","uuid":"t1","timestamp":"2026-05-01T10:00:02Z","aiTitle":"Test","sessionId":"s1"}"#,
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"permission-mode","uuid":"p1","timestamp":"2026-05-01T10:00:00Z","permissionMode":"auto","sessionId":"s1"}"#,
+                r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:01Z","message":{"role":"user","content":"Hello"}}"#,
+                r#"{"type":"ai-title","uuid":"t1","timestamp":"2026-05-01T10:00:02Z","aiTitle":"Test","sessionId":"s1"}"#,
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 4);
         assert_eq!(msgs[0].role, "meta");
@@ -1346,7 +1701,8 @@ mod tests {
 
     #[test]
     fn test_strip_cursor_tags_multiple() {
-        let input = "<user_query><additional_data>some data</additional_data>actual query</user_query>";
+        let input =
+            "<user_query><additional_data>some data</additional_data>actual query</user_query>";
         let result = strip_cursor_tags(input);
         assert_eq!(result, "some dataactual query");
     }
@@ -1554,8 +1910,16 @@ mod tests {
 
         let agent_file = sub_dir.join("agent-abc123.jsonl");
         let mut f = fs::File::create(&agent_file).unwrap();
-        writeln!(f, r#"{{"type":"user","message":{{"content":"do something"}}}}"#).unwrap();
-        writeln!(f, r#"{{"type":"assistant","message":{{"content":"done"}}}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"type":"user","message":{{"content":"do something"}}}}"#
+        )
+        .unwrap();
+        writeln!(
+            f,
+            r#"{{"type":"assistant","message":{{"content":"done"}}}}"#
+        )
+        .unwrap();
 
         let session_path = format!("{}.jsonl", session_dir.to_str().unwrap());
         let result = discover_subagents(&session_path);
@@ -1577,7 +1941,11 @@ mod tests {
 
         let meta_file = sub_dir.join("agent-def456.meta.json");
         let mut mf = fs::File::create(&meta_file).unwrap();
-        writeln!(mf, r#"{{"agentType":"researcher","description":"Does research"}}"#).unwrap();
+        writeln!(
+            mf,
+            r#"{{"agentType":"researcher","description":"Does research"}}"#
+        )
+        .unwrap();
 
         let session_path = format!("{}.jsonl", session_dir.to_str().unwrap());
         let result = discover_subagents(&session_path);
@@ -1617,7 +1985,11 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let file = dir.path().join("resolve_test.jsonl");
         let mut f = fs::File::create(&file).unwrap();
-        writeln!(f, r#"{{"type":"user","uuid":"u1","message":{{"content":"hi"}}}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"type":"user","uuid":"u1","message":{{"content":"hi"}}}}"#
+        )
+        .unwrap();
 
         let result = resolve_image(&file, None, "nonexistent-uuid", 0);
         assert!(result.is_err());
@@ -1665,18 +2037,42 @@ mod tests {
 
     #[test]
     fn test_search_in_messages_no_match() {
-        let messages = vec![
-            Message { id: "1".into(), role: "user".into(), text: Some("Hello".into()), tool_name: None, tool_input: None, tool_output: None, tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
-        ];
+        let messages = vec![Message {
+            id: "1".into(),
+            role: "user".into(),
+            text: Some("Hello".into()),
+            tool_name: None,
+            tool_input: None,
+            tool_output: None,
+            tool_use_id: None,
+            tool_status: None,
+            timestamp: None,
+            model: None,
+            images: None,
+            raw: None,
+            agent_hash: None,
+        }];
         let hits = search_in_messages(&messages, "xyz", 10);
         assert!(hits.is_empty());
     }
 
     #[test]
     fn test_search_in_messages_tool_output() {
-        let messages = vec![
-            Message { id: "1".into(), role: "tool_result".into(), text: None, tool_name: None, tool_input: None, tool_output: Some("file content with keyword".into()), tool_use_id: None, tool_status: None, timestamp: None, model: None, images: None, raw: None, agent_hash: None },
-        ];
+        let messages = vec![Message {
+            id: "1".into(),
+            role: "tool_result".into(),
+            text: None,
+            tool_name: None,
+            tool_input: None,
+            tool_output: Some("file content with keyword".into()),
+            tool_use_id: None,
+            tool_status: None,
+            timestamp: None,
+            model: None,
+            images: None,
+            raw: None,
+            agent_hash: None,
+        }];
         let hits = search_in_messages(&messages, "keyword", 10);
         assert_eq!(hits.len(), 1);
         assert!(hits[0].snippet.contains("<mark>"));
@@ -1717,7 +2113,11 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let file = dir.path().join("no_content.jsonl");
         let mut f = fs::File::create(&file).unwrap();
-        writeln!(f, r#"{{"type":"assistant","uuid":"nc-uuid","message":{{"role":"assistant"}}}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"type":"assistant","uuid":"nc-uuid","message":{{"role":"assistant"}}}}"#
+        )
+        .unwrap();
 
         let result = resolve_image(&file, None, "nc-uuid", 0);
         assert!(result.is_err());
@@ -1727,9 +2127,12 @@ mod tests {
     #[test]
     fn test_load_messages_image_blocks() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"text","text":"Here is the image:"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"abc"}}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"text","text":"Here is the image:"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"abc"}}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
@@ -1742,10 +2145,13 @@ mod tests {
     #[test]
     fn test_load_messages_image_source_paths_backfill() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"text","text":"see image"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"x"}}]}}"#,
-            r#"{"type":"assistant","uuid":"a2","timestamp":"2026-05-01T10:00:01Z","message":{"role":"assistant","content":[{"type":"text","text":"[Image: source: /tmp/cached.png]"}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"text","text":"see image"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"x"}}]}}"#,
+                r#"{"type":"assistant","uuid":"a2","timestamp":"2026-05-01T10:00:01Z","message":{"role":"assistant","content":[{"type":"text","text":"[Image: source: /tmp/cached.png]"}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         let img_msg = msgs.iter().find(|m| m.images.is_some()).unwrap();
         let imgs = img_msg.images.as_ref().unwrap();
@@ -1755,9 +2161,12 @@ mod tests {
     #[test]
     fn test_load_messages_multiple_tool_uses_in_one_entry() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu1","name":"Read","input":{"file_path":"/a"}},{"type":"tool_use","id":"tu2","name":"Bash","input":{"command":"ls"}}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu1","name":"Read","input":{"file_path":"/a"}},{"type":"tool_use","id":"tu2","name":"Bash","input":{"command":"ls"}}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 2);
         assert_eq!(msgs[0].tool_name, Some("Read".to_string()));
@@ -1767,9 +2176,12 @@ mod tests {
     #[test]
     fn test_load_messages_tool_result_with_content_array() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":[{"type":"text","text":"result line 1"},{"type":"text","text":"result line 2"}]}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":[{"type":"text","text":"result line 1"},{"type":"text","text":"result line 2"}]}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "tool_result");
@@ -1780,9 +2192,12 @@ mod tests {
     #[test]
     fn test_load_messages_agent_hash_from_tool_result() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","toolUseResult":{"agentId":"agent-abc"},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":"output"}]}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"user","uuid":"u1","timestamp":"2026-05-01T10:00:00Z","toolUseResult":{"agentId":"agent-abc"},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu1","content":"output"}]}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].agent_hash, Some("agent-abc".to_string()));
@@ -1806,7 +2221,11 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let file = dir.path().join("no_img.jsonl");
         let mut f = fs::File::create(&file).unwrap();
-        writeln!(f, r#"{{"type":"user","uuid":"u1","message":{{"content":"hi"}}}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"type":"user","uuid":"u1","message":{{"content":"hi"}}}}"#
+        )
+        .unwrap();
 
         let result = compute_global_image_number(&file, "nonexistent", 0);
         assert!(result.is_err());
@@ -1840,7 +2259,11 @@ mod tests {
         let agent_file = sub_dir.join("agent-xyz789.jsonl");
         let mut f = fs::File::create(&agent_file).unwrap();
         writeln!(f, r#"{{"agentId":"xyz789","agentType":"code-agent"}}"#).unwrap();
-        writeln!(f, r#"{{"type":"user","message":{{"content":"implement feature X"}}}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"type":"user","message":{{"content":"implement feature X"}}}}"#
+        )
+        .unwrap();
 
         let session_path = format!("{}.jsonl", session_dir.to_str().unwrap());
         let result = discover_subagents(&session_path);
@@ -1955,9 +2378,12 @@ mod tests {
     #[test]
     fn test_system_subtype_no_duration() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","subtype":"some_event","sessionId":"s1"}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"system","uuid":"s1","timestamp":"2026-05-01T10:00:00Z","subtype":"some_event","sessionId":"s1"}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "meta");
@@ -1967,11 +2393,14 @@ mod tests {
     #[test]
     fn test_load_messages_malformed_lines_skipped() {
         let dir = TempDir::new().unwrap();
-        let file = write_session_file(&dir, &[
-            "this is not json",
-            "",
-            r#"{"type":"user","uuid":"u1","message":{"role":"user","content":"Hello"}}"#,
-        ]);
+        let file = write_session_file(
+            &dir,
+            &[
+                "this is not json",
+                "",
+                r#"{"type":"user","uuid":"u1","message":{"role":"user","content":"Hello"}}"#,
+            ],
+        );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].text, Some("Hello".to_string()));

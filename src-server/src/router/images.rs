@@ -1,12 +1,12 @@
+use crate::scanner::{session_loader, sessions};
 use axum::{
+    Json, Router,
     extract::{Path, Query},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use serde::Deserialize;
-use crate::scanner::{sessions, session_loader};
 
 pub fn routes() -> Router {
     Router::new()
@@ -44,11 +44,15 @@ async fn serve_image(
                     StatusCode::OK,
                     [
                         (header::CONTENT_TYPE, media.to_string()),
-                        (header::CACHE_CONTROL, format!("public, max-age={}", crate::constants::IMAGE_CACHE_MAX_AGE)),
+                        (
+                            header::CACHE_CONTROL,
+                            format!("public, max-age={}", crate::constants::IMAGE_CACHE_MAX_AGE),
+                        ),
                         (header::CONTENT_LENGTH, bytes.len().to_string()),
                     ],
                     bytes,
-                ).into_response();
+                )
+                    .into_response();
             }
         }
     }
@@ -76,10 +80,7 @@ async fn serve_image(
                     header::CACHE_CONTROL,
                     format!("public, max-age={}", crate::constants::IMAGE_CACHE_MAX_AGE),
                 ),
-                (
-                    header::CONTENT_LENGTH,
-                    bytes.len().to_string(),
-                ),
+                (header::CONTENT_LENGTH, bytes.len().to_string()),
             ],
             bytes,
         )
@@ -116,14 +117,21 @@ async fn open_folder(Json(body): Json<OpenFolderBody>) -> Response {
     };
 
     let result = if is_file {
-        std::process::Command::new("open").arg("-R").arg(&body.path).spawn()
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&body.path)
+            .spawn()
     } else {
         std::process::Command::new("open").arg(&dir).spawn()
     };
 
     match result {
         Ok(_) => (StatusCode::OK, Json(serde_json::json!({"ok": true}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("failed to open: {e}")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to open: {e}"),
+        )
+            .into_response(),
     }
 }
 

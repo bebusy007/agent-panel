@@ -2,7 +2,7 @@
 //! daily token/message aggregates. Follows OpenCovibe's approach: each message's
 //! tokens land on the day its timestamp indicates (NOT the session's last_activity).
 
-use axum::{extract::Query, routing::get, Json, Router};
+use axum::{Json, Router, extract::Query, routing::get};
 use rayon::prelude::*;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -12,8 +12,7 @@ use std::path::PathBuf;
 use crate::scanner::sessions;
 
 pub fn routes() -> Router {
-    Router::new()
-        .route("/usage/overview", get(usage_overview))
+    Router::new().route("/usage/overview", get(usage_overview))
 }
 
 #[derive(Deserialize)]
@@ -58,16 +57,22 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
             Ok(l) => l,
             Err(_) => continue,
         };
-        if line.len() < 20 { continue; }
+        if line.len() < 20 {
+            continue;
+        }
 
         // Claude Code: messages have "type":"user"/"assistant", usage in message.usage
         // Codex: messages have "type":"event_msg" with sub-type, usage in payload.info.total_token_usage
         let has_cc_usage = line.contains("\"cache_read_input_tokens\"");
-        let is_cc_message = line.contains("\"type\":\"user\"") || line.contains("\"type\":\"assistant\"");
-        let is_codex_message = line.contains("\"user_message\"") || line.contains("\"agent_message\"");
+        let is_cc_message =
+            line.contains("\"type\":\"user\"") || line.contains("\"type\":\"assistant\"");
+        let is_codex_message =
+            line.contains("\"user_message\"") || line.contains("\"agent_message\"");
         let has_codex_usage = line.contains("\"total_token_usage\"");
 
-        if !is_cc_message && !has_cc_usage && !is_codex_message && !has_codex_usage { continue; }
+        if !is_cc_message && !has_cc_usage && !is_codex_message && !has_codex_usage {
+            continue;
+        }
 
         // Count messages
         if is_cc_message || is_codex_message {
@@ -76,7 +81,9 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
             }
         }
 
-        if !has_cc_usage && !has_codex_usage { continue; }
+        if !has_cc_usage && !has_codex_usage {
+            continue;
+        }
 
         // Full parse for token extraction
         let entry: serde_json::Value = match serde_json::from_str(&line) {
@@ -93,16 +100,30 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
         if has_cc_usage {
             if let Some(message) = entry.get("message") {
                 if let Some(usage) = message.get("usage") {
-                    let model = message.get("model")
+                    let model = message
+                        .get("model")
                         .and_then(|v| v.as_str())
                         .unwrap_or("<unknown>")
                         .to_string();
-                    let inp = usage.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let out = usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let cr = usage.get("cache_read_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let cw = usage.get("cache_creation_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let inp = usage
+                        .get("input_tokens")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let out = usage
+                        .get("output_tokens")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let cr = usage
+                        .get("cache_read_input_tokens")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let cw = usage
+                        .get("cache_creation_input_tokens")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
 
-                    let tc = result.tokens_by_model
+                    let tc = result
+                        .tokens_by_model
                         .entry(timestamp.to_string())
                         .or_default()
                         .entry(model)
@@ -117,14 +138,22 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
 
         // Codex format: payload.info.last_token_usage.{input_tokens, output_tokens}
         if has_codex_usage {
-            if let Some(usage) = entry.get("payload")
+            if let Some(usage) = entry
+                .get("payload")
                 .and_then(|p| p.get("info"))
                 .and_then(|i| i.get("last_token_usage"))
             {
-                let inp = usage.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-                let out = usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                let inp = usage
+                    .get("input_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let out = usage
+                    .get("output_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
 
-                let tc = result.tokens_by_model
+                let tc = result
+                    .tokens_by_model
                     .entry(timestamp.to_string())
                     .or_default()
                     .entry("codex".to_string())
@@ -142,9 +171,14 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
 fn extract_date_fast(line: &str) -> Option<String> {
     let marker = crate::constants::TIMESTAMP_MARKER;
     let pos = line.find(marker)? + marker.len();
-    if pos + crate::constants::TIMESTAMP_PREFIX_LEN > line.len() { return None; }
+    if pos + crate::constants::TIMESTAMP_PREFIX_LEN > line.len() {
+        return None;
+    }
     let date = &line[pos..pos + crate::constants::TIMESTAMP_PREFIX_LEN];
-    if date.len() == crate::constants::TIMESTAMP_PREFIX_LEN && date.as_bytes()[4] == b'-' && date.as_bytes()[7] == b'-' {
+    if date.len() == crate::constants::TIMESTAMP_PREFIX_LEN
+        && date.as_bytes()[4] == b'-'
+        && date.as_bytes()[7] == b'-'
+    {
         Some(date.to_string())
     } else {
         None
@@ -192,17 +226,15 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
     }
 
     // Scan claude-code + codex sessions (both have usage/message data in JSONL)
-    let scannable: Vec<(&str, PathBuf)> = sessions_list.iter()
+    let scannable: Vec<(&str, PathBuf)> = sessions_list
+        .iter()
         .filter(|s| s.source == "claude-code" || s.source == "codex")
         .map(|s| (s.source.as_str(), PathBuf::from(&s.file_path)))
         .collect();
     let file_paths: Vec<PathBuf> = scannable.iter().map(|(_, p)| p.clone()).collect();
 
     // Parallel per-file scan
-    let file_results: Vec<FileDaily> = file_paths
-        .par_iter()
-        .map(|p| scan_file_daily(p))
-        .collect();
+    let file_results: Vec<FileDaily> = file_paths.par_iter().map(|p| scan_file_daily(p)).collect();
 
     // Merge into daily aggregates
     let mut daily_map: BTreeMap<String, DailyBuilder> = BTreeMap::new();
@@ -212,7 +244,10 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
         // Merge token data
         for (date, models) in &fd.tokens_by_model {
             let day = daily_map.entry(date.clone()).or_default();
-            daily_sessions.entry(date.clone()).or_default().insert(file_idx);
+            daily_sessions
+                .entry(date.clone())
+                .or_default()
+                .insert(file_idx);
 
             for (_model, tc) in models {
                 day.input_tokens += tc.input + tc.cache_read + tc.cache_write;
@@ -224,19 +259,26 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
         for (date, count) in &fd.messages {
             let day = daily_map.entry(date.clone()).or_default();
             day.message_count += count;
-            daily_sessions.entry(date.clone()).or_default().insert(file_idx);
+            daily_sessions
+                .entry(date.clone())
+                .or_default()
+                .insert(file_idx);
         }
     }
 
     // Cursor Agent: contribute session + message count from file mtime (no timestamp per line)
     for (cursor_idx, s) in sessions_list.iter().enumerate() {
-        if s.source != "cursor-agent" { continue; }
+        if s.source != "cursor-agent" {
+            continue;
+        }
         if let Some(ts) = s.last_activity.as_deref().or(s.started_at.as_deref()) {
             if ts.len() >= 10 {
                 let date = &ts[..10];
                 let day = daily_map.entry(date.to_string()).or_default();
                 day.message_count += s.message_count;
-                daily_sessions.entry(date.to_string()).or_default()
+                daily_sessions
+                    .entry(date.to_string())
+                    .or_default()
                     .insert(file_paths.len() + cursor_idx);
             }
         }
@@ -248,12 +290,12 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
         dt.format("%Y-%m-%d").to_string()
     });
 
-    let date_in_range = |date: &str| -> bool {
-        cutoff.as_ref().map_or(true, |c| date >= c.as_str())
-    };
+    let date_in_range =
+        |date: &str| -> bool { cutoff.as_ref().map_or(true, |c| date >= c.as_str()) };
 
     // Build daily list (filtered by date range)
-    let daily: Vec<DailyAggregate> = daily_map.iter()
+    let daily: Vec<DailyAggregate> = daily_map
+        .iter()
         .filter(|(date, _)| date_in_range(date))
         .map(|(date, d)| DailyAggregate {
             date: date.clone(),
@@ -271,7 +313,10 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
     let total_sessions: u32 = daily.iter().map(|d| d.session_count).sum();
 
     // Active days & streaks
-    let active_days = daily.iter().filter(|d| d.message_count > 0 || d.input_tokens > 0).count();
+    let active_days = daily
+        .iter()
+        .filter(|d| d.message_count > 0 || d.input_tokens > 0)
+        .count();
     let (current_streak, longest_streak) = compute_streaks(&daily);
 
     // Model aggregates — also filtered by date range
@@ -279,7 +324,9 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
     for (file_idx, fd) in file_results.iter().enumerate() {
         let _ = file_idx;
         for (date, models) in &fd.tokens_by_model {
-            if !date_in_range(date) { continue; }
+            if !date_in_range(date) {
+                continue;
+            }
             for (model, tc) in models {
                 let ma = filtered_model_map.entry(model.clone()).or_default();
                 ma.input_tokens += tc.input;
@@ -290,16 +337,20 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
         }
     }
 
-    let total_model_tokens: u64 = filtered_model_map.values()
+    let total_model_tokens: u64 = filtered_model_map
+        .values()
         .map(|m| m.input_tokens + m.output_tokens + m.cache_read + m.cache_write)
         .sum();
 
-    let mut by_model: Vec<ModelAggregate> = filtered_model_map.into_iter()
+    let mut by_model: Vec<ModelAggregate> = filtered_model_map
+        .into_iter()
         .map(|(model, m)| {
             let tokens = m.input_tokens + m.output_tokens + m.cache_read + m.cache_write;
             let pct = if total_model_tokens > 0 {
                 tokens as f64 / total_model_tokens as f64 * crate::constants::PERCENT_MULTIPLIER
-            } else { 0.0 };
+            } else {
+                0.0
+            };
             ModelAggregate {
                 model,
                 input_tokens: m.input_tokens,
@@ -320,14 +371,17 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
     // By source — filter sessions by date range via last_activity
     let mut by_source: HashMap<String, u32> = HashMap::new();
     for s in &sessions_list {
-        let in_range = s.last_activity.as_deref()
+        let in_range = s
+            .last_activity
+            .as_deref()
             .map(|ts| date_in_range(&ts[..ts.len().min(10)]))
             .unwrap_or(false);
         if in_range {
             *by_source.entry(s.source.clone()).or_default() += 1;
         }
     }
-    let by_source_list: Vec<serde_json::Value> = by_source.iter()
+    let by_source_list: Vec<serde_json::Value> = by_source
+        .iter()
         .map(|(source, count)| serde_json::json!({ "source": source, "count": count }))
         .collect();
 
@@ -362,10 +416,13 @@ struct ModelBuilder {
 }
 
 pub(crate) fn compute_streaks(daily: &[DailyAggregate]) -> (u32, u32) {
-    if daily.is_empty() { return (0, 0); }
+    if daily.is_empty() {
+        return (0, 0);
+    }
 
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    let active_dates: HashSet<&str> = daily.iter()
+    let active_dates: HashSet<&str> = daily
+        .iter()
         .filter(|d| d.message_count > 0 || d.input_tokens > 0)
         .map(|d| d.date.as_str())
         .collect();
@@ -383,7 +440,9 @@ pub(crate) fn compute_streaks(daily: &[DailyAggregate]) -> (u32, u32) {
     for _ in 0..crate::constants::STREAK_LOOKBACK_DAYS {
         let ds = date.format("%Y-%m-%d").to_string();
         if active_dates.contains(ds.as_str()) {
-            if checking_current { current += 1; }
+            if checking_current {
+                current += 1;
+            }
             streak += 1;
             longest = longest.max(streak);
         } else {
@@ -479,9 +538,30 @@ mod tests {
         let yesterday = today - chrono::Duration::days(1);
         let day_before = today - chrono::Duration::days(2);
         let daily = vec![
-            DailyAggregate { date: day_before.format("%Y-%m-%d").to_string(), input_tokens: 10, output_tokens: 5, message_count: 1, session_count: 1, cost_usd: 0.0 },
-            DailyAggregate { date: yesterday.format("%Y-%m-%d").to_string(), input_tokens: 10, output_tokens: 5, message_count: 1, session_count: 1, cost_usd: 0.0 },
-            DailyAggregate { date: today.format("%Y-%m-%d").to_string(), input_tokens: 10, output_tokens: 5, message_count: 1, session_count: 1, cost_usd: 0.0 },
+            DailyAggregate {
+                date: day_before.format("%Y-%m-%d").to_string(),
+                input_tokens: 10,
+                output_tokens: 5,
+                message_count: 1,
+                session_count: 1,
+                cost_usd: 0.0,
+            },
+            DailyAggregate {
+                date: yesterday.format("%Y-%m-%d").to_string(),
+                input_tokens: 10,
+                output_tokens: 5,
+                message_count: 1,
+                session_count: 1,
+                cost_usd: 0.0,
+            },
+            DailyAggregate {
+                date: today.format("%Y-%m-%d").to_string(),
+                input_tokens: 10,
+                output_tokens: 5,
+                message_count: 1,
+                session_count: 1,
+                cost_usd: 0.0,
+            },
         ];
         let (current, longest) = compute_streaks(&daily);
         assert_eq!(current, 3);
@@ -494,9 +574,30 @@ mod tests {
         let three_days_ago = today - chrono::Duration::days(3);
         let four_days_ago = today - chrono::Duration::days(4);
         let daily = vec![
-            DailyAggregate { date: four_days_ago.format("%Y-%m-%d").to_string(), input_tokens: 10, output_tokens: 5, message_count: 1, session_count: 1, cost_usd: 0.0 },
-            DailyAggregate { date: three_days_ago.format("%Y-%m-%d").to_string(), input_tokens: 10, output_tokens: 5, message_count: 1, session_count: 1, cost_usd: 0.0 },
-            DailyAggregate { date: today.format("%Y-%m-%d").to_string(), input_tokens: 10, output_tokens: 5, message_count: 1, session_count: 1, cost_usd: 0.0 },
+            DailyAggregate {
+                date: four_days_ago.format("%Y-%m-%d").to_string(),
+                input_tokens: 10,
+                output_tokens: 5,
+                message_count: 1,
+                session_count: 1,
+                cost_usd: 0.0,
+            },
+            DailyAggregate {
+                date: three_days_ago.format("%Y-%m-%d").to_string(),
+                input_tokens: 10,
+                output_tokens: 5,
+                message_count: 1,
+                session_count: 1,
+                cost_usd: 0.0,
+            },
+            DailyAggregate {
+                date: today.format("%Y-%m-%d").to_string(),
+                input_tokens: 10,
+                output_tokens: 5,
+                message_count: 1,
+                session_count: 1,
+                cost_usd: 0.0,
+            },
         ];
         let (current, longest) = compute_streaks(&daily);
         assert_eq!(current, 1);
@@ -524,9 +625,17 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let file = dir.path().join("session.jsonl");
         let mut f = std::fs::File::create(&file).unwrap();
-        writeln!(f, r#"{{"timestamp":"2026-05-10T10:00:00Z","type":"user","message":"hello"}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-10T10:00:00Z","type":"user","message":"hello"}}"#
+        )
+        .unwrap();
         writeln!(f, r#"{{"timestamp":"2026-05-10T10:01:00Z","type":"assistant","message":{{"model":"claude-sonnet-4","usage":{{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":20,"cache_creation_input_tokens":10}}}}}}"#).unwrap();
-        writeln!(f, r#"{{"timestamp":"2026-05-11T09:00:00Z","type":"user","message":"another day"}}"#).unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-11T09:00:00Z","type":"user","message":"another day"}}"#
+        )
+        .unwrap();
 
         let path = std::path::PathBuf::from(file);
         let result = scan_file_daily(&path);

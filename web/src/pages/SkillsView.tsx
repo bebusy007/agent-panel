@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
-import { api } from "@/lib/api";
-import { useCachedAsync, useDebounced } from "@/lib/hooks";
-import { useOverlayNavigate } from "@/lib/use-detail-nav";
-import { SearchBar } from "@/components/SearchBar";
-import { FilterChips } from "@/components/FilterChips";
-import { MasonryGrid } from "@/components/MasonryGrid";
-import { SkillCard } from "@/components/SkillCard";
-import { describeSkillSource } from "@/lib/utils";
-import type { SkillSummary } from "@/lib/api";
+import { useMemo, useState } from 'react';
+import { api } from '@/lib/api';
+import { useCachedAsync, useDebounced } from '@/lib/hooks';
+import { useOverlayNavigate } from '@/lib/use-detail-nav';
+import { SearchBar } from '@/components/SearchBar';
+import { FilterChips } from '@/components/FilterChips';
+import { MasonryGrid } from '@/components/MasonryGrid';
+import { SkillCard } from '@/components/SkillCard';
+import { describeSkillSource } from '@/lib/utils';
+import type { SkillSummary } from '@/lib/api';
 
 /**
  * Skills listing.
@@ -24,14 +24,10 @@ import type { SkillSummary } from "@/lib/api";
  *  - Detail view is an overlay route (`/skills/:id`).
  */
 export default function SkillsView() {
-  const { data, loading, error, refetch } = useCachedAsync(
-    "skills:list",
-    () => api.skills(),
-    [],
-  );
+  const { data, loading, error, refetch } = useCachedAsync('skills:list', () => api.skills(), []);
   const openOverlay = useOverlayNavigate();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const debouncedQuery = useDebounced(query, 150);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [selectedTriggers, setSelectedTriggers] = useState<Set<string>>(new Set());
@@ -42,10 +38,10 @@ export default function SkillsView() {
     const counts = new Map<string, { value: string; label: string; count: number }>();
     for (const s of skills) {
       const desc = describeSkillSource(s.source);
-      const key = s.source.split(":")[0];
+      const key = s.source.split(':')[0];
       const cur = counts.get(key);
       if (cur) cur.count++;
-      else counts.set(key, { value: key, label: desc.label.split(" · ")[0]!, count: 1 });
+      else counts.set(key, { value: key, label: desc.label.split(' · ')[0]!, count: 1 });
     }
     return Array.from(counts.values()).sort((a, b) => b.count - a.count);
   }, [skills]);
@@ -67,23 +63,21 @@ export default function SkillsView() {
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
     return skills.filter((s) => {
-      if (selectedSources.size > 0 && !selectedSources.has(s.source.split(":")[0])) return false;
+      if (selectedSources.size > 0 && !selectedSources.has(s.source.split(':')[0])) return false;
       if (selectedTriggers.size > 0) {
         const tset = new Set(s.triggers ?? []);
         let any = false;
-        for (const t of selectedTriggers) if (tset.has(t)) { any = true; break; }
+        for (const t of selectedTriggers)
+          if (tset.has(t)) {
+            any = true;
+            break;
+          }
         if (!any) return false;
       }
       if (q.length < 2) return true;
-      const hay = [
-        s.name,
-        s.description,
-        s.description,
-        ...(s.triggers ?? []),
-        ...s.cliCommands,
-      ]
+      const hay = [s.name, s.description, s.description, ...(s.triggers ?? []), ...s.cliCommands]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .toLowerCase();
       return hay.includes(q);
     });
@@ -114,7 +108,7 @@ export default function SkillsView() {
         <div>
           <h1 className="typo-h1">Skills</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            共 <span className="text-fg">{skills.length}</span> 个，当前显示{" "}
+            共 <span className="text-fg">{skills.length}</span> 个，当前显示{' '}
             <span className="text-fg">{filtered.length}</span>
           </p>
         </div>
@@ -147,9 +141,7 @@ export default function SkillsView() {
         )}
         {triggerOptions.length > 0 && (
           <div>
-            <div className="typo-label mb-1.5">
-              热门触发词
-            </div>
+            <div className="typo-label mb-1.5">热门触发词</div>
             <FilterChips
               options={triggerOptions}
               selected={selectedTriggers}

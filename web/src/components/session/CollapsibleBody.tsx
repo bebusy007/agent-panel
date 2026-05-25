@@ -5,12 +5,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-export function CollapsibleBody({
-  longMode,
-  expanded,
-  onExpand,
-  children,
-}: Props) {
+export function CollapsibleBody({ longMode, expanded, onExpand, children }: Props) {
   if (!longMode) return <>{children}</>;
   if (expanded) {
     return (

@@ -1,13 +1,13 @@
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { extractOutputText } from "@/lib/tool-rendering";
-import type { Message } from "@/lib/api";
-import { CopyButton } from "../ToolCardHeader";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { extractOutputText } from '@/lib/tool-rendering';
+import type { Message } from '@/lib/api';
+import { CopyButton } from '../ToolCardHeader';
 
 export function WebFetchCard({ tool, result }: { tool: Message; result?: Message }) {
   const input = (tool.toolInput as Record<string, unknown> | undefined) ?? {};
-  const url = (input.url as string) || (input.query as string) || "";
-  const prompt = (input.prompt as string) || "";
+  const url = (input.url as string) || (input.query as string) || '';
+  const prompt = (input.prompt as string) || '';
   const out = result?.toolOutput ?? extractOutputText(tool.toolOutput);
 
   return (
@@ -20,7 +20,7 @@ export function WebFetchCard({ tool, result }: { tool: Message; result?: Message
           title={url}
           className="min-w-0 flex-1 truncate font-mono text-sky-300 hover:underline"
         >
-          {url || "(no url)"}
+          {url || '(no url)'}
         </a>
         <CopyButton text={url} />
       </div>

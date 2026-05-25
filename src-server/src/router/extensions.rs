@@ -1,5 +1,5 @@
-use axum::{routing::get, Json, Router};
 use crate::scanner::extensions;
+use axum::{Json, Router, routing::get};
 
 pub fn routes() -> Router {
     Router::new()
@@ -51,7 +51,12 @@ async fn summary() -> Json<serde_json::Value> {
     let agents = extensions::scan_agents();
     let plugins = extensions::scan_plugins();
 
-    tracing::info!(hooks = hooks.len(), agents = agents.len(), plugins = plugins.len(), "extensions_summary → ok");
+    tracing::info!(
+        hooks = hooks.len(),
+        agents = agents.len(),
+        plugins = plugins.len(),
+        "extensions_summary → ok"
+    );
     Json(serde_json::json!({
         "hooks": hooks.len(),
         "agents": agents.len(),

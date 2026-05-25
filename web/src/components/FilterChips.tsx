@@ -1,12 +1,12 @@
-import { AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function FilterChips({
   options,
   selected,
   onToggle,
   onClear,
-  emptyHint = "暂无可选项",
+  emptyHint = '暂无可选项',
 }: {
   options: Array<{
     value: string;
@@ -33,18 +33,18 @@ export function FilterChips({
             key={opt.value}
             onClick={() => onToggle(opt.value)}
             className={cn(
-              "text-xs rounded-full px-2.5 py-0.5 border transition-colors inline-flex items-center gap-1",
+              'text-xs rounded-full px-2.5 py-0.5 border transition-colors inline-flex items-center gap-1',
               isOn
-                ? "border-accent/50 bg-accent/10 text-accent"
+                ? 'border-accent/50 bg-accent/10 text-accent'
                 : opt.warning
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-200 hover:border-amber-500/60"
-                  : "border-border bg-card text-muted-foreground hover:border-border hover:text-fg"
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-200 hover:border-amber-500/60'
+                  : 'border-border bg-card text-muted-foreground hover:border-border hover:text-fg',
             )}
             title={opt.warning || undefined}
           >
             {opt.warning && <AlertTriangle className="size-3 shrink-0" />}
             {opt.label}
-            {typeof opt.count === "number" && (
+            {typeof opt.count === 'number' && (
               <span className="text-[10px] opacity-60 tabular-nums">{opt.count}</span>
             )}
           </button>

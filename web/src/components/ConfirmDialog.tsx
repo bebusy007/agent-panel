@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { AlertTriangle, Info, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect, useState, type ReactNode } from 'react';
+import { AlertTriangle, Info, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface CascadeItem {
   id: string;
@@ -21,7 +21,7 @@ export interface ConfirmDialogProps {
   /** When set, user must type this exact word to enable confirm */
   requireType?: string;
   /** Visual tone */
-  tone?: "default" | "danger";
+  tone?: 'default' | 'danger';
   /** Loading state from parent */
   loading?: boolean;
   /** Cascade candidates; shown as a checklist. Initially all checked. */
@@ -39,22 +39,22 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmLabel = "确认",
-  cancelLabel = "取消",
+  confirmLabel = '确认',
+  cancelLabel = '取消',
   requireType,
-  tone = "default",
+  tone = 'default',
   loading = false,
   cascade,
   warning,
 }: ConfirmDialogProps) {
-  const [typed, setTyped] = useState("");
+  const [typed, setTyped] = useState('');
   const [working, setWorking] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
   // When the dialog opens, default all cascade items to checked.
   useEffect(() => {
     if (!open) {
-      setTyped("");
+      setTyped('');
       return;
     }
     setCheckedIds(new Set((cascade?.items ?? []).map((i) => i.id)));
@@ -63,10 +63,10 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   const canConfirm = requireType ? typed === requireType : true;
@@ -95,7 +95,7 @@ export function ConfirmDialog({
       <div className="relative w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl">
         <header className="flex items-start justify-between gap-3 px-5 pt-4 pb-3 border-b border-border">
           <div className="flex items-start gap-2.5">
-            {tone === "danger" && (
+            {tone === 'danger' && (
               <AlertTriangle className="size-5 text-amber-400 mt-0.5 shrink-0" />
             )}
             <h2 className="text-base font-semibold tracking-tight">{title}</h2>
@@ -113,7 +113,9 @@ export function ConfirmDialog({
 
           {cascade && cascade.items.length > 0 && (
             <div className="mt-4 rounded-md border border-border bg-background/60 px-3 py-2.5">
-              <div className="text-xs font-medium text-muted-foreground mb-2">{cascade.heading}</div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">
+                {cascade.heading}
+              </div>
               <ul className="space-y-1.5">
                 {cascade.items.map((it) => {
                   const checked = checkedIds.has(it.id);
@@ -157,7 +159,9 @@ export function ConfirmDialog({
           {requireType && (
             <div className="mt-4 space-y-2">
               <div className="text-xs">
-                请输入 <code className="font-mono bg-secondary px-1.5 py-0.5 rounded">{requireType}</code> 以确认
+                请输入{' '}
+                <code className="font-mono bg-secondary px-1.5 py-0.5 rounded">{requireType}</code>{' '}
+                以确认
               </div>
               <input
                 autoFocus
@@ -181,14 +185,14 @@ export function ConfirmDialog({
             onClick={handleConfirm}
             disabled={!canConfirm || busy}
             className={cn(
-              "text-sm px-3 py-1.5 rounded-md font-medium transition-colors",
-              tone === "danger"
-                ? "bg-red-500/90 hover:bg-red-500 text-white"
-                : "bg-accent hover:bg-accent/90 text-accent-foreground",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
+              'text-sm px-3 py-1.5 rounded-md font-medium transition-colors',
+              tone === 'danger'
+                ? 'bg-red-500/90 hover:bg-red-500 text-white'
+                : 'bg-accent hover:bg-accent/90 text-accent-foreground',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            {busy ? "处理中…" : confirmLabel}
+            {busy ? '处理中…' : confirmLabel}
           </button>
         </footer>
       </div>

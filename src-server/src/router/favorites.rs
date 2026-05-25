@@ -1,10 +1,14 @@
-use axum::{extract::Path, routing::{get, post, delete}, Json, Router};
+use axum::{
+    Json, Router,
+    extract::Path,
+    routing::{delete, get, post},
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::scanner::{sessions, session_loader};
+use crate::scanner::{session_loader, sessions};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,7 +28,9 @@ struct FavoritesFile {
 
 fn favorites_path() -> PathBuf {
     let home = dirs::home_dir().unwrap_or_default();
-    home.join(".claude").join("agent-panel").join("favorites.json")
+    home.join(".claude")
+        .join("agent-panel")
+        .join("favorites.json")
 }
 
 fn load_favorites() -> FavoritesFile {
@@ -50,15 +56,21 @@ pub fn routes() -> Router {
         .route("/favorites", get(list_favorites))
         .route("/favorites", post(add_favorite))
         .route("/favorites/{id}", delete(remove_favorite))
-        .route("/favorites/by-message/{session_id}/{message_id}", delete(remove_by_message))
+        .route(
+            "/favorites/by-message/{session_id}/{message_id}",
+            delete(remove_by_message),
+        )
         .route("/favorites/session/{session_id}", get(session_favorites))
 }
 
-async fn remove_by_message(Path((session_id, message_id)): Path<(String, String)>) -> Json<serde_json::Value> {
+async fn remove_by_message(
+    Path((session_id, message_id)): Path<(String, String)>,
+) -> Json<serde_json::Value> {
     tracing::info!(session_id = %session_id, message_id = %message_id, "remove_favorite_by_message request");
     let mut data = load_favorites();
     let before = data.favorites.len();
-    data.favorites.retain(|f| !(f.session_id == session_id && f.message_id == message_id));
+    data.favorites
+        .retain(|f| !(f.session_id == session_id && f.message_id == message_id));
 
     if data.favorites.len() == before {
         tracing::warn!(session_id = %session_id, message_id = %message_id, "remove_favorite_by_message → not found");
@@ -81,41 +93,47 @@ async fn list_favorites() -> Json<serde_json::Value> {
     }
 
     let scan = sessions::scan_all_sessions();
-    let session_map: HashMap<&str, &sessions::SessionSummary> = scan.sessions.iter()
-        .map(|s| (s.id.as_str(), s))
-        .collect();
+    let session_map: HashMap<&str, &sessions::SessionSummary> =
+        scan.sessions.iter().map(|s| (s.id.as_str(), s)).collect();
 
     let mut messages_cache: HashMap<String, Vec<session_loader::Message>> = HashMap::new();
 
-    let enriched: Vec<serde_json::Value> = data.favorites.iter().map(|fav| {
-        let session = session_map.get(fav.session_id.as_str());
+    let enriched: Vec<serde_json::Value> = data
+        .favorites
+        .iter()
+        .map(|fav| {
+            let session = session_map.get(fav.session_id.as_str());
 
-        let message = session.and_then(|s| {
-            let msgs = messages_cache.entry(fav.session_id.clone()).or_insert_with(|| {
-                session_loader::load_messages(std::path::Path::new(&s.file_path)).unwrap_or_default()
+            let message = session.and_then(|s| {
+                let msgs = messages_cache
+                    .entry(fav.session_id.clone())
+                    .or_insert_with(|| {
+                        session_loader::load_messages(std::path::Path::new(&s.file_path))
+                            .unwrap_or_default()
+                    });
+                msgs.iter().find(|m| m.id == fav.message_id)
             });
-            msgs.iter().find(|m| m.id == fav.message_id)
-        });
 
-        let mut obj = serde_json::json!({
-            "id": fav.id,
-            "sessionId": fav.session_id,
-            "messageId": fav.message_id,
-            "createdAt": fav.created_at,
-        });
-        if let Some(label) = &fav.label {
-            obj["label"] = serde_json::json!(label);
-        }
-        if let Some(s) = session {
-            obj["sessionTitle"] = serde_json::json!(s.title);
-            obj["sessionSource"] = serde_json::json!(s.source);
-            obj["sessionCwd"] = serde_json::json!(s.cwd);
-        }
-        if let Some(m) = message {
-            obj["message"] = serde_json::to_value(m).unwrap_or_default();
-        }
-        obj
-    }).collect();
+            let mut obj = serde_json::json!({
+                "id": fav.id,
+                "sessionId": fav.session_id,
+                "messageId": fav.message_id,
+                "createdAt": fav.created_at,
+            });
+            if let Some(label) = &fav.label {
+                obj["label"] = serde_json::json!(label);
+            }
+            if let Some(s) = session {
+                obj["sessionTitle"] = serde_json::json!(s.title);
+                obj["sessionSource"] = serde_json::json!(s.source);
+                obj["sessionCwd"] = serde_json::json!(s.cwd);
+            }
+            if let Some(m) = message {
+                obj["message"] = serde_json::to_value(m).unwrap_or_default();
+            }
+            obj
+        })
+        .collect();
 
     tracing::info!(total = enriched.len(), "list_favorites → ok (enriched)");
     Json(serde_json::json!({
@@ -141,7 +159,11 @@ async fn add_favorite(Json(body): Json<AddFavoriteBody>) -> Json<serde_json::Val
     );
     let mut data = load_favorites();
 
-    if data.favorites.iter().any(|f| f.session_id == body.session_id && f.message_id == body.message_id) {
+    if data
+        .favorites
+        .iter()
+        .any(|f| f.session_id == body.session_id && f.message_id == body.message_id)
+    {
         tracing::warn!(session_id = %body.session_id, message_id = %body.message_id, "add_favorite → duplicate");
         return Json(serde_json::json!({ "error": "already exists" }));
     }
@@ -190,7 +212,9 @@ async fn remove_favorite(Path(id): Path<String>) -> Json<serde_json::Value> {
 
 async fn session_favorites(Path(session_id): Path<String>) -> Json<serde_json::Value> {
     let data = load_favorites();
-    let matches: Vec<&FavoriteItem> = data.favorites.iter()
+    let matches: Vec<&FavoriteItem> = data
+        .favorites
+        .iter()
         .filter(|f| f.session_id == session_id)
         .collect();
 
@@ -206,15 +230,13 @@ mod tests {
     #[test]
     fn test_favorites_file_roundtrip() {
         let data = FavoritesFile {
-            favorites: vec![
-                FavoriteItem {
-                    id: "f1".to_string(),
-                    session_id: "s1".to_string(),
-                    message_id: "m1".to_string(),
-                    label: Some("important".to_string()),
-                    created_at: "2026-05-01T10:00:00Z".to_string(),
-                },
-            ],
+            favorites: vec![FavoriteItem {
+                id: "f1".to_string(),
+                session_id: "s1".to_string(),
+                message_id: "m1".to_string(),
+                label: Some("important".to_string()),
+                created_at: "2026-05-01T10:00:00Z".to_string(),
+            }],
         };
 
         let json = serde_json::to_string(&data).unwrap();

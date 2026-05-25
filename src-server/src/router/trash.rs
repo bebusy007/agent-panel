@@ -1,7 +1,7 @@
 //! Trash management — soft-delete sessions by renaming .jsonl → .jsonl.trash
 //! Restore by renaming back. Permanent delete removes the file.
 
-use axum::{routing::post, Json, Router};
+use axum::{Json, Router, routing::post};
 use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
@@ -104,7 +104,10 @@ async fn permanent_delete(Json(body): Json<TrashRequest>) -> Json<serde_json::Va
         let home = dirs::home_dir().unwrap_or_default();
         let claude_dir = home.join(".claude");
         if !path.starts_with(&claude_dir) {
-            errors.push(format!("refusing to delete outside ~/.claude: {}", path_str));
+            errors.push(format!(
+                "refusing to delete outside ~/.claude: {}",
+                path_str
+            ));
             continue;
         }
 
@@ -117,7 +120,10 @@ async fn permanent_delete(Json(body): Json<TrashRequest>) -> Json<serde_json::Va
     if !errors.is_empty() {
         tracing::warn!(errors = ?errors, "permanent delete had errors");
     }
-    tracing::info!(deleted_count = deleted.len(), "sessions permanently deleted");
+    tracing::info!(
+        deleted_count = deleted.len(),
+        "sessions permanently deleted"
+    );
 
     Json(serde_json::json!({
         "deleted": deleted,

@@ -1,28 +1,37 @@
-import { useEffect, useState } from "react";
-import { Activity, RefreshCw, BarChart3, MessageSquare, Hash, Calendar, DollarSign, HelpCircle } from "lucide-react";
-import { api } from "@/lib/api";
-import { cn, describeSessionSource, formatCost, formatTokens, sourceColor } from "@/lib/utils";
-import { HeatmapCalendar } from "@/components/usage/HeatmapCalendar";
-import type { RustUsageOverview } from "@/lib/api";
-import type { SessionSource } from "@/lib/api";
+import { useEffect, useState } from 'react';
+import {
+  Activity,
+  RefreshCw,
+  BarChart3,
+  MessageSquare,
+  Hash,
+  Calendar,
+  DollarSign,
+  HelpCircle,
+} from 'lucide-react';
+import { api } from '@/lib/api';
+import { cn, describeSessionSource, formatCost, formatTokens, sourceColor } from '@/lib/utils';
+import { HeatmapCalendar } from '@/components/usage/HeatmapCalendar';
+import type { RustUsageOverview } from '@/lib/api';
+import type { SessionSource } from '@/lib/api';
 
-type ScopeKey = "all" | SessionSource;
+type ScopeKey = 'all' | SessionSource;
 type DaysKey = 1 | 7 | 30 | 90 | 0; // 0 = all
-type ChartMode = "tokens" | "sessions" | "messages" | "cost";
+type ChartMode = 'tokens' | 'sessions' | 'messages' | 'cost';
 
 const SCOPE_OPTIONS: { key: ScopeKey; label: string }[] = [
-  { key: "all", label: "全部" },
-  { key: "claude-code", label: "Claude Code" },
-  { key: "cursor-agent", label: "Cursor agent" },
-  { key: "codex", label: "Codex" },
+  { key: 'all', label: '全部' },
+  { key: 'claude-code', label: 'Claude Code' },
+  { key: 'cursor-agent', label: 'Cursor agent' },
+  { key: 'codex', label: 'Codex' },
 ];
 
 const DAY_OPTIONS: { key: DaysKey; label: string }[] = [
-  { key: 1, label: "1d" },
-  { key: 7, label: "7d" },
-  { key: 30, label: "30d" },
-  { key: 90, label: "90d" },
-  { key: 0, label: "全部" },
+  { key: 1, label: '1d' },
+  { key: 7, label: '7d' },
+  { key: 30, label: '30d' },
+  { key: 90, label: '90d' },
+  { key: 0, label: '全部' },
 ];
 
 /**
@@ -39,12 +48,12 @@ const DAY_OPTIONS: { key: DaysKey; label: string }[] = [
  *     "—" everywhere.
  */
 export default function UsageView() {
-  const [scope, setScope] = useState<ScopeKey>("all");
+  const [scope, setScope] = useState<ScopeKey>('all');
   const [days, setDays] = useState<DaysKey>(30);
   const [data, setData] = useState<RustUsageOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chartMode, setChartMode] = useState<ChartMode>("tokens");
+  const [chartMode, setChartMode] = useState<ChartMode>('tokens');
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -53,14 +62,14 @@ export default function UsageView() {
     setError(null);
     api
       .usageOverview({
-        source: scope === "all" ? undefined : scope,
+        source: scope === 'all' ? undefined : scope,
         days: days === 0 ? undefined : days,
       })
       .then((d) => {
         if (!cancelled) {
           setData(d);
-          if (d.totalTokens === 0 && (chartMode === "tokens" || chartMode === "cost")) {
-            setChartMode(d.totalMessages > 0 ? "messages" : "sessions");
+          if (d.totalTokens === 0 && (chartMode === 'tokens' || chartMode === 'cost')) {
+            setChartMode(d.totalMessages > 0 ? 'messages' : 'sessions');
           }
         }
       })
@@ -89,7 +98,7 @@ export default function UsageView() {
           className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-fg"
           title="重新计算"
         >
-          <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+          <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
           刷新
         </button>
       </header>
@@ -102,10 +111,10 @@ export default function UsageView() {
               key={o.key}
               onClick={() => setScope(o.key)}
               className={cn(
-                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                 scope === o.key
-                  ? "bg-secondary text-fg shadow-sm"
-                  : "text-muted-foreground hover:text-fg",
+                  ? 'bg-secondary text-fg shadow-sm'
+                  : 'text-muted-foreground hover:text-fg',
               )}
             >
               {o.label}
@@ -126,10 +135,10 @@ export default function UsageView() {
                 key={o.key}
                 onClick={() => setDays(o.key)}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                   days === o.key
-                    ? "bg-accent/15 text-accent"
-                    : "text-muted-foreground hover:text-fg",
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-muted-foreground hover:text-fg',
                 )}
               >
                 {o.label}
@@ -153,7 +162,7 @@ export default function UsageView() {
       )}
 
       {data && (
-        <div className={cn("space-y-5 transition-opacity", loading && "opacity-70")}>
+        <div className={cn('space-y-5 transition-opacity', loading && 'opacity-70')}>
           {/* Summary cards */}
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <SummaryCard
@@ -175,29 +184,29 @@ export default function UsageView() {
               icon={<DollarSign className="size-3.5" />}
               label="估算成本"
               value={formatCost(data.totalCostUsd, false)}
-              hint={`基于本地价格表（${"2026-01-01"}）`}
+              hint={`基于本地价格表（${'2026-01-01'}）`}
               info={
                 <>
                   <p className="font-medium text-fg">如何计算</p>
                   <ul className="mt-1 list-inside list-disc space-y-0.5">
                     <li>
-                      <span className="text-fg">Claude Code</span>：每个会话的
-                      input / output / cache_read / cache_write tokens 分别
-                      乘以模型对应的 USD/M tokens 单价
+                      <span className="text-fg">Claude Code</span>：每个会话的 input / output /
+                      cache_read / cache_write tokens 分别 乘以模型对应的 USD/M tokens 单价
                     </li>
                     <li>
-                      <span className="text-fg">Codex</span>：仅记录
-                      total_tokens，全部按 output 价计（带 <code>~</code> 前缀）
+                      <span className="text-fg">Codex</span>：仅记录 total_tokens，全部按 output
+                      价计（带 <code>~</code> 前缀）
                     </li>
                     <li>
-                      <span className="text-fg">Cursor agent / Cursor composer / Claude prompts</span>：
-                      不记录 token，无法估算（显示 <code>—</code>）
+                      <span className="text-fg">
+                        Cursor agent / Cursor composer / Claude prompts
+                      </span>
+                      ： 不记录 token，无法估算（显示 <code>—</code>）
                     </li>
                   </ul>
                   <p className="mt-2 text-muted-foreground">
                     价格表：
-                    <code className="font-mono">shared/pricing.ts</code>，
-                    更新于 {"2026-01-01"}。
+                    <code className="font-mono">shared/pricing.ts</code>， 更新于 {'2026-01-01'}。
                     供应商调价后请手动更新该文件。
                   </p>
                   <p className="mt-1 text-muted-foreground">
@@ -226,22 +235,24 @@ export default function UsageView() {
                 最近 365 天活跃度
               </h2>
               <div className="flex items-center gap-1 rounded-md border border-border bg-background/40 p-0.5">
-                {(["tokens", "cost", "sessions", "messages"] as ChartMode[]).map((m) => (
+                {(['tokens', 'cost', 'sessions', 'messages'] as ChartMode[]).map((m) => (
                   <button
                     key={m}
                     onClick={() => setChartMode(m)}
                     className={cn(
-                      "rounded px-2 py-0.5 text-[10px] transition-colors",
-                      chartMode === m ? "bg-secondary text-fg" : "text-muted-foreground hover:text-muted-foreground",
+                      'rounded px-2 py-0.5 text-[10px] transition-colors',
+                      chartMode === m
+                        ? 'bg-secondary text-fg'
+                        : 'text-muted-foreground hover:text-muted-foreground',
                     )}
                   >
-                    {m === "tokens"
-                      ? "Token"
-                      : m === "cost"
-                        ? "成本"
-                        : m === "sessions"
-                          ? "会话"
-                          : "消息"}
+                    {m === 'tokens'
+                      ? 'Token'
+                      : m === 'cost'
+                        ? '成本'
+                        : m === 'sessions'
+                          ? '会话'
+                          : '消息'}
                   </button>
                 ))}
               </div>
@@ -254,10 +265,11 @@ export default function UsageView() {
             <section className="rounded-lg border border-border bg-card p-4">
               <header className="mb-3 flex items-center justify-between">
                 <h2 className="typo-label">
-                  趋势（{days === 0 ? "全部时间" : `最近 ${days} 天`}）
+                  趋势（{days === 0 ? '全部时间' : `最近 ${days} 天`}）
                 </h2>
                 <span className="text-[10px] text-muted-foreground">
-                  共 <span className="text-muted-foreground tabular-nums">{data.daily.length}</span> 天有活动
+                  共 <span className="text-muted-foreground tabular-nums">{data.daily.length}</span>{' '}
+                  天有活动
                 </span>
               </header>
               <TrendBars daily={data.daily.slice(-90)} metric={chartMode} />
@@ -267,9 +279,7 @@ export default function UsageView() {
           {/* By Source */}
           {data.bySource.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-3 typo-label">
-                按来源
-              </h2>
+              <h2 className="mb-3 typo-label">按来源</h2>
               <table className="w-full text-xs">
                 <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr className="border-b border-border">
@@ -286,7 +296,7 @@ export default function UsageView() {
                       <td className="py-1.5">
                         <span
                           className={cn(
-                            "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] ring-1 ring-inset font-medium",
+                            'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] ring-1 ring-inset font-medium',
                             sourceColor(row.source),
                           )}
                         >
@@ -294,13 +304,11 @@ export default function UsageView() {
                         </span>
                       </td>
                       <td className="py-1.5 text-right tabular-nums">{row.count}</td>
-                      <td className="py-1.5 text-right tabular-nums">{row.count.toLocaleString()}</td>
                       <td className="py-1.5 text-right tabular-nums">
-                        {0 > 0 ? (
-                          formatTokens(0)
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                        {row.count.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        {0 > 0 ? formatTokens(0) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="py-1.5 text-right tabular-nums">
                         {0 > 0 ? (
@@ -320,64 +328,74 @@ export default function UsageView() {
           {data.byModel.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-3 typo-label">
-                按模型 {data.byModel.length > 10 && (
+                按模型{' '}
+                {data.byModel.length > 10 && (
                   <span className="text-muted-foreground">(展示前 10)</span>
                 )}
               </h2>
               <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <tr className="border-b border-border">
-                    <th className="py-1.5 text-left">模型</th>
-                    <th className="py-1.5 text-right whitespace-nowrap px-3">Input</th>
-                    <th className="py-1.5 text-right whitespace-nowrap px-3">Output</th>
-                    <th className="py-1.5 text-right whitespace-nowrap px-3">Cache Read</th>
-                    <th className="py-1.5 text-right whitespace-nowrap px-3">Cache Write</th>
-                    <th className="py-1.5 text-right whitespace-nowrap px-3">总量</th>
-                    <th className="py-1.5 pl-3" style={{ width: 100 }}>占比</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byModel.slice(0, 10).map((row) => {
-                    const total = row.inputTokens + row.outputTokens + row.cacheReadTokens + row.cacheWriteTokens;
-                    return (
-                    <tr key={row.model} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-1.5 truncate max-w-[240px] font-mono text-[11px]" title={row.model}>
-                        {row.model}
-                      </td>
-                      <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] px-3">
-                        {formatTokens(row.inputTokens)}
-                      </td>
-                      <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] px-3">
-                        {formatTokens(row.outputTokens)}
-                      </td>
-                      <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] text-muted-foreground px-3">
-                        {formatTokens(row.cacheReadTokens)}
-                      </td>
-                      <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] text-muted-foreground px-3">
-                        {formatTokens(row.cacheWriteTokens)}
-                      </td>
-                      <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] font-medium px-3">
-                        {formatTokens(total)}
-                      </td>
-                      <td className="py-1.5 pl-3" style={{ width: 100 }}>
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-secondary">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${Math.min(100, row.pct)}%` }}
-                            />
-                          </div>
-                          <span className="shrink-0 w-8 text-right text-[10px] tabular-nums text-muted-foreground">
-                            {row.pct.toFixed(0)}%
-                          </span>
-                        </div>
-                      </td>
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b border-border">
+                      <th className="py-1.5 text-left">模型</th>
+                      <th className="py-1.5 text-right whitespace-nowrap px-3">Input</th>
+                      <th className="py-1.5 text-right whitespace-nowrap px-3">Output</th>
+                      <th className="py-1.5 text-right whitespace-nowrap px-3">Cache Read</th>
+                      <th className="py-1.5 text-right whitespace-nowrap px-3">Cache Write</th>
+                      <th className="py-1.5 text-right whitespace-nowrap px-3">总量</th>
+                      <th className="py-1.5 pl-3" style={{ width: 100 }}>
+                        占比
+                      </th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.byModel.slice(0, 10).map((row) => {
+                      const total =
+                        row.inputTokens +
+                        row.outputTokens +
+                        row.cacheReadTokens +
+                        row.cacheWriteTokens;
+                      return (
+                        <tr key={row.model} className="border-b border-border/50 hover:bg-muted/30">
+                          <td
+                            className="py-1.5 truncate max-w-[240px] font-mono text-[11px]"
+                            title={row.model}
+                          >
+                            {row.model}
+                          </td>
+                          <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] px-3">
+                            {formatTokens(row.inputTokens)}
+                          </td>
+                          <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] px-3">
+                            {formatTokens(row.outputTokens)}
+                          </td>
+                          <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] text-muted-foreground px-3">
+                            {formatTokens(row.cacheReadTokens)}
+                          </td>
+                          <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] text-muted-foreground px-3">
+                            {formatTokens(row.cacheWriteTokens)}
+                          </td>
+                          <td className="py-1.5 text-right whitespace-nowrap tabular-nums font-mono text-[11px] font-medium px-3">
+                            {formatTokens(total)}
+                          </td>
+                          <td className="py-1.5 pl-3" style={{ width: 100 }}>
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-secondary">
+                                <div
+                                  className="h-full rounded-full bg-primary"
+                                  style={{ width: `${Math.min(100, row.pct)}%` }}
+                                />
+                              </div>
+                              <span className="shrink-0 w-8 text-right text-[10px] tabular-nums text-muted-foreground">
+                                {row.pct.toFixed(0)}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}
@@ -454,16 +472,13 @@ function InfoTooltip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function dateRangeHint(
-  days: DaysKey,
-  daily: { date: string }[] | undefined,
-): string {
+function dateRangeHint(days: DaysKey, daily: { date: string }[] | undefined): string {
   if (days === 0) {
     // "全部时间" — show the actual span we have data for, falling back
     // to "(无数据)" when daily is empty.
     const first = daily?.[0]?.date;
     const last = daily?.[daily.length - 1]?.date;
-    if (!first) return "全部时间 · 暂无数据";
+    if (!first) return '全部时间 · 暂无数据';
     return `全部时间 · ${first} ~ ${last}`;
   }
   const today = new Date();
@@ -474,8 +489,8 @@ function dateRangeHint(
 }
 
 function formatAxisValue(v: number, metric: ChartMode): string {
-  if (metric === "cost") return formatCost(v, false);
-  if (metric === "tokens") return formatTokens(v);
+  if (metric === 'cost') return formatCost(v, false);
+  if (metric === 'tokens') return formatTokens(v);
   if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
   return v.toFixed(0);
 }
@@ -484,22 +499,40 @@ function TrendBars({
   daily,
   metric,
 }: {
-  daily: { date: string; inputTokens: number; outputTokens: number; messageCount: number; sessionCount: number; costUsd: number }[];
+  daily: {
+    date: string;
+    inputTokens: number;
+    outputTokens: number;
+    messageCount: number;
+    sessionCount: number;
+    costUsd: number;
+  }[];
   metric: ChartMode;
 }) {
-  const valueOf = (
-    d: { inputTokens: number; outputTokens: number; messageCount: number; sessionCount: number; costUsd: number },
-  ) => {
-    if (metric === "cost") return d.costUsd;
-    if (metric === "tokens") return d.inputTokens + d.outputTokens;
-    if (metric === "messages") return d.messageCount;
+  const valueOf = (d: {
+    inputTokens: number;
+    outputTokens: number;
+    messageCount: number;
+    sessionCount: number;
+    costUsd: number;
+  }) => {
+    if (metric === 'cost') return d.costUsd;
+    if (metric === 'tokens') return d.inputTokens + d.outputTokens;
+    if (metric === 'messages') return d.messageCount;
     return d.sessionCount;
   };
   const max = daily.reduce((m, d) => Math.max(m, valueOf(d)), 0);
   const [hover, setHover] = useState<{
     x: number;
     y: number;
-    entry: { date: string; inputTokens: number; outputTokens: number; messageCount: number; sessionCount: number; costUsd: number };
+    entry: {
+      date: string;
+      inputTokens: number;
+      outputTokens: number;
+      messageCount: number;
+      sessionCount: number;
+      costUsd: number;
+    };
   } | null>(null);
 
   if (max === 0) {
@@ -543,7 +576,9 @@ function TrendBars({
             {daily.map((d, i) => (
               <div key={d.date} className="flex-1 min-w-0 text-center">
                 {i % labelInterval === 0 && (
-                  <span className="text-[10px] text-muted-foreground tabular-nums">{d.date.slice(5)}</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {d.date.slice(5)}
+                  </span>
                 )}
               </div>
             ))}
