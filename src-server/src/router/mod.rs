@@ -16,6 +16,15 @@ mod usage;
 mod version;
 pub mod ws;
 
+#[cfg(test)]
+mod favorites_tests;
+#[cfg(test)]
+mod search_tests;
+#[cfg(test)]
+mod session_tests;
+#[cfg(test)]
+mod usage_tests;
+
 use crate::watcher::EventSender;
 use axum::Router;
 use tracing_subscriber::{EnvFilter, reload};
