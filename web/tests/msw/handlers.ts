@@ -10,16 +10,17 @@ export const handlers = [
   // Stats
   http.get('/api/stats', () => {
     return HttpResponse.json({
-      skills: state.getSkills().length,
-      mcps: state.getMcps().length,
-      sessions: state.getSessions().length,
-      favorites: state.getFavorites().length,
-      hooks: 0,
-      agents: 0,
-      plugins: 0,
-      sources: {},
-      totalTokens: 1500,
-      totalCostUsd: 0,
+      totals: {
+        skills: state.getSkills().length,
+        mcps: state.getMcps().length,
+        sessions: state.getSessions().length,
+        hooks: 0,
+        agents: 0,
+        plugins: 0,
+        sources: 3,
+        totalTokens: 1500,
+        totalCostUsd: 0,
+      },
       scanTimeMs: 10,
     });
   }),
@@ -129,6 +130,7 @@ export const handlers = [
       daily: [],
       byModel: [],
       bySource: [],
+      heatmap: [],
     });
   }),
 
