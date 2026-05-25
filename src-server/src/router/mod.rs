@@ -2,6 +2,7 @@ mod extensions;
 mod favorites;
 mod health;
 mod images;
+pub mod log_level;
 mod logs;
 mod mcps;
 mod resume;
@@ -17,9 +18,14 @@ pub mod ws;
 
 use crate::watcher::EventSender;
 use axum::Router;
+use tracing_subscriber::{EnvFilter, reload};
 
-pub fn build_api_router(watcher_tx: EventSender, log_dir: String) -> Router {
-    Router::new()
+pub fn build_api_router(
+    watcher_tx: EventSender,
+    log_dir: String,
+    log_level_handle: Option<reload::Handle<EnvFilter, tracing_subscriber::Registry>>,
+) -> Router {
+    let mut router = Router::new()
         .merge(logs::routes(log_dir))
         .merge(health::routes())
         .merge(skills::routes())
@@ -35,7 +41,13 @@ pub fn build_api_router(watcher_tx: EventSender, log_dir: String) -> Router {
         .merge(resume::routes())
         .merge(sources::routes())
         .merge(version::routes())
-        .merge(ws::routes(watcher_tx))
+        .merge(ws::routes(watcher_tx));
+
+    if let Some(handle) = log_level_handle {
+        router = router.merge(log_level::routes(handle));
+    }
+
+    router
 }
 
 #[cfg(test)]
@@ -47,7 +59,7 @@ mod integration_tests {
 
     fn test_server(log_dir: &str) -> TestServer {
         let (tx, _) = broadcast::channel(256);
-        let router = build_api_router(tx, log_dir.to_string());
+        let router = build_api_router(tx, log_dir.to_string(), None);
         TestServer::new(router.into_make_service())
     }
 

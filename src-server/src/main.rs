@@ -48,7 +48,7 @@ async fn main() {
     let args = Args::parse();
 
     // Initialize logging — guards must live until program exit
-    let _log_guards = logging::init(&args.log_dir, args.release_mode);
+    let log_guards = logging::init(&args.log_dir, args.release_mode);
 
     // Install panic hook — crash reports written to crash.log
     let log_path = std::path::PathBuf::from(&args.log_dir);
@@ -57,7 +57,11 @@ async fn main() {
     // Start file watcher (background thread)
     let watcher_tx = watcher::start_watching();
 
-    let api = router::build_api_router(watcher_tx, args.log_dir.clone());
+    let api = router::build_api_router(
+        watcher_tx,
+        args.log_dir.clone(),
+        Some(log_guards.stdout_reload),
+    );
 
     let index_path = std::path::PathBuf::from(&args.dist).join("index.html");
     let spa_fallback = tower::service_fn(move |_req: http::Request<_>| {
