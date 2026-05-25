@@ -2,6 +2,7 @@
   "name": "agent-panel",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "description": "Local read-only dashboard for every AI agent on your machine — Skills, MCP servers, hooks, custom agents, conversation history (Claude Code / Cursor / Codex), full-text search, and multi-source token usage analytics.",
   "scripts": {
     "dev": "vite",
@@ -10,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix src/"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -35,6 +38,7 @@
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -48,13 +52,16 @@
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "eslint": "^10.4.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.49",
+    "prettier": "^3.6.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.59.4",
     "vite": "^6.0.7",
-    "prettier": "^3.6.0",
     "vitest": "^3.2.1"
   }
 }

@@ -492,7 +492,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({
   label,
   mono,
-  // eslint-disable-next-line react/no-unknown-property
   ...rest
 }: {
   label: string;
