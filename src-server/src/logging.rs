@@ -1,7 +1,9 @@
 use std::fs;
 use std::path::Path;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt};
+use tracing_subscriber::{
+    EnvFilter, Layer, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt,
+};
 
 pub struct LogGuards {
     _file_guard: WorkerGuard,
@@ -19,8 +21,8 @@ pub fn init(log_dir: &str, release_mode: bool) -> LogGuards {
         "agent_panel_server=debug,tower_http=info"
     };
 
-    let stdout_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(default_stdout_filter));
+    let stdout_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_stdout_filter));
 
     let (stdout_filter_layer, stdout_reload) = reload::Layer::new(stdout_filter);
 
