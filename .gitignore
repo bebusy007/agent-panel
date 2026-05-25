@@ -21,6 +21,7 @@ screenshot/
 # Rust build artifacts
 /target/
 src-server/target/
+src-server/bindings/
 
 # Tauri
 src-tauri/binaries/agent-panel-server-*

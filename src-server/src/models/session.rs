@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionSummary {
     pub id: String,
@@ -13,6 +15,7 @@ pub struct SessionSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd_short: Option<String>,
     pub message_count: u32,
+    #[ts(type = "number | null")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tokens_total: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]

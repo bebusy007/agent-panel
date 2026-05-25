@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct SkillSummary {
     pub id: String,
@@ -16,6 +18,7 @@ pub struct SkillSummary {
     pub cli_commands: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub symlink_to: Option<String>,
+    #[ts(type = "number")]
     pub file_size: u64,
     pub file_path: String,
 }
