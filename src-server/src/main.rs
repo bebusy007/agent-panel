@@ -1,6 +1,8 @@
 mod constants;
+pub mod error_codes;
 mod logging;
 mod models;
+mod panic_hook;
 mod router;
 mod scanner;
 mod search;
@@ -46,6 +48,10 @@ async fn main() {
 
     // Initialize logging — guards must live until program exit
     let _log_guards = logging::init(&args.log_dir, args.release_mode);
+
+    // Install panic hook — crash reports written to crash.log
+    let log_path = std::path::PathBuf::from(&args.log_dir);
+    panic_hook::install(&log_path);
 
     // Start file watcher (background thread)
     let watcher_tx = watcher::start_watching();
