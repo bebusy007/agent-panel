@@ -573,8 +573,9 @@ mod tests {
 
     #[test]
     fn test_cursor_project_dir_to_cwd_valid_path() {
-        let result = cursor_project_dir_to_cwd("Users");
-        assert_eq!(result, Some("/Users".to_string()));
+        // /tmp 在 macOS 和 Linux 上都存在，/Users 只在 macOS 存在
+        let result = cursor_project_dir_to_cwd("tmp");
+        assert_eq!(result, Some("/tmp".to_string()));
     }
 
     #[test]
