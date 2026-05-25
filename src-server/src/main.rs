@@ -1,11 +1,12 @@
 mod constants;
-pub mod error_codes;
 mod logging;
 mod models;
 mod panic_hook;
 mod router;
 mod scanner;
 mod search;
+#[cfg(test)]
+pub mod test_utils;
 mod watcher;
 
 use axum::Router;
