@@ -19,11 +19,11 @@ serde_json = "1"
 aho-corasick = "1"
 memmap2 = "0.9"
 rayon = "1"
-lru = "0.12"
+lru = "0.18"
 
 # File system
 walkdir = "2"
-notify = "7"
+notify = "8"
 dirs = "6"
 
 # HTTP types (used by tower-http TraceLayer)
@@ -51,7 +51,7 @@ urlencoding = "2"
 rust-embed = "8"
 
 # TypeScript type generation
-ts-rs = "10"
+ts-rs = "12"
 
 [dev-dependencies]
 tempfile = "3"
