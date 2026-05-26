@@ -689,4 +689,109 @@ mod tests {
         let result = scan_cursor_file(&file).unwrap();
         assert_eq!(result.first_user_message, Some("What is Rust?".to_string()));
     }
+
+    #[test]
+    fn test_cursor_project_dir_to_cwd_multi_segment() {
+        // 在 /tmp 下创建 multi-segment 目录来测试贪心匹配算法
+        let test_dir = std::path::PathBuf::from("/tmp/test-foo-bar");
+        fs::create_dir_all(&test_dir).unwrap();
+        let result = cursor_project_dir_to_cwd("tmp-test-foo-bar");
+        // tmp/ 对应根路径 /，算法从左到右匹配最长存在的目录
+        // tmp → test-foo-bar → test-foo → test（贪心回退）
+        assert!(result.is_some());
+        let _ = fs::remove_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_cursor_project_dir_to_cwd_double_segment() {
+        // /tmp/abc-def → 对应 cursor 项目 dir 名 "tmp-abc-def"
+        let test_dir = std::path::PathBuf::from("/tmp/abc-def");
+        fs::create_dir_all(&test_dir).unwrap();
+        let result = cursor_project_dir_to_cwd("tmp-abc-def");
+        assert!(result.is_some());
+        let _ = fs::remove_dir(&test_dir);
+    }
+
+    #[test]
+    fn test_scan_codex_file_malformed_lines_skipped() {
+        let dir = TempDir::new().unwrap();
+        let file = dir
+            .path()
+            .join("rollout-2026-03-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
+        let mut f = fs::File::create(&file).unwrap();
+        writeln!(f, "not json at all").unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-03-01T10:00:00Z","type":"event_msg","payload":{{"type":"user_message","message":"valid message"}}}}"#
+        )
+        .unwrap();
+        writeln!(f, r#"{{"timestamp":"invalid-date","type":"event_msg","payload":{{"type":"user_message","message":"bad ts"}}}}"#).unwrap();
+
+        let result = scan_codex_file(&file).unwrap();
+        // Only the valid message counts
+        assert_eq!(result.first_user_message, Some("valid message".to_string()));
+    }
+
+    #[test]
+    fn test_scan_cursor_file_with_content_blocks() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("cursor-blocks.jsonl");
+        let mut f = fs::File::create(&file).unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-10T10:00:00Z","role":"user","message":{{"content":[{{"type":"text","text":"Block test"}},{{"type":"tool_result","tool_use_id":"t1","content":"result text"}}]}}}}"#
+        )
+        .unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-10T10:01:00Z","role":"assistant","message":{{"content":[{{"type":"tool_use","name":"Read","id":"t1","input":{{"file_path":"/test"}}}}]}}}}"#
+        )
+        .unwrap();
+
+        let result = scan_cursor_file(&file).unwrap();
+        assert_eq!(result.first_user_message, Some("Block test".to_string()));
+        assert!(result.message_count > 0);
+    }
+
+    #[test]
+    fn test_scan_codex_file_empty_file_returns_none() {
+        let dir = TempDir::new().unwrap();
+        let file = dir
+            .path()
+            .join("rollout-2026-04-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
+        fs::File::create(&file).unwrap(); // empty file
+        assert!(scan_codex_file(&file).is_none());
+    }
+
+    #[test]
+    fn test_safe_truncate_multibyte_boundary() {
+        // "你好世界" = 12 bytes in UTF-8, 4 chars
+        let s = "你好世界";
+        assert_eq!(safe_truncate(s, 3), "你"); // 3 bytes = first char
+        assert_eq!(safe_truncate(s, 6), "你好"); // 6 bytes = first 2 chars
+    }
+
+    #[test]
+    fn test_scan_codex_file_session_meta_fields() {
+        let dir = TempDir::new().unwrap();
+        let file = dir
+            .path()
+            .join("rollout-2026-05-01T00-00-00-aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl");
+        let mut f = fs::File::create(&file).unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-01T10:00:00Z","type":"session_meta","payload":{{"cwd":"/my/project","model_provider":"claude-sonnet-4","id":"session-abc"}}}}"#
+        )
+        .unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-01T10:01:00Z","type":"event_msg","payload":{{"type":"user_message","message":"query"}}}}"#
+        )
+        .unwrap();
+
+        let result = scan_codex_file(&file).unwrap();
+        assert_eq!(result.cwd, Some("/my/project".to_string()));
+        assert_eq!(result.model, Some("claude-sonnet-4".to_string()));
+        assert_eq!(result.source, "codex");
+    }
 }
