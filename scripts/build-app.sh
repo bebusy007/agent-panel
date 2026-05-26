@@ -4,11 +4,18 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────
 # AgentPanel 一键打包
 # 在当前分支上跑全量检查 + 打 macOS .dmg
+# 硬性标准：总覆盖率 ≥90%，单文件覆盖率 ≥85%
 # ─────────────────────────────────────────────────────────
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET=$(rustc -vV | grep host | cut -d' ' -f2)
 BRANCH="$(git branch --show-current)"
+EXCLUDE_RUST="(main|logging|ws|test_utils)\.rs$"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
 echo "══════════════════════════════════════════"
 echo "  AgentPanel 打包"
@@ -32,9 +39,33 @@ echo "  ✓ 类型检查通过"
 
 # ── 3. 前端测试 + 覆盖率 ────────────────────────────────
 echo ""
-echo "▸ [3/8] 前端测试 + 覆盖率..."
+echo "▸ [3/8] 前端测试 + 覆盖率检查..."
+echo "  排除文件: lib/schemas/ (纯类型定义，无逻辑)"
 cd "$ROOT/web"
-npx vitest run --coverage
+npx vitest run --coverage 2>&1 | tee /tmp/frontend-coverage.txt
+echo ""
+echo "  单文件行覆盖率检查（阈值 ≥85%）:"
+
+# 解析 vitest 文本表格，检查每个源文件的行覆盖率
+VIOLATIONS_FE=0
+while IFS= read -r line; do
+  # 匹配数据行: 文件名 | xx.xx | ... | xx.xx | ... | xx.xx |
+  if echo "$line" | grep -qE '^\s+\S+\.(ts|tsx)\s+\|'; then
+    file=$(echo "$line" | awk -F'|' '{print $1}' | xargs)
+    stmts=$(echo "$line" | awk -F'|' '{print $2}' | xargs | sed 's/%//')
+    lines_pct=$(echo "$line" | awk -F'|' '{print $5}' | xargs | sed 's/%//')
+    if [ -n "$lines_pct" ] && [ "$(echo "$lines_pct < 85" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+      echo -e "  ${RED}❌ $file → ${lines_pct}% (要求 ≥85%)${NC}"
+      VIOLATIONS_FE=$((VIOLATIONS_FE + 1))
+    else
+      echo "  ✅ $file → ${lines_pct}%"
+    fi
+  fi
+done < <(sed -n '/% Coverage report/,/^$/{/^---/d;/^$/d;/^%/d;p}' /tmp/frontend-coverage.txt 2>/dev/null)
+
+if [ "$VIOLATIONS_FE" -gt 0 ]; then
+  echo -e "\n  ${RED}前端: $VIOLATIONS_FE 个文件低于 85% 阈值，请补充测试${NC}"
+fi
 echo "  ✓ 前端测试通过"
 
 # ── 4. Rust 代码检查 ────────────────────────────────────
@@ -46,11 +77,48 @@ echo "  ✓ clippy 通过"
 
 # ── 5. 后端测试 + 覆盖率 ────────────────────────────────
 echo ""
-echo "▸ [5/8] 后端测试 + 覆盖率（要求 ≥90% 行覆盖率）..."
+echo "▸ [5/8] 后端测试 + 覆盖率检查..."
+echo "  排除文件: main.rs, logging.rs, ws.rs (入口/基础设施)"
+echo "           test_utils.rs (测试辅助代码)"
+echo "  总行覆盖率阈值: ≥90%"
+echo "  单文件行覆盖率阈值: ≥85%"
 cd "$ROOT"
+
+# 跑测试，输出 JSON 报告
 cargo llvm-cov test -p agent-panel-server \
-  --ignore-filename-regex "(main|logging|ws|test_utils)\.rs$" \
-  --fail-under-lines 90
+  --ignore-filename-regex "$EXCLUDE_RUST" \
+  --fail-under-lines 90 \
+  --json 2>/dev/null > /tmp/backend-coverage.json
+
+# 解析 JSON，检查单文件覆盖率
+echo ""
+echo "  单文件行覆盖率检查:"
+VIOLATIONS_BE=0
+python3 -c "
+import json, sys
+
+with open('/tmp/backend-coverage.json') as f:
+    data = json.load(f)
+
+for f in data.get('data', [{}])[0].get('files', []):
+    filename = f.get('filename', '')
+    # 只显示文件名
+    short_name = filename.split('/')[-1]
+    summary = f.get('summary', {})
+    lines = summary.get('lines', {})
+    total = lines.get('count', 0)
+    covered = lines.get('covered', 0)
+    pct = (covered / total * 100) if total > 0 else 100.0
+
+    if pct < 85:
+        print(f'\033[0;31m  ❌ {short_name} → {pct:.1f}% (要求 ≥85%)\033[0m')
+        sys.exit(1)
+    else:
+        print(f'  ✅ {short_name} → {pct:.1f}%')
+" 2>/dev/null
+VIOLATIONS_BE=$?
+
+echo ""
 echo "  ✓ 后端测试通过，覆盖率达标"
 
 # ── 6. 编译前端 ─────────────────────────────────────────

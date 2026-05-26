@@ -67,43 +67,92 @@ pub fn routes(handle: reload::Handle<EnvFilter, tracing_subscriber::Registry>) -
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum_test::TestServer;
+
+    fn test_server() -> (
+        TestServer,
+        reload::Layer<EnvFilter, tracing_subscriber::Registry>,
+    ) {
+        let (layer, handle) =
+            reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(EnvFilter::new(
+                "agent_panel_server=debug,tower_http=info",
+            ));
+        let router = routes(handle);
+        (
+            TestServer::new(router.into_make_service()),
+            layer,
+        )
+    }
 
     #[test]
     fn test_reload_handle_accepts_new_filter() {
-        let (_layer, handle) = reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(EnvFilter::new("info"));
-        let new_filter = EnvFilter::new("debug");
-        assert!(handle.reload(new_filter).is_ok());
+        let (_layer, handle) =
+            reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(EnvFilter::new("info"));
+        assert!(handle.reload(EnvFilter::new("debug")).is_ok());
     }
 
     #[test]
     fn test_reload_handle_accepts_target_specific_filter() {
-        let (_layer, handle) = reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(
-            EnvFilter::new("agent_panel_server=debug,tower_http=info"),
-        );
-        let new_filter =
-            EnvFilter::new("agent_panel_server=debug,tower_http=debug");
-        assert!(handle.reload(new_filter).is_ok());
+        let (_layer, handle) =
+            reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(
+                EnvFilter::new("agent_panel_server=debug,tower_http=info"),
+            );
+        assert!(handle
+            .reload(EnvFilter::new("agent_panel_server=debug,tower_http=debug"))
+            .is_ok());
     }
 
     #[test]
     fn test_state_get_set_level() {
-        let (_layer, handle) = reload::Layer::new(EnvFilter::new("info"));
+        let (_layer, handle) =
+            reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(EnvFilter::new("info"));
         let state = Arc::new(LogLevelState {
             handle,
             current_level: Arc::new(RwLock::new("info".to_string())),
         });
-
-        // 初始值
-        assert_eq!(
-            state.current_level.read().unwrap().as_str(),
-            "info"
-        );
-
-        // 写入新值
+        assert_eq!(state.current_level.read().unwrap().as_str(), "info");
         *state.current_level.write().unwrap() = "debug".to_string();
-        assert_eq!(
-            state.current_level.read().unwrap().as_str(),
-            "debug"
-        );
+        assert_eq!(state.current_level.read().unwrap().as_str(), "debug");
+    }
+
+    #[tokio::test]
+    async fn test_get_log_level_returns_initial() {
+        let (server, _layer) = test_server();
+        let res = server.get("/log-level").await;
+        res.assert_status_ok();
+        assert_eq!(res.json::<serde_json::Value>()["level"], "info");
+    }
+
+    #[tokio::test]
+    async fn test_set_log_level_debug() {
+        let (server, _layer) = test_server();
+        let res = server
+            .post("/log-level")
+            .json(&serde_json::json!({"level": "debug"}))
+            .await;
+        res.assert_status_ok();
+        assert_eq!(res.json::<serde_json::Value>()["level"], "debug");
+    }
+
+    #[tokio::test]
+    async fn test_set_then_get_roundtrip() {
+        let (server, _layer) = test_server();
+        server
+            .post("/log-level")
+            .json(&serde_json::json!({"level": "trace"}))
+            .await;
+        let res = server.get("/log-level").await;
+        assert_eq!(res.json::<serde_json::Value>()["level"], "trace");
+    }
+
+    #[tokio::test]
+    async fn test_set_log_level_off() {
+        let (server, _layer) = test_server();
+        let res = server
+            .post("/log-level")
+            .json(&serde_json::json!({"level": "off"}))
+            .await;
+        res.assert_status_ok();
+        assert_eq!(res.json::<serde_json::Value>()["level"], "off");
     }
 }
