@@ -22,9 +22,11 @@ use tokio::sync::broadcast;
 
 use crate::router;
 
-/// 创建隔离的测试服务器
+/// 创建隔离的测试服务器，将 HOME 重定向到临时目录以隔离文件 I/O
 pub fn create_test_server() -> (TestServer, TempDir) {
     let dir = TempDir::new().expect("failed to create temp dir");
+    // SAFETY: 仅在测试环境使用，隔离 HOME 目录避免污染用户数据
+    unsafe { std::env::set_var("HOME", dir.path()) };
     let (tx, _) = broadcast::channel(256);
     let api = router::build_api_router(tx, dir.path().to_string_lossy().to_string(), None);
     let server = TestServer::new(api.into_make_service());

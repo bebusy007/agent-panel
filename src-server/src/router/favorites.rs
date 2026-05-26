@@ -27,7 +27,7 @@ struct FavoritesFile {
 }
 
 fn favorites_path() -> PathBuf {
-    let home = crate::scanner::home_dir().unwrap_or_default();
+    let home = dirs::home_dir().unwrap_or_default();
     home.join(".claude")
         .join("agent-panel")
         .join("favorites.json")

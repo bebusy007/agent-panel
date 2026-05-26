@@ -30,7 +30,7 @@ pub struct McpSummary {
 
 /// Scan all MCP sources and return deduplicated server list.
 pub fn scan_mcps() -> Vec<McpSummary> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };

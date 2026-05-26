@@ -14,7 +14,7 @@ use std::path::PathBuf;
 
 /// Scan all skill sources and return deduplicated results.
 pub fn scan_skills() -> Vec<SkillSummary> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };

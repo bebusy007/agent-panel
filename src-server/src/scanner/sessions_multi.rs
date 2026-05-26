@@ -27,7 +27,7 @@ fn safe_truncate(s: &str, max_bytes: usize) -> &str {
 // ============================================================
 
 pub fn scan_codex_sessions() -> Vec<SessionSummary> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };
@@ -193,7 +193,7 @@ fn extract_codex_id(file_stem: &str) -> Option<&str> {
 // ============================================================
 
 pub fn scan_cursor_sessions() -> Vec<SessionSummary> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };
@@ -386,7 +386,7 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
 
 #[allow(dead_code)]
 pub fn scan_claude_history() -> Vec<SessionSummary> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };

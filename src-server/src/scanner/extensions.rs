@@ -34,7 +34,7 @@ pub struct PluginEntry {
 
 /// Scan hooks from settings.json
 pub fn scan_hooks() -> Vec<HookEntry> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };
@@ -95,7 +95,7 @@ fn scan_hooks_from_file(path: &Path, scope: &str) -> Vec<HookEntry> {
 
 /// Scan custom agents from ~/.claude/agents/
 pub fn scan_agents() -> Vec<AgentEntry> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };
@@ -138,7 +138,7 @@ pub fn scan_agents() -> Vec<AgentEntry> {
 
 /// Scan installed plugins from ~/.claude/plugins/installed_plugins.json
 pub fn scan_plugins() -> Vec<PluginEntry> {
-    let home = match crate::scanner::home_dir() {
+    let home = match dirs::home_dir() {
         Some(h) => h,
         None => return vec![],
     };
