@@ -70,3 +70,66 @@ pub fn install(log_dir: &std::path::Path) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_panic_hook_writes_crash_log() {
+        let dir = TempDir::new().unwrap();
+        let original = std::panic::take_hook();
+
+        install(dir.path());
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            panic!("测试崩溃 test-panic-msg");
+        }));
+        assert!(result.is_err(), "catch_unwind 应该捕获到 panic");
+
+        let crash_log = dir.path().join("crash.log");
+        assert!(crash_log.exists(), "crash.log 应该被创建");
+
+        let content = std::fs::read_to_string(&crash_log).unwrap();
+        assert!(
+            content.contains("=== Crash Report ==="),
+            "应包含 Crash Report 头"
+        );
+        assert!(
+            content.contains("test-panic-msg"),
+            "应包含 panic 消息"
+        );
+        assert!(
+            content.contains("=== End Crash Report ==="),
+            "应包含 Crash Report 尾"
+        );
+        assert!(content.contains("Timestamp:"), "应包含时间戳");
+        assert!(content.contains("Location:"), "应包含 panic 位置");
+        assert!(content.contains("Backtrace:"), "应包含 backtrace");
+
+        // 恢复原始 hook
+        std::panic::set_hook(original);
+    }
+
+    #[test]
+    fn test_panic_hook_appends_to_existing_crash_log() {
+        let dir = TempDir::new().unwrap();
+        let original = std::panic::take_hook();
+
+        // 预写一个 crash.log 模拟历史崩溃
+        std::fs::write(dir.path().join("crash.log"), "旧崩溃记录\n").unwrap();
+
+        install(dir.path());
+
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            panic!("新崩溃");
+        }));
+
+        let content = std::fs::read_to_string(dir.path().join("crash.log")).unwrap();
+        assert!(content.contains("旧崩溃记录"), "应保留历史记录");
+        assert!(content.contains("新崩溃"), "应追加新记录");
+
+        std::panic::set_hook(original);
+    }
+}

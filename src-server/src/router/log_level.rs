@@ -63,3 +63,47 @@ pub fn routes(handle: reload::Handle<EnvFilter, tracing_subscriber::Registry>) -
         .route("/log-level", get(get_log_level).post(set_log_level))
         .with_state(state)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reload_handle_accepts_new_filter() {
+        let (_layer, handle) = reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(EnvFilter::new("info"));
+        let new_filter = EnvFilter::new("debug");
+        assert!(handle.reload(new_filter).is_ok());
+    }
+
+    #[test]
+    fn test_reload_handle_accepts_target_specific_filter() {
+        let (_layer, handle) = reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(
+            EnvFilter::new("agent_panel_server=debug,tower_http=info"),
+        );
+        let new_filter =
+            EnvFilter::new("agent_panel_server=debug,tower_http=debug");
+        assert!(handle.reload(new_filter).is_ok());
+    }
+
+    #[test]
+    fn test_state_get_set_level() {
+        let (_layer, handle) = reload::Layer::new(EnvFilter::new("info"));
+        let state = Arc::new(LogLevelState {
+            handle,
+            current_level: Arc::new(RwLock::new("info".to_string())),
+        });
+
+        // 初始值
+        assert_eq!(
+            state.current_level.read().unwrap().as_str(),
+            "info"
+        );
+
+        // 写入新值
+        *state.current_level.write().unwrap() = "debug".to_string();
+        assert_eq!(
+            state.current_level.read().unwrap().as_str(),
+            "debug"
+        );
+    }
+}

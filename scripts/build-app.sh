@@ -49,7 +49,7 @@ echo ""
 echo "▸ [5/8] 后端测试 + 覆盖率（要求 ≥90% 行覆盖率）..."
 cd "$ROOT"
 cargo llvm-cov test -p agent-panel-server \
-  --ignore-filename-regex "(main|logging|ws|test_utils|panic_hook)\.rs$" \
+  --ignore-filename-regex "(main|logging|ws|test_utils)\.rs$" \
   --fail-under-lines 90
 echo "  ✓ 后端测试通过，覆盖率达标"
 
