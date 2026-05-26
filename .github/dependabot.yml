@@ -4,6 +4,7 @@ updates:
     directory: /web
     schedule:
       interval: weekly
+    versioning-strategy: increase-if-necessary
     labels: [dependencies, frontend]
     groups:
       frontend-deps:
