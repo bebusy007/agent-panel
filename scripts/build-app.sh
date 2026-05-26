@@ -84,40 +84,57 @@ echo "  总行覆盖率阈值: ≥90%"
 echo "  单文件行覆盖率阈值: ≥85%"
 cd "$ROOT"
 
-# 跑测试，输出 JSON 报告
+# 跑测试（串行避免 HOME 环境变量竞态），输出 JSON 报告
 cargo llvm-cov test -p agent-panel-server \
   --ignore-filename-regex "$EXCLUDE_RUST" \
   --fail-under-lines 90 \
-  --json 2>/dev/null > /tmp/backend-coverage.json
+  --json -- --test-threads=1 2>/dev/null > /tmp/backend-coverage.json
+LLVM_EXIT=$?
 
 # 解析 JSON，检查单文件覆盖率
 echo ""
 echo "  单文件行覆盖率检查:"
-VIOLATIONS_BE=0
 python3 -c "
 import json, sys
 
 with open('/tmp/backend-coverage.json') as f:
     data = json.load(f)
 
+bad = []
+good = []
 for f in data.get('data', [{}])[0].get('files', []):
     filename = f.get('filename', '')
-    # 只显示文件名
     short_name = filename.split('/')[-1]
     summary = f.get('summary', {})
     lines = summary.get('lines', {})
     total = lines.get('count', 0)
     covered = lines.get('covered', 0)
     pct = (covered / total * 100) if total > 0 else 100.0
-
     if pct < 85:
-        print(f'\033[0;31m  ❌ {short_name} → {pct:.1f}% (要求 ≥85%)\033[0m')
-        sys.exit(1)
+        bad.append((short_name, pct))
     else:
-        print(f'  ✅ {short_name} → {pct:.1f}%')
+        good.append((short_name, pct))
+
+for fn, pct in sorted(bad):
+    print(f'\033[0;31m  ❌ {fn} → {pct:.1f}% (要求 ≥85%)\033[0m')
+for fn, pct in sorted(good):
+    print(f'  ✅ {fn} → {pct:.1f}%')
+
+if bad:
+    print(f'\n\033[0;31m  后端: {len(bad)} 个文件低于 85%，请补充测试\033[0m')
+    sys.exit(1)
+else:
+    print(f'\n  ✅ 全部 {len(good)} 个文件达标')
 " 2>/dev/null
 VIOLATIONS_BE=$?
 
+if [ "$LLVM_EXIT" -ne 0 ]; then
+  echo -e "\n  ${RED}后端: 总覆盖率或测试失败 (exit=$LLVM_EXIT)${NC}"
+  exit 1
+fi
+if [ "$VIOLATIONS_BE" -ne 0 ]; then
+  exit 1
+fi
 echo ""
 echo "  ✓ 后端测试通过，覆盖率达标"
 
