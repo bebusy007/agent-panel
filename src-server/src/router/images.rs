@@ -30,8 +30,8 @@ async fn serve_image(
     // Fast path: if cache_path is provided and the file exists, serve it directly
     if let Some(ref cp) = query.cache_path {
         let p = std::path::Path::new(cp);
-        if p.is_file() {
-            if let Ok(bytes) = std::fs::read(p) {
+        if p.is_file()
+            && let Ok(bytes) = std::fs::read(p) {
                 let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("png");
                 let media = match ext {
                     "png" => "image/png",
@@ -54,7 +54,6 @@ async fn serve_image(
                 )
                     .into_response();
             }
-        }
     }
 
     let result = sessions::scan_all_sessions();

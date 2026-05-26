@@ -256,7 +256,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 ContentBlock::Text(t) => Some(t.as_str()),
                 _ => None,
             })
-            .flat_map(|t| extract_image_source_paths(t))
+            .flat_map(extract_image_source_paths)
             .collect();
         let text_blocks: Vec<&str> = blocks
             .iter()
@@ -439,8 +439,8 @@ fn parse_codex_entry(
                             .map(|s| s.to_string())
                     })
                 });
-                if let Some(t) = text {
-                    if !t.trim().is_empty() {
+                if let Some(t) = text
+                    && !t.trim().is_empty() {
                         *idx += 1;
                         msgs.push(Message {
                             id: format!("codex-{}", idx),
@@ -458,7 +458,6 @@ fn parse_codex_entry(
                             agent_hash: None,
                         });
                     }
-                }
             }
             "agent_message" | "agent_reasoning" => {
                 let text = payload.get("message").and_then(|v| v.as_str());
@@ -771,11 +770,10 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
         let item_type = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
         match item_type {
             "text" => {
-                if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
-                    if !text.is_empty() {
+                if let Some(text) = item.get("text").and_then(|v| v.as_str())
+                    && !text.is_empty() {
                         blocks.push(ContentBlock::Text(text.to_string()));
                     }
-                }
             }
             "tool_use" => {
                 let name = item
@@ -926,8 +924,8 @@ pub fn resolve_image(
 ) -> Result<(Vec<u8>, String), String> {
     // Step 1: Try image-cache file.
     // We need to compute the global image number (1-based) by scanning the JSONL.
-    if let Some(raw_id) = session_id_raw {
-        if let Some(home) = dirs::home_dir() {
+    if let Some(raw_id) = session_id_raw
+        && let Some(home) = dirs::home_dir() {
             let cache_dir = home.join(".claude").join("image-cache").join(raw_id);
             if cache_dir.is_dir() {
                 // Count all image blocks up to target to get global number
@@ -953,7 +951,6 @@ pub fn resolve_image(
                 }
             }
         }
-    }
 
     // Step 2: Parse JSONL and decode base64
     let file = fs::File::open(jsonl_path).map_err(|e| format!("open jsonl: {e}"))?;
@@ -1018,8 +1015,8 @@ pub fn resolve_image(
                 let text = item.get("text").and_then(|v| v.as_str()).unwrap_or("");
                 let cursor_refs = parse_cursor_image_refs(text);
                 for cref in &cursor_refs {
-                    if img_idx == image_index {
-                        if let Some(fp) = &cref.file_path {
+                    if img_idx == image_index
+                        && let Some(fp) = &cref.file_path {
                             let path = Path::new(fp);
                             if path.is_file() {
                                 let bytes =
@@ -1029,7 +1026,6 @@ pub fn resolve_image(
                                 return Err(format!("file_ref not found: {fp}"));
                             }
                         }
-                    }
                     img_idx += 1;
                 }
             }
@@ -1143,9 +1139,9 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
         let meta_path = sub_path.join(format!("agent-{}.meta.json", hash));
         let (mut agent_type, mut description) = ("unknown".to_string(), String::new());
 
-        if meta_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&meta_path) {
-                if let Ok(meta) = serde_json::from_str::<serde_json::Value>(&content) {
+        if meta_path.exists()
+            && let Ok(content) = std::fs::read_to_string(&meta_path)
+                && let Ok(meta) = serde_json::from_str::<serde_json::Value>(&content) {
                     agent_type = meta
                         .get("agentType")
                         .and_then(|v| v.as_str())
@@ -1157,12 +1153,10 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
                         .unwrap_or("")
                         .to_string();
                 }
-            }
-        }
 
         // If no meta file, peek first lines of the JSONL for agentType/description
-        if description.is_empty() {
-            if let Ok(file) = std::fs::File::open(&path) {
+        if description.is_empty()
+            && let Ok(file) = std::fs::File::open(&path) {
                 let reader = std::io::BufReader::new(file);
                 for line in reader.lines().take(3).flatten() {
                     if line.is_empty() {
@@ -1193,7 +1187,6 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
                     }
                 }
             }
-        }
 
         // Count lines (= approximate message count)
         let message_count = std::fs::File::open(&path)
@@ -1209,7 +1202,7 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
         });
     }
 
-    results.sort_by(|a, b| b.message_count.cmp(&a.message_count));
+    results.sort_by_key(|a| std::cmp::Reverse(a.message_count));
     results
 }
 

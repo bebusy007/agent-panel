@@ -228,7 +228,7 @@ async fn read_content(
             .to_string();
 
         // Format span info
-        let span = json.get("span").map(|s| format_span(s));
+        let span = json.get("span").map(format_span);
 
         // Collect remaining fields (exclude "message" since we extracted it)
         let fields = fields_obj.and_then(|f| {

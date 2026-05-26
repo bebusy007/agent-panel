@@ -40,7 +40,7 @@ pub fn build_resume_hints(
     cwd: Option<&str>,
     session_id_raw: Option<&str>,
 ) -> ResumeHints {
-    let cwd_quoted = cwd.map(|c| shell_quote(c));
+    let cwd_quoted = cwd.map(shell_quote);
 
     match source {
         "claude-code" => {

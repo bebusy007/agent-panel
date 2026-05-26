@@ -45,6 +45,7 @@ async fn handle_socket(mut socket: WebSocket, mut rx: broadcast::Receiver<WatchE
                         tracing::info!("ws client disconnected");
                         break;
                     }
+                    #[allow(clippy::collapsible_match)]
                     Some(Ok(Message::Ping(data))) => {
                         if socket.send(Message::Pong(data)).await.is_err() {
                             break;

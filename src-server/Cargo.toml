@@ -58,8 +58,3 @@ tempfile = "3"
 tokio-test = "0.4"
 axum-test = "20"
 pretty_assertions = "1"
-
-[profile.release]
-opt-level = 3
-lto = "thin"
-strip = true

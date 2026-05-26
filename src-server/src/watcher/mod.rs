@@ -8,10 +8,10 @@
 //! - ~/.claude/agents/ (agent changes)
 
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::PathBuf;
-use std::sync::Arc;
 use tokio::sync::broadcast;
-use tracing;
+
+#[cfg(test)]
+use std::path::PathBuf;
 
 /// Event types broadcast to WebSocket clients.
 #[derive(Debug, Clone, serde::Serialize)]

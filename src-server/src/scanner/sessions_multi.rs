@@ -50,7 +50,7 @@ pub fn scan_codex_sessions() -> Vec<SessionSummary> {
 
     let results: Vec<SessionSummary> = files
         .par_iter()
-        .filter_map(|path| scan_codex_file(path))
+        .filter_map(scan_codex_file)
         .collect();
     tracing::info!(count = results.len(), "codex session scan complete");
     results
@@ -73,7 +73,7 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
     let mut last_activity: Option<String> = None;
     let mut message_count: u32 = 0;
 
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         if line.is_empty() {
             continue;
         }
@@ -118,21 +118,19 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
                             if let Some(s) = m.as_str() {
                                 return Some(s.to_string());
                             }
-                            if let Some(c) = m.get("content") {
-                                if let Some(s) = c.as_str() {
+                            if let Some(c) = m.get("content")
+                                && let Some(s) = c.as_str() {
                                     return Some(s.to_string());
                                 }
-                            }
                             None
                         });
-                        if let Some(t) = text {
-                            if !t.trim().is_empty() {
+                        if let Some(t) = text
+                            && !t.trim().is_empty() {
                                 first_user_text = Some(
                                     safe_truncate(&t, crate::constants::FIRST_MESSAGE_MAX_LEN)
                                         .to_string(),
                                 );
                             }
-                        }
                     }
                 }
             }
@@ -226,7 +224,7 @@ pub fn scan_cursor_sessions() -> Vec<SessionSummary> {
 
     let results: Vec<SessionSummary> = jsonl_files
         .par_iter()
-        .filter_map(|path| scan_cursor_file(path))
+        .filter_map(scan_cursor_file)
         .collect();
     tracing::info!(count = results.len(), "cursor session scan complete");
     results
@@ -289,7 +287,7 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
 
     for line in reader
         .lines()
-        .flatten()
+        .map_while(Result::ok)
         .take(crate::constants::CURSOR_SCAN_LINES)
     {
         if line.is_empty() {
@@ -387,6 +385,7 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
 // called from scan_all_sessions().
 // ============================================================
 
+#[allow(dead_code)]
 pub fn scan_claude_history() -> Vec<SessionSummary> {
     let home = match dirs::home_dir() {
         Some(h) => h,
@@ -407,7 +406,7 @@ pub fn scan_claude_history() -> Vec<SessionSummary> {
     let mut sessions: std::collections::HashMap<String, SessionSummary> =
         std::collections::HashMap::new();
 
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         if line.is_empty() {
             continue;
         }

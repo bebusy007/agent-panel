@@ -8,8 +8,9 @@
 use crate::models::skill::SkillSummary;
 use std::collections::HashSet;
 use std::fs;
-use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+use std::path::Path;
+#[cfg(test)]
+use std::path::PathBuf;
 
 /// Scan all skill sources and return deduplicated results.
 pub fn scan_skills() -> Vec<SkillSummary> {
@@ -32,8 +33,8 @@ pub fn scan_skills() -> Vec<SkillSummary> {
 
     // 2. Plugin cache: ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/
     let cache_root = claude_dir.join("plugins").join("cache");
-    if cache_root.is_dir() {
-        if let Ok(marketplaces) = fs::read_dir(&cache_root) {
+    if cache_root.is_dir()
+        && let Ok(marketplaces) = fs::read_dir(&cache_root) {
             for mp_entry in marketplaces.flatten() {
                 let mp_name = mp_entry.file_name().to_string_lossy().to_string();
                 if mp_name.starts_with('.') {
@@ -81,12 +82,11 @@ pub fn scan_skills() -> Vec<SkillSummary> {
                 }
             }
         }
-    }
 
     // 3. Marketplace: ~/.claude/plugins/marketplaces/<mp>/(plugins|external_plugins)/<plugin>/skills/
     let market_root = claude_dir.join("plugins").join("marketplaces");
-    if market_root.is_dir() {
-        if let Ok(marketplaces) = fs::read_dir(&market_root) {
+    if market_root.is_dir()
+        && let Ok(marketplaces) = fs::read_dir(&market_root) {
             for mp_entry in marketplaces.flatten() {
                 let mp_name = mp_entry.file_name().to_string_lossy().to_string();
                 if mp_name.starts_with('.') {
@@ -130,7 +130,6 @@ pub fn scan_skills() -> Vec<SkillSummary> {
                 }
             }
         }
-    }
 
     skills.sort_by(|a, b| a.name.cmp(&b.name));
     tracing::info!(count = skills.len(), "skill scan complete");
@@ -150,21 +149,19 @@ fn scan_skills_dir(dir: &Path, source: &str, marketplace: Option<&str>) -> Vec<S
         let path = entry.path();
         if !path.is_dir() {
             // Also handle flat .md files directly in the skills dir
-            if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                if let Some(skill) = parse_skill_file(&path, source, marketplace) {
+            if path.extension().and_then(|s| s.to_str()) == Some("md")
+                && let Some(skill) = parse_skill_file(&path, source, marketplace) {
                     results.push(skill);
                 }
-            }
             continue;
         }
 
         // Look for SKILL.md inside the directory
         let skill_file = path.join("SKILL.md");
-        if skill_file.is_file() {
-            if let Some(skill) = parse_skill_file(&skill_file, source, marketplace) {
+        if skill_file.is_file()
+            && let Some(skill) = parse_skill_file(&skill_file, source, marketplace) {
                 results.push(skill);
             }
-        }
     }
 
     results
@@ -256,7 +253,7 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Vec<String>, Vec<String>
             let mut current = String::new();
             for ch in line.chars() {
                 match ch {
-                    '"' | '\'' | '"' | '"' | '「' | '」' => {
+                    '"' | '\'' | '「' | '」' => {
                         if in_quote {
                             if !current.is_empty() {
                                 triggers.push(current.clone());
@@ -289,14 +286,13 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Vec<String>, Vec<String>
             }
             if let Some(start) = trimmed.find('`') {
                 let rest = &trimmed[start + 1..];
-                if rest.starts_with('/') {
-                    if let Some(end) = rest.find('`') {
+                if rest.starts_with('/')
+                    && let Some(end) = rest.find('`') {
                         let cmd = &rest[..end];
                         if cmd.len() > 1 && cmd.len() < 40 {
                             cli_commands.push(cmd.to_string());
                         }
                     }
-                }
             }
         }
     }

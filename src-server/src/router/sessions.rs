@@ -188,8 +188,8 @@ async fn list_sessions(Query(params): Query<ListParams>) -> Json<serde_json::Val
     // Sort
     let sort_by = params.sort_by.as_deref().unwrap_or("lastActivity");
     match sort_by {
-        "tokens" => sessions_list.sort_by(|a, b| b.tokens_total.cmp(&a.tokens_total)),
-        "messageCount" => sessions_list.sort_by(|a, b| b.message_count.cmp(&a.message_count)),
+        "tokens" => sessions_list.sort_by_key(|a| std::cmp::Reverse(a.tokens_total)),
+        "messageCount" => sessions_list.sort_by_key(|a| std::cmp::Reverse(a.message_count)),
         "startedAt" => sessions_list.sort_by(|a, b| {
             b.started_at
                 .as_deref()

@@ -109,8 +109,8 @@ fn determine_strategy(
     mtime_secs: u64,
     cache: &Option<ProjectCache>,
 ) -> ScanStrategy {
-    if let Some(pc) = cache {
-        if let Some(entry) = pc.entries.get(file_name) {
+    if let Some(pc) = cache
+        && let Some(entry) = pc.entries.get(file_name) {
             if entry.mtime_secs == mtime_secs && entry.size == file_size {
                 return ScanStrategy::UseCached(entry.summary.clone());
             }
@@ -121,7 +121,6 @@ fn determine_strategy(
                 };
             }
         }
-    }
     ScanStrategy::FullParse
 }
 
@@ -151,13 +150,11 @@ pub fn scan_all_sessions() -> ScanResult {
     let ttl = Duration::from_secs(crate::constants::SESSION_CACHE_TTL_SECS);
 
     // Try to return cached result
-    if let Ok(guard) = SCAN_CACHE.lock() {
-        if let Some(ref cache) = *guard {
-            if cache.created_at.elapsed() < ttl {
+    if let Ok(guard) = SCAN_CACHE.lock()
+        && let Some(ref cache) = *guard
+            && cache.created_at.elapsed() < ttl {
                 return cache.result.clone();
             }
-        }
-    }
 
     let result = scan_all_sessions_uncached();
 
@@ -308,8 +305,8 @@ fn scan_single_project(project_dir: &Path) -> Vec<SessionSummary> {
         entries: HashMap::new(),
     };
     for (path, size, mtime) in &file_entries {
-        if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
-            if let Some(summary) = summaries
+        if let Some(file_name) = path.file_name().and_then(|s| s.to_str())
+            && let Some(summary) = summaries
                 .iter()
                 .find(|s| s.file_path == path.to_string_lossy())
             {
@@ -323,7 +320,6 @@ fn scan_single_project(project_dir: &Path) -> Vec<SessionSummary> {
                     },
                 );
             }
-        }
     }
     save_project_cache(project_dir, &new_cache);
 
@@ -504,39 +500,33 @@ fn process_line(line: &str, state: &mut ParseState) {
         _ => {}
     }
 
-    if state.first_user_text.is_none() && msg_type == "user" {
-        if let Some(text) = extract_text_from_message(&entry) {
-            if !text.trim().is_empty() {
+    if state.first_user_text.is_none() && msg_type == "user"
+        && let Some(text) = extract_text_from_message(&entry)
+            && !text.trim().is_empty() {
                 state.first_user_text =
                     Some(truncate(&text, crate::constants::FIRST_MESSAGE_MAX_LEN));
             }
-        }
-    }
 
-    if state.cwd.is_none() {
-        if let Some(c) = entry.get("cwd").and_then(|v| v.as_str()) {
+    if state.cwd.is_none()
+        && let Some(c) = entry.get("cwd").and_then(|v| v.as_str()) {
             state.cwd = Some(c.to_string());
         }
-    }
-    if state.git_branch.is_none() {
-        if let Some(b) = entry.get("gitBranch").and_then(|v| v.as_str()) {
+    if state.git_branch.is_none()
+        && let Some(b) = entry.get("gitBranch").and_then(|v| v.as_str()) {
             state.git_branch = Some(b.to_string());
         }
-    }
-    if state.session_id_raw.is_none() {
-        if let Some(s) = entry.get("sessionId").and_then(|v| v.as_str()) {
+    if state.session_id_raw.is_none()
+        && let Some(s) = entry.get("sessionId").and_then(|v| v.as_str()) {
             state.session_id_raw = Some(s.to_string());
         }
-    }
-    if state.model.is_none() {
-        if let Some(m) = entry
+    if state.model.is_none()
+        && let Some(m) = entry
             .get("message")
             .and_then(|msg| msg.get("model"))
             .and_then(|v| v.as_str())
         {
             state.model = Some(m.to_string());
         }
-    }
 
     if let Some(ts) = entry.get("timestamp").and_then(|v| v.as_str()) {
         if state.started_at.is_none() {

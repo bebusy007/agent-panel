@@ -47,8 +47,8 @@ pub fn scan_mcps() -> Vec<McpSummary> {
 
     // 2. Project-level settings (scan all project dirs)
     let projects_dir = home.join(".claude").join("projects");
-    if projects_dir.is_dir() {
-        if let Ok(entries) = fs::read_dir(&projects_dir) {
+    if projects_dir.is_dir()
+        && let Ok(entries) = fs::read_dir(&projects_dir) {
             for entry in entries.flatten() {
                 let settings_file = entry.path().join("settings.json");
                 if settings_file.is_file() {
@@ -61,7 +61,6 @@ pub fn scan_mcps() -> Vec<McpSummary> {
                 }
             }
         }
-    }
 
     // 3. Cursor MCP config
     let cursor_mcp = home.join(".cursor").join("mcp.json");

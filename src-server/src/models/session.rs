@@ -4,6 +4,7 @@ use ts_rs::TS;
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct SessionSummary {
     pub id: String,
     pub source: String,
