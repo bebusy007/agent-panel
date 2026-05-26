@@ -31,6 +31,22 @@ jobs:
       - run: cd web && pnpm install --frozen-lockfile
       - run: cd web && pnpm build
 
+      - name: Extract release notes
+        id: notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            body=$(awk "/^## \[$VERSION\]/{flag=1;next} /^## \[/{flag=0} flag" CHANGELOG.md)
+          else
+            body=$(awk '/^## \[Unreleased\]/{flag=1;next} /^## \[/{flag=0} flag' CHANGELOG.md)
+          fi
+          {
+            echo 'RELEASE_BODY<<EOF'
+            echo -n "$body"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         if: startsWith(github.ref, 'refs/tags/v')
@@ -39,7 +55,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Agent Panel ${{ github.ref_name }}"
-          releaseBody: "See the assets for download links."
+          releaseBody: ${{ steps.notes.outputs.RELEASE_BODY }}
           releaseDraft: true
           prerelease: true
 

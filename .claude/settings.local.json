@@ -25,7 +25,10 @@
       "Bash(lsof -iTCP:7788 -sTCP:LISTEN -t)",
       "Bash(xargs kill *)",
       "Bash(lsof -iTCP:5173 -sTCP:LISTEN -t)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(git rm *)",
+      "Bash(git pull *)",
+      "Bash(git tag *)"
     ]
   }
 }
