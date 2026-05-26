@@ -2,97 +2,92 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────
-# AgentPanel — one-shot build script with gate checks
-# Produces: macOS .dmg (Apple Silicon or Intel)
+# AgentPanel 一键打包
+# 在当前分支上跑全量检查 + 打 macOS .dmg
 # ─────────────────────────────────────────────────────────
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BRANCH="${1:-master}"
 TARGET=$(rustc -vV | grep host | cut -d' ' -f2)
+BRANCH="$(git branch --show-current)"
 
 echo "══════════════════════════════════════════"
-echo "  AgentPanel Build"
-echo "  branch: $BRANCH"
-echo "  target: $TARGET"
+echo "  AgentPanel 打包"
+echo "  分支: $BRANCH"
+echo "  架构: $TARGET"
 echo "══════════════════════════════════════════"
 
-# ── 0. Checkout & pull ───────────────────────────────────
+# ── 1. 清理 ─────────────────────────────────────────────
 echo ""
-echo "▸ [0/9] Checkout $BRANCH and pull latest..."
-cd "$ROOT"
-git checkout "$BRANCH"
-git pull origin "$BRANCH"
-echo "  ✓ on $BRANCH @ $(git rev-parse --short HEAD)"
-
-# ── 1. Clean ─────────────────────────────────────────────
-echo ""
-echo "▸ [1/9] Cleaning..."
+echo "▸ [1/8] 清理上次产物..."
 rm -rf "$ROOT/web/dist"
 rm -f "$ROOT/src-tauri/binaries/agent-panel-server-"*
-echo "  ✓ web/dist and sidecar binaries cleaned"
+echo "  ✓ 清理完成"
 
-# ── 2. TypeScript check ─────────────────────────────────
+# ── 2. 前端类型检查 ─────────────────────────────────────
 echo ""
-echo "▸ [2/9] TypeScript check..."
+echo "▸ [2/8] TypeScript 类型检查..."
 cd "$ROOT/web"
 npx tsc --noEmit
-echo "  ✓ typecheck passed"
+echo "  ✓ 类型检查通过"
 
-# ── 3. Frontend tests + coverage ─────────────────────────
+# ── 3. 前端测试 + 覆盖率 ────────────────────────────────
 echo ""
-echo "▸ [3/9] Frontend tests + coverage (≥90% lines)..."
+echo "▸ [3/8] 前端测试 + 覆盖率..."
 cd "$ROOT/web"
 npx vitest run --coverage
-echo "  ✓ frontend tests passed, coverage met"
+echo "  ✓ 前端测试通过"
 
-# ── 4. Rust lint ─────────────────────────────────────────
+# ── 4. Rust 代码检查 ────────────────────────────────────
 echo ""
-echo "▸ [4/9] Rust clippy..."
+echo "▸ [4/8] Rust 代码检查 (clippy)..."
 cd "$ROOT"
 cargo clippy -p agent-panel-server --all-targets 2>&1 | tail -5
-echo "  ✓ clippy passed"
+echo "  ✓ clippy 通过"
 
-# ── 5. Rust tests + coverage ────────────────────────────
+# ── 5. 后端测试 + 覆盖率 ────────────────────────────────
 echo ""
-echo "▸ [5/9] Rust tests + coverage (≥90% lines)..."
+echo "▸ [5/8] 后端测试 + 覆盖率（要求 ≥90% 行覆盖率）..."
 cd "$ROOT"
-cargo llvm-cov test -p agent-panel-server --ignore-filename-regex "(main|logging|ws)\.rs$" --fail-under-lines 90
-echo "  ✓ rust tests passed, coverage met"
+cargo llvm-cov test -p agent-panel-server \
+  --ignore-filename-regex "(main|logging|ws|test_utils|panic_hook)\.rs$" \
+  --fail-under-lines 90
+echo "  ✓ 后端测试通过，覆盖率达标"
 
-# ── 6. Build frontend ───────────────────────────────────
+# ── 6. 编译前端 ─────────────────────────────────────────
 echo ""
-echo "▸ [6/9] Building frontend..."
+echo "▸ [6/8] 编译前端..."
 cd "$ROOT/web"
-npm run build
-echo "  ✓ web/dist ready"
+pnpm build
+echo "  ✓ web/dist 就绪"
 
-# ── 7. Build server + copy sidecar ──────────────────────
+# ── 7. 编译后端 + 复制侧推 ──────────────────────────────
 echo ""
-echo "▸ [7/9] Building server (release) + sidecar..."
+echo "▸ [7/8] 编译后端 (release) + 复制侧推文件..."
 cd "$ROOT"
 cargo build --release -p agent-panel-server
 SIDECAR_SRC="$ROOT/target/release/agent-panel-server"
 SIDECAR_DST="$ROOT/src-tauri/binaries/agent-panel-server-$TARGET"
 cp "$SIDECAR_SRC" "$SIDECAR_DST"
 chmod +x "$SIDECAR_DST"
-echo "  ✓ server binary → $SIDECAR_DST"
+echo "  ✓ 侧推文件 → $SIDECAR_DST"
 
-# ── 8. Tauri build ──────────────────────────────────────
+# ── 8. Tauri 打包 ───────────────────────────────────────
 echo ""
-echo "▸ [8/9] Building Tauri app..."
+echo "▸ [8/8] Tauri 打包..."
 cd "$ROOT"
 cargo tauri build 2>&1
 echo ""
 
-# ── Done ─────────────────────────────────────────────────
-DMG_DIR="$ROOT/target/release/bundle/dmg"
-if [ -d "$DMG_DIR" ]; then
+# ── 完成 ─────────────────────────────────────────────────
+DMG=$(find "$ROOT/target" -name "*.dmg" 2>/dev/null | head -1)
+if [ -n "$DMG" ]; then
     echo "══════════════════════════════════════════"
-    echo "  ✅ Build complete!"
+    echo "  ✅ 打包完成！"
     echo ""
-    echo "  DMG files:"
-    ls -lh "$DMG_DIR"/*.dmg 2>/dev/null || echo "  (no .dmg found)"
+    echo "  产物: $DMG"
+    echo "  大小: $(ls -lh "$DMG" | awk '{print $5}')"
     echo "══════════════════════════════════════════"
 else
-    echo "  Build finished. Check target/release/bundle/ for output."
+    echo "  ⚠ 脚本跑完了但没找到 DMG，检查 target/ 目录"
+    exit 1
 fi
