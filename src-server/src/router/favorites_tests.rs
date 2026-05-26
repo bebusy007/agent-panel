@@ -6,7 +6,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_list_returns_array() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/favorites").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -15,7 +15,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_add_returns_favorite() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server
             .post("/favorites")
             .json(&serde_json::json!({
@@ -31,9 +31,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_by_session() {
-        let (server, _dir) = create_test_server();
-
-        // Add favorite
+        let (server, _dir, _guard) = create_test_server();
         server
             .post("/favorites")
             .json(&serde_json::json!({
@@ -41,11 +39,29 @@ mod tests {
                 "messageId": "msg-1"
             }))
             .await;
-
-        // Query by session
         let res = server.get("/favorites/session/session-test-abc").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
         assert!(body["favorites"].is_array());
+    }
+
+    #[tokio::test]
+    async fn test_favorites_remove_nonexistent() {
+        let (server, _dir, _guard) = create_test_server();
+        let res = server.delete("/favorites/nonexistent-id").await;
+        res.assert_status_ok();
+        let body: serde_json::Value = res.json();
+        assert!(body.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_favorites_remove_by_message_not_found() {
+        let (server, _dir, _guard) = create_test_server();
+        let res = server
+            .delete("/favorites/by-message/no-such-session/no-such-message")
+            .await;
+        res.assert_status_ok();
+        let body: serde_json::Value = res.json();
+        assert!(body.get("error").is_some());
     }
 }

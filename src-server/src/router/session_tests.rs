@@ -6,7 +6,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_list_returns_array() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/sessions").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -16,7 +16,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_detail_not_found() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/sessions/nonexistent-id-12345").await;
         let body: serde_json::Value = res.json();
         assert!(body.get("error").is_some() || body.get("summary").is_none());
@@ -24,7 +24,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_projects_returns_array() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/sessions/projects").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -33,7 +33,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_refresh_returns_ok() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.post("/sessions/refresh").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -42,21 +42,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_health() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/sessions/health").await;
         res.assert_status_ok();
     }
 
     #[tokio::test]
     async fn test_session_export_not_found() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/sessions/nonexistent-id-12345/export.md").await;
         res.assert_status(axum::http::StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
     async fn test_trash_list_returns_array() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/sessions/trash/list").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -65,7 +65,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_trash_restore_empty() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server
             .post("/sessions/restore")
             .json(&serde_json::json!({ "filePaths": [] }))

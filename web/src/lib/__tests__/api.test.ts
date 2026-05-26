@@ -164,4 +164,74 @@ describe('rustApi (fetch mock)', () => {
       expect.objectContaining({ method: 'POST' }),
     );
   });
+
+  it('statsActivity with default weeks', async () => {
+    mockOk({ weeks: 52, days: [], totals: { tokens: 0, sessions: 0 } });
+    const { rustApi } = await import('../api');
+    await rustApi.statsActivity();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/stats/activity?weeks=52',
+      expect.any(Object),
+    );
+  });
+
+  it('statsActivity with custom weeks', async () => {
+    mockOk({ weeks: 4, days: [], totals: { tokens: 100, sessions: 5 } });
+    const { rustApi } = await import('../api');
+    await rustApi.statsActivity(4);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/stats/activity?weeks=4',
+      expect.any(Object),
+    );
+  });
+
+  it('skill fetches single skill by id', async () => {
+    mockOk({
+      skill: { id: 's1', name: 'test', source: 'user', filePath: '/f', fileSize: 100 },
+    });
+    const { rustApi } = await import('../api');
+    await rustApi.skill('s1');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/skills/s1', expect.any(Object));
+  });
+
+  it('mcp fetches single mcp by name', async () => {
+    mockOk({ mcp: { serverName: 'test-mcp', source: 'global' } });
+    const { rustApi } = await import('../api');
+    await rustApi.mcp('test-mcp');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/mcps/test-mcp', expect.any(Object));
+  });
+
+  it('sessionDetail fetches session by id', async () => {
+    mockOk({ session: {}, messages: [], messageCount: 0, resumeHints: null });
+    const { rustApi } = await import('../api');
+    await rustApi.sessionDetail('session-1');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/sessions/session-1', expect.any(Object));
+  });
+
+  it('favoritesForSession fetches favorites for session', async () => {
+    mockOk({ favorites: [] });
+    const { rustApi } = await import('../api');
+    await rustApi.favoritesForSession('session-1');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/favorites/session/session-1',
+      expect.any(Object),
+    );
+  });
+
+  it('logsFiles fetches log file list', async () => {
+    mockOk({ files: [] });
+    const { rustApi } = await import('../api');
+    await rustApi.logsFiles();
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/logs/files', expect.any(Object));
+  });
+
+  it('logsContent fetches log file content', async () => {
+    mockOk({ entries: [], totalLines: 0 });
+    const { rustApi } = await import('../api');
+    await rustApi.logsContent('agent-panel.2026-01-01.log');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/logs/content?file=agent-panel.2026-01-01.log',
+      expect.any(Object),
+    );
+  });
 });

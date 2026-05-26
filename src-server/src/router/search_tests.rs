@@ -6,7 +6,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_no_results() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server
             .post("/search/messages")
             .json(&serde_json::json!({ "query": "zzz-nonexistent-query-xyz-12345" }))
@@ -19,7 +19,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_with_filters() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server
             .post("/search/messages")
             .json(&serde_json::json!({

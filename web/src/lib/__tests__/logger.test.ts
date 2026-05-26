@@ -88,4 +88,30 @@ describe('logger', () => {
     // Should not throw
     await vi.waitFor(() => expect(true).toBe(true));
   });
+
+  it('warn level logs via console.warn in dev mode', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    logger.warn('ui', 'test warn');
+    logger.flush();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('setLevel changes log level at runtime', () => {
+    logger.setLevel('error');
+    const fetchBefore = fetchSpy.mock.calls.length;
+    logger.info('ui', 'should be filtered');
+    logger.flush();
+    // info should be filtered when level is error
+    expect(fetchSpy).toHaveBeenCalledTimes(fetchBefore);
+    logger.setLevel('debug');
+  });
+
+  it('setLevel and debug logging works', () => {
+    logger.setLevel('debug');
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    logger.debug('ui', 'test debug');
+    expect(debugSpy).toHaveBeenCalled();
+    debugSpy.mockRestore();
+  });
 });
