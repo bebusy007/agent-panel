@@ -440,24 +440,25 @@ fn parse_codex_entry(
                     })
                 });
                 if let Some(t) = text
-                    && !t.trim().is_empty() {
-                        *idx += 1;
-                        msgs.push(Message {
-                            id: format!("codex-{}", idx),
-                            role: "user".to_string(),
-                            text: Some(t),
-                            tool_name: None,
-                            tool_input: None,
-                            tool_output: None,
-                            tool_use_id: None,
-                            tool_status: None,
-                            timestamp: timestamp.clone(),
-                            model: None,
-                            images: None,
-                            raw: None,
-                            agent_hash: None,
-                        });
-                    }
+                    && !t.trim().is_empty()
+                {
+                    *idx += 1;
+                    msgs.push(Message {
+                        id: format!("codex-{}", idx),
+                        role: "user".to_string(),
+                        text: Some(t),
+                        tool_name: None,
+                        tool_input: None,
+                        tool_output: None,
+                        tool_use_id: None,
+                        tool_status: None,
+                        timestamp: timestamp.clone(),
+                        model: None,
+                        images: None,
+                        raw: None,
+                        agent_hash: None,
+                    });
+                }
             }
             "agent_message" | "agent_reasoning" => {
                 let text = payload.get("message").and_then(|v| v.as_str());
@@ -771,9 +772,10 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
         match item_type {
             "text" => {
                 if let Some(text) = item.get("text").and_then(|v| v.as_str())
-                    && !text.is_empty() {
-                        blocks.push(ContentBlock::Text(text.to_string()));
-                    }
+                    && !text.is_empty()
+                {
+                    blocks.push(ContentBlock::Text(text.to_string()));
+                }
             }
             "tool_use" => {
                 let name = item
@@ -925,32 +927,33 @@ pub fn resolve_image(
     // Step 1: Try image-cache file.
     // We need to compute the global image number (1-based) by scanning the JSONL.
     if let Some(raw_id) = session_id_raw
-        && let Some(home) = dirs::home_dir() {
-            let cache_dir = home.join(".claude").join("image-cache").join(raw_id);
-            if cache_dir.is_dir() {
-                // Count all image blocks up to target to get global number
-                if let Ok(global_num) =
-                    compute_global_image_number(jsonl_path, message_uuid, image_index)
-                {
-                    // Try common extensions
-                    for ext in &["png", "jpg", "jpeg", "gif", "webp"] {
-                        let cache_file = cache_dir.join(format!("{}.{}", global_num, ext));
-                        if cache_file.is_file() {
-                            let bytes =
-                                fs::read(&cache_file).map_err(|e| format!("read cache: {e}"))?;
-                            let media = match *ext {
-                                "png" => "image/png",
-                                "jpg" | "jpeg" => "image/jpeg",
-                                "gif" => "image/gif",
-                                "webp" => "image/webp",
-                                _ => "application/octet-stream",
-                            };
-                            return Ok((bytes, media.to_string()));
-                        }
+        && let Some(home) = dirs::home_dir()
+    {
+        let cache_dir = home.join(".claude").join("image-cache").join(raw_id);
+        if cache_dir.is_dir() {
+            // Count all image blocks up to target to get global number
+            if let Ok(global_num) =
+                compute_global_image_number(jsonl_path, message_uuid, image_index)
+            {
+                // Try common extensions
+                for ext in &["png", "jpg", "jpeg", "gif", "webp"] {
+                    let cache_file = cache_dir.join(format!("{}.{}", global_num, ext));
+                    if cache_file.is_file() {
+                        let bytes =
+                            fs::read(&cache_file).map_err(|e| format!("read cache: {e}"))?;
+                        let media = match *ext {
+                            "png" => "image/png",
+                            "jpg" | "jpeg" => "image/jpeg",
+                            "gif" => "image/gif",
+                            "webp" => "image/webp",
+                            _ => "application/octet-stream",
+                        };
+                        return Ok((bytes, media.to_string()));
                     }
                 }
             }
         }
+    }
 
     // Step 2: Parse JSONL and decode base64
     let file = fs::File::open(jsonl_path).map_err(|e| format!("open jsonl: {e}"))?;
@@ -1016,16 +1019,17 @@ pub fn resolve_image(
                 let cursor_refs = parse_cursor_image_refs(text);
                 for cref in &cursor_refs {
                     if img_idx == image_index
-                        && let Some(fp) = &cref.file_path {
-                            let path = Path::new(fp);
-                            if path.is_file() {
-                                let bytes =
-                                    fs::read(path).map_err(|e| format!("read file_ref: {e}"))?;
-                                return Ok((bytes, cref.media_type.clone()));
-                            } else {
-                                return Err(format!("file_ref not found: {fp}"));
-                            }
+                        && let Some(fp) = &cref.file_path
+                    {
+                        let path = Path::new(fp);
+                        if path.is_file() {
+                            let bytes =
+                                fs::read(path).map_err(|e| format!("read file_ref: {e}"))?;
+                            return Ok((bytes, cref.media_type.clone()));
+                        } else {
+                            return Err(format!("file_ref not found: {fp}"));
                         }
+                    }
                     img_idx += 1;
                 }
             }
@@ -1141,52 +1145,54 @@ pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
 
         if meta_path.exists()
             && let Ok(content) = std::fs::read_to_string(&meta_path)
-                && let Ok(meta) = serde_json::from_str::<serde_json::Value>(&content) {
-                    agent_type = meta
-                        .get("agentType")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("unknown")
-                        .to_string();
-                    description = meta
-                        .get("description")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                }
+            && let Ok(meta) = serde_json::from_str::<serde_json::Value>(&content)
+        {
+            agent_type = meta
+                .get("agentType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            description = meta
+                .get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+        }
 
         // If no meta file, peek first lines of the JSONL for agentType/description
         if description.is_empty()
-            && let Ok(file) = std::fs::File::open(&path) {
-                let reader = std::io::BufReader::new(file);
-                for line in reader.lines().take(3).flatten() {
-                    if line.is_empty() {
-                        continue;
+            && let Ok(file) = std::fs::File::open(&path)
+        {
+            let reader = std::io::BufReader::new(file);
+            for line in reader.lines().take(3).flatten() {
+                if line.is_empty() {
+                    continue;
+                }
+                if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line) {
+                    if let Some(at) = obj.get("agentType").and_then(|v| v.as_str()) {
+                        agent_type = at.to_string();
                     }
-                    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line) {
-                        if let Some(at) = obj.get("agentType").and_then(|v| v.as_str()) {
-                            agent_type = at.to_string();
-                        }
-                        if let Some(at) = obj
-                            .get("agentId")
-                            .and_then(|_| obj.get("agentType"))
-                            .and_then(|v| v.as_str())
-                        {
-                            agent_type = at.to_string();
-                        }
-                        if let Some(msg) = obj
-                            .get("message")
-                            .and_then(|m| m.get("content"))
-                            .and_then(|c| c.as_str())
-                        {
-                            description = msg
-                                .chars()
-                                .take(crate::constants::SUBAGENT_DESC_MAX_LEN)
-                                .collect();
-                            break;
-                        }
+                    if let Some(at) = obj
+                        .get("agentId")
+                        .and_then(|_| obj.get("agentType"))
+                        .and_then(|v| v.as_str())
+                    {
+                        agent_type = at.to_string();
+                    }
+                    if let Some(msg) = obj
+                        .get("message")
+                        .and_then(|m| m.get("content"))
+                        .and_then(|c| c.as_str())
+                    {
+                        description = msg
+                            .chars()
+                            .take(crate::constants::SUBAGENT_DESC_MAX_LEN)
+                            .collect();
+                        break;
                     }
                 }
             }
+        }
 
         // Count lines (= approximate message count)
         let message_count = std::fs::File::open(&path)

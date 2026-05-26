@@ -20,7 +20,11 @@ struct SetLogLevelRequest {
 }
 
 async fn get_log_level(State(state): State<Arc<LogLevelState>>) -> Json<LogLevelResponse> {
-    let level = state.current_level.read().unwrap_or_else(|e| e.into_inner()).clone();
+    let level = state
+        .current_level
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
     Json(LogLevelResponse { level })
 }
 

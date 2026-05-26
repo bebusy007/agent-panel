@@ -5,8 +5,8 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::Manager;
 use tauri::WebviewUrl;
-use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::ShellExt;
 
 struct SidecarState(Mutex<Option<CommandChild>>);
 
@@ -30,13 +30,17 @@ fn find_available_port() -> u16 {
 extern "C" fn kill_sidecar_by_pid() {
     let pid = SIDECAR_PID.swap(0, Ordering::SeqCst);
     if pid != 0 {
-        unsafe { libc::kill(pid as i32, libc::SIGTERM); }
+        unsafe {
+            libc::kill(pid as i32, libc::SIGTERM);
+        }
     }
 }
 
 extern "C" fn signal_handler(_sig: libc::c_int) {
     kill_sidecar_by_pid();
-    unsafe { libc::_exit(0); }
+    unsafe {
+        libc::_exit(0);
+    }
 }
 
 fn main() {
@@ -74,11 +78,14 @@ fn main() {
             let sidecar = handle.shell().sidecar("agent-panel-server").unwrap();
             let (_rx, child) = sidecar
                 .args([
-                    "--port", &port.to_string(),
+                    "--port",
+                    &port.to_string(),
                     "--no-open",
                     "--release-mode",
-                    "--dist", &dist_path,
-                    "--log-dir", &log_dir,
+                    "--dist",
+                    &dist_path,
+                    "--log-dir",
+                    &log_dir,
                 ])
                 .spawn()
                 .expect("failed to spawn sidecar");
@@ -107,19 +114,16 @@ fn main() {
                 let page_url = format!("http://127.0.0.1:{}", port);
                 let url: url::Url = page_url.parse().unwrap();
 
-                let _win = tauri::WebviewWindowBuilder::new(
-                    &handle2,
-                    "main",
-                    WebviewUrl::External(url),
-                )
-                .title("AgentPanel")
-                .inner_size(1280.0, 800.0)
-                .min_inner_size(900.0, 600.0)
-                .resizable(true)
-                .visible(true)
-                .focused(true)
-                .build()
-                .expect("failed to create window");
+                let _win =
+                    tauri::WebviewWindowBuilder::new(&handle2, "main", WebviewUrl::External(url))
+                        .title("AgentPanel")
+                        .inner_size(1280.0, 800.0)
+                        .min_inner_size(900.0, 600.0)
+                        .resizable(true)
+                        .visible(true)
+                        .focused(true)
+                        .build()
+                        .expect("failed to create window");
             });
 
             Ok(())

@@ -34,95 +34,46 @@ pub fn scan_skills() -> Vec<SkillSummary> {
     // 2. Plugin cache: ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/
     let cache_root = claude_dir.join("plugins").join("cache");
     if cache_root.is_dir()
-        && let Ok(marketplaces) = fs::read_dir(&cache_root) {
-            for mp_entry in marketplaces.flatten() {
-                let mp_name = mp_entry.file_name().to_string_lossy().to_string();
-                if mp_name.starts_with('.') {
-                    continue;
-                }
-                let mp_dir = mp_entry.path();
-                if !mp_dir.is_dir() {
-                    continue;
-                }
-
-                if let Ok(plugins) = fs::read_dir(&mp_dir) {
-                    for plugin_entry in plugins.flatten() {
-                        let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
-                        if plugin_name.starts_with('.') {
-                            continue;
-                        }
-                        let plugin_dir = plugin_entry.path();
-                        if !plugin_dir.is_dir() {
-                            continue;
-                        }
-
-                        // Find latest version dir
-                        if let Ok(versions) = fs::read_dir(&plugin_dir) {
-                            for ver_entry in versions.flatten() {
-                                let ver_name = ver_entry.file_name().to_string_lossy().to_string();
-                                if ver_name.starts_with('.') {
-                                    continue;
-                                }
-                                let skills_dir = ver_entry.path().join("skills");
-                                if !skills_dir.is_dir() {
-                                    continue;
-                                }
-
-                                let source_label = format!("plugin:{mp_name}/{plugin_name}");
-                                for skill in
-                                    scan_skills_dir(&skills_dir, &source_label, Some(&mp_name))
-                                {
-                                    let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
-                                    installed_keys.insert(key);
-                                    skills.push(skill);
-                                }
-                            }
-                        }
-                    }
-                }
+        && let Ok(marketplaces) = fs::read_dir(&cache_root)
+    {
+        for mp_entry in marketplaces.flatten() {
+            let mp_name = mp_entry.file_name().to_string_lossy().to_string();
+            if mp_name.starts_with('.') {
+                continue;
             }
-        }
+            let mp_dir = mp_entry.path();
+            if !mp_dir.is_dir() {
+                continue;
+            }
 
-    // 3. Marketplace: ~/.claude/plugins/marketplaces/<mp>/(plugins|external_plugins)/<plugin>/skills/
-    let market_root = claude_dir.join("plugins").join("marketplaces");
-    if market_root.is_dir()
-        && let Ok(marketplaces) = fs::read_dir(&market_root) {
-            for mp_entry in marketplaces.flatten() {
-                let mp_name = mp_entry.file_name().to_string_lossy().to_string();
-                if mp_name.starts_with('.') {
-                    continue;
-                }
-                let mp_dir = mp_entry.path();
-                if !mp_dir.is_dir() {
-                    continue;
-                }
-
-                for bucket in &["plugins", "external_plugins"] {
-                    let bucket_dir = mp_dir.join(bucket);
-                    if !bucket_dir.is_dir() {
+            if let Ok(plugins) = fs::read_dir(&mp_dir) {
+                for plugin_entry in plugins.flatten() {
+                    let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
+                    if plugin_name.starts_with('.') {
+                        continue;
+                    }
+                    let plugin_dir = plugin_entry.path();
+                    if !plugin_dir.is_dir() {
                         continue;
                     }
 
-                    if let Ok(plugins) = fs::read_dir(&bucket_dir) {
-                        for plugin_entry in plugins.flatten() {
-                            let plugin_name =
-                                plugin_entry.file_name().to_string_lossy().to_string();
-                            if plugin_name.starts_with('.') {
+                    // Find latest version dir
+                    if let Ok(versions) = fs::read_dir(&plugin_dir) {
+                        for ver_entry in versions.flatten() {
+                            let ver_name = ver_entry.file_name().to_string_lossy().to_string();
+                            if ver_name.starts_with('.') {
                                 continue;
                             }
-                            let skills_dir = plugin_entry.path().join("skills");
+                            let skills_dir = ver_entry.path().join("skills");
                             if !skills_dir.is_dir() {
                                 continue;
                             }
 
-                            let source_label = format!("marketplace:{mp_name}/{plugin_name}");
+                            let source_label = format!("plugin:{mp_name}/{plugin_name}");
                             for skill in scan_skills_dir(&skills_dir, &source_label, Some(&mp_name))
                             {
                                 let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
-                                // Deduplicate: skip marketplace copy if already installed
-                                if installed_keys.contains(&key) {
-                                    continue;
-                                }
+                                installed_keys.insert(key);
                                 skills.push(skill);
                             }
                         }
@@ -130,6 +81,54 @@ pub fn scan_skills() -> Vec<SkillSummary> {
                 }
             }
         }
+    }
+
+    // 3. Marketplace: ~/.claude/plugins/marketplaces/<mp>/(plugins|external_plugins)/<plugin>/skills/
+    let market_root = claude_dir.join("plugins").join("marketplaces");
+    if market_root.is_dir()
+        && let Ok(marketplaces) = fs::read_dir(&market_root)
+    {
+        for mp_entry in marketplaces.flatten() {
+            let mp_name = mp_entry.file_name().to_string_lossy().to_string();
+            if mp_name.starts_with('.') {
+                continue;
+            }
+            let mp_dir = mp_entry.path();
+            if !mp_dir.is_dir() {
+                continue;
+            }
+
+            for bucket in &["plugins", "external_plugins"] {
+                let bucket_dir = mp_dir.join(bucket);
+                if !bucket_dir.is_dir() {
+                    continue;
+                }
+
+                if let Ok(plugins) = fs::read_dir(&bucket_dir) {
+                    for plugin_entry in plugins.flatten() {
+                        let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
+                        if plugin_name.starts_with('.') {
+                            continue;
+                        }
+                        let skills_dir = plugin_entry.path().join("skills");
+                        if !skills_dir.is_dir() {
+                            continue;
+                        }
+
+                        let source_label = format!("marketplace:{mp_name}/{plugin_name}");
+                        for skill in scan_skills_dir(&skills_dir, &source_label, Some(&mp_name)) {
+                            let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
+                            // Deduplicate: skip marketplace copy if already installed
+                            if installed_keys.contains(&key) {
+                                continue;
+                            }
+                            skills.push(skill);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     skills.sort_by(|a, b| a.name.cmp(&b.name));
     tracing::info!(count = skills.len(), "skill scan complete");
@@ -150,18 +149,20 @@ fn scan_skills_dir(dir: &Path, source: &str, marketplace: Option<&str>) -> Vec<S
         if !path.is_dir() {
             // Also handle flat .md files directly in the skills dir
             if path.extension().and_then(|s| s.to_str()) == Some("md")
-                && let Some(skill) = parse_skill_file(&path, source, marketplace) {
-                    results.push(skill);
-                }
+                && let Some(skill) = parse_skill_file(&path, source, marketplace)
+            {
+                results.push(skill);
+            }
             continue;
         }
 
         // Look for SKILL.md inside the directory
         let skill_file = path.join("SKILL.md");
         if skill_file.is_file()
-            && let Some(skill) = parse_skill_file(&skill_file, source, marketplace) {
-                results.push(skill);
-            }
+            && let Some(skill) = parse_skill_file(&skill_file, source, marketplace)
+        {
+            results.push(skill);
+        }
     }
 
     results
@@ -287,12 +288,13 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Vec<String>, Vec<String>
             if let Some(start) = trimmed.find('`') {
                 let rest = &trimmed[start + 1..];
                 if rest.starts_with('/')
-                    && let Some(end) = rest.find('`') {
-                        let cmd = &rest[..end];
-                        if cmd.len() > 1 && cmd.len() < 40 {
-                            cli_commands.push(cmd.to_string());
-                        }
+                    && let Some(end) = rest.find('`')
+                {
+                    let cmd = &rest[..end];
+                    if cmd.len() > 1 && cmd.len() < 40 {
+                        cli_commands.push(cmd.to_string());
                     }
+                }
             }
         }
     }

@@ -110,17 +110,18 @@ fn determine_strategy(
     cache: &Option<ProjectCache>,
 ) -> ScanStrategy {
     if let Some(pc) = cache
-        && let Some(entry) = pc.entries.get(file_name) {
-            if entry.mtime_secs == mtime_secs && entry.size == file_size {
-                return ScanStrategy::UseCached(entry.summary.clone());
-            }
-            if file_size > entry.size && entry.byte_offset > 0 {
-                return ScanStrategy::Incremental {
-                    offset: entry.byte_offset,
-                    cached: entry.summary.clone(),
-                };
-            }
+        && let Some(entry) = pc.entries.get(file_name)
+    {
+        if entry.mtime_secs == mtime_secs && entry.size == file_size {
+            return ScanStrategy::UseCached(entry.summary.clone());
         }
+        if file_size > entry.size && entry.byte_offset > 0 {
+            return ScanStrategy::Incremental {
+                offset: entry.byte_offset,
+                cached: entry.summary.clone(),
+            };
+        }
+    }
     ScanStrategy::FullParse
 }
 
@@ -152,9 +153,10 @@ pub fn scan_all_sessions() -> ScanResult {
     // Try to return cached result
     if let Ok(guard) = SCAN_CACHE.lock()
         && let Some(ref cache) = *guard
-            && cache.created_at.elapsed() < ttl {
-                return cache.result.clone();
-            }
+        && cache.created_at.elapsed() < ttl
+    {
+        return cache.result.clone();
+    }
 
     let result = scan_all_sessions_uncached();
 
@@ -309,17 +311,17 @@ fn scan_single_project(project_dir: &Path) -> Vec<SessionSummary> {
             && let Some(summary) = summaries
                 .iter()
                 .find(|s| s.file_path == path.to_string_lossy())
-            {
-                new_cache.entries.insert(
-                    file_name.to_string(),
-                    CacheEntry {
-                        mtime_secs: *mtime,
-                        size: *size,
-                        byte_offset: *size,
-                        summary: summary.clone(),
-                    },
-                );
-            }
+        {
+            new_cache.entries.insert(
+                file_name.to_string(),
+                CacheEntry {
+                    mtime_secs: *mtime,
+                    size: *size,
+                    byte_offset: *size,
+                    summary: summary.clone(),
+                },
+            );
+        }
     }
     save_project_cache(project_dir, &new_cache);
 
@@ -500,33 +502,37 @@ fn process_line(line: &str, state: &mut ParseState) {
         _ => {}
     }
 
-    if state.first_user_text.is_none() && msg_type == "user"
+    if state.first_user_text.is_none()
+        && msg_type == "user"
         && let Some(text) = extract_text_from_message(&entry)
-            && !text.trim().is_empty() {
-                state.first_user_text =
-                    Some(truncate(&text, crate::constants::FIRST_MESSAGE_MAX_LEN));
-            }
+        && !text.trim().is_empty()
+    {
+        state.first_user_text = Some(truncate(&text, crate::constants::FIRST_MESSAGE_MAX_LEN));
+    }
 
     if state.cwd.is_none()
-        && let Some(c) = entry.get("cwd").and_then(|v| v.as_str()) {
-            state.cwd = Some(c.to_string());
-        }
+        && let Some(c) = entry.get("cwd").and_then(|v| v.as_str())
+    {
+        state.cwd = Some(c.to_string());
+    }
     if state.git_branch.is_none()
-        && let Some(b) = entry.get("gitBranch").and_then(|v| v.as_str()) {
-            state.git_branch = Some(b.to_string());
-        }
+        && let Some(b) = entry.get("gitBranch").and_then(|v| v.as_str())
+    {
+        state.git_branch = Some(b.to_string());
+    }
     if state.session_id_raw.is_none()
-        && let Some(s) = entry.get("sessionId").and_then(|v| v.as_str()) {
-            state.session_id_raw = Some(s.to_string());
-        }
+        && let Some(s) = entry.get("sessionId").and_then(|v| v.as_str())
+    {
+        state.session_id_raw = Some(s.to_string());
+    }
     if state.model.is_none()
         && let Some(m) = entry
             .get("message")
             .and_then(|msg| msg.get("model"))
             .and_then(|v| v.as_str())
-        {
-            state.model = Some(m.to_string());
-        }
+    {
+        state.model = Some(m.to_string());
+    }
 
     if let Some(ts) = entry.get("timestamp").and_then(|v| v.as_str()) {
         if state.started_at.is_none() {

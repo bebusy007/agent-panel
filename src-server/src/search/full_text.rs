@@ -178,9 +178,11 @@ pub(crate) fn search_in_file(
 
         // Apply message type filter
         if let Some(ref filter_type) = filters.message_type
-            && filter_type != "all" && msg_type != filter_type {
-                continue;
-            }
+            && filter_type != "all"
+            && msg_type != filter_type
+        {
+            continue;
+        }
 
         // Extract text content for snippet generation
         let text = extract_text_from_entry(&entry);
@@ -214,13 +216,15 @@ pub(crate) fn search_in_file(
 
         // Apply date filter
         if let (Some(from), Some(ts)) = (&filters.date_from, &timestamp)
-            && ts.as_str() < from.as_str() {
-                continue;
-            }
+            && ts.as_str() < from.as_str()
+        {
+            continue;
+        }
         if let (Some(to), Some(ts)) = (&filters.date_to, &timestamp)
-            && ts.as_str() > to.as_str() {
-                continue;
-            }
+            && ts.as_str() > to.as_str()
+        {
+            continue;
+        }
 
         // Apply advanced filters (CCHV-style)
         if let Some(want_tool_calls) = filters.has_tool_calls {
@@ -328,9 +332,10 @@ fn extract_text_from_entry(entry: &serde_json::Value) -> String {
 
     // message.content
     if let Some(message) = entry.get("message")
-        && let Some(content) = message.get("content") {
-            extract_text_from_content(content, &mut parts);
-        }
+        && let Some(content) = message.get("content")
+    {
+        extract_text_from_content(content, &mut parts);
+    }
 
     parts.join(" ")
 }
@@ -417,10 +422,11 @@ pub fn search_all_sessions(
     let current_gen = CACHE_GENERATION.load(Ordering::Acquire);
     if let Ok(mut cache) = SEARCH_CACHE.lock()
         && let Some(cached) = cache.get(&cache_key)
-            && cached.generation == current_gen {
-                tracing::info!(query = %query, total_matches = cached.response.total_matches, cache_hit = true, "search complete");
-                return cached.response.clone();
-            }
+        && cached.generation == current_gen
+    {
+        tracing::info!(query = %query, total_matches = cached.response.total_matches, cache_hit = true, "search complete");
+        return cached.response.clone();
+    }
 
     let home = match dirs::home_dir() {
         Some(h) => h,

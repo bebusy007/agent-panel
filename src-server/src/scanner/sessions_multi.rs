@@ -48,10 +48,7 @@ pub fn scan_codex_sessions() -> Vec<SessionSummary> {
         .map(|e| e.path().to_path_buf())
         .collect();
 
-    let results: Vec<SessionSummary> = files
-        .par_iter()
-        .filter_map(scan_codex_file)
-        .collect();
+    let results: Vec<SessionSummary> = files.par_iter().filter_map(scan_codex_file).collect();
     tracing::info!(count = results.len(), "codex session scan complete");
     results
 }
@@ -119,18 +116,20 @@ fn scan_codex_file(file_path: &PathBuf) -> Option<SessionSummary> {
                                 return Some(s.to_string());
                             }
                             if let Some(c) = m.get("content")
-                                && let Some(s) = c.as_str() {
-                                    return Some(s.to_string());
-                                }
+                                && let Some(s) = c.as_str()
+                            {
+                                return Some(s.to_string());
+                            }
                             None
                         });
                         if let Some(t) = text
-                            && !t.trim().is_empty() {
-                                first_user_text = Some(
-                                    safe_truncate(&t, crate::constants::FIRST_MESSAGE_MAX_LEN)
-                                        .to_string(),
-                                );
-                            }
+                            && !t.trim().is_empty()
+                        {
+                            first_user_text = Some(
+                                safe_truncate(&t, crate::constants::FIRST_MESSAGE_MAX_LEN)
+                                    .to_string(),
+                            );
+                        }
                     }
                 }
             }

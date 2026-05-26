@@ -200,14 +200,15 @@ fn extract_first_paragraph(content: &str) -> Option<String> {
     let mut lines = content.lines();
     // Skip frontmatter if present
     if let Some(first) = lines.next()
-        && first.trim() == "---" {
-            // Skip until closing ---
-            for line in lines.by_ref() {
-                if line.trim() == "---" {
-                    break;
-                }
+        && first.trim() == "---"
+    {
+        // Skip until closing ---
+        for line in lines.by_ref() {
+            if line.trim() == "---" {
+                break;
             }
         }
+    }
     // Skip empty lines and headings
     let text: String = lines
         .skip_while(|l| l.trim().is_empty() || l.starts_with('#'))

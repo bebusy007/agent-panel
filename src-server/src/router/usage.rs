@@ -76,9 +76,10 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
 
         // Count messages
         if (is_cc_message || is_codex_message)
-            && let Some(date) = extract_date_fast(&line) {
-                *result.messages.entry(date).or_default() += 1;
-            }
+            && let Some(date) = extract_date_fast(&line)
+        {
+            *result.messages.entry(date).or_default() += 1;
+        }
 
         if !has_cc_usage && !has_codex_usage {
             continue;
@@ -98,40 +99,41 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
         // Claude Code format: message.usage.{input_tokens, output_tokens, ...}
         if has_cc_usage
             && let Some(message) = entry.get("message")
-                && let Some(usage) = message.get("usage") {
-                    let model = message
-                        .get("model")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string();
-                    let inp = usage
-                        .get("input_tokens")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let out = usage
-                        .get("output_tokens")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let cr = usage
-                        .get("cache_read_input_tokens")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let cw = usage
-                        .get("cache_creation_input_tokens")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
+            && let Some(usage) = message.get("usage")
+        {
+            let model = message
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<unknown>")
+                .to_string();
+            let inp = usage
+                .get("input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let out = usage
+                .get("output_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let cr = usage
+                .get("cache_read_input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let cw = usage
+                .get("cache_creation_input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
-                    let tc = result
-                        .tokens_by_model
-                        .entry(timestamp.to_string())
-                        .or_default()
-                        .entry(model)
-                        .or_default();
-                    tc.input += inp;
-                    tc.output += out;
-                    tc.cache_read += cr;
-                    tc.cache_write += cw;
-                }
+            let tc = result
+                .tokens_by_model
+                .entry(timestamp.to_string())
+                .or_default()
+                .entry(model)
+                .or_default();
+            tc.input += inp;
+            tc.output += out;
+            tc.cache_read += cr;
+            tc.cache_write += cw;
+        }
 
         // Codex format: payload.info.last_token_usage.{input_tokens, output_tokens}
         if has_codex_usage
@@ -139,25 +141,25 @@ fn scan_file_daily(path: &PathBuf) -> FileDaily {
                 .get("payload")
                 .and_then(|p| p.get("info"))
                 .and_then(|i| i.get("last_token_usage"))
-            {
-                let inp = usage
-                    .get("input_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
-                let out = usage
-                    .get("output_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
+        {
+            let inp = usage
+                .get("input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let out = usage
+                .get("output_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
-                let tc = result
-                    .tokens_by_model
-                    .entry(timestamp.to_string())
-                    .or_default()
-                    .entry("codex".to_string())
-                    .or_default();
-                tc.input += inp;
-                tc.output += out;
-            }
+            let tc = result
+                .tokens_by_model
+                .entry(timestamp.to_string())
+                .or_default()
+                .entry("codex".to_string())
+                .or_default();
+            tc.input += inp;
+            tc.output += out;
+        }
     }
 
     result
@@ -268,15 +270,16 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
             continue;
         }
         if let Some(ts) = s.last_activity.as_deref().or(s.started_at.as_deref())
-            && ts.len() >= 10 {
-                let date = &ts[..10];
-                let day = daily_map.entry(date.to_string()).or_default();
-                day.message_count += s.message_count;
-                daily_sessions
-                    .entry(date.to_string())
-                    .or_default()
-                    .insert(file_paths.len() + cursor_idx);
-            }
+            && ts.len() >= 10
+        {
+            let date = &ts[..10];
+            let day = daily_map.entry(date.to_string()).or_default();
+            day.message_count += s.message_count;
+            daily_sessions
+                .entry(date.to_string())
+                .or_default()
+                .insert(file_paths.len() + cursor_idx);
+        }
     }
 
     // Apply days filter
@@ -285,8 +288,7 @@ async fn usage_overview(Query(params): Query<UsageParams>) -> Json<serde_json::V
         dt.format("%Y-%m-%d").to_string()
     });
 
-    let date_in_range =
-        |date: &str| -> bool { cutoff.as_ref().is_none_or(|c| date >= c.as_str()) };
+    let date_in_range = |date: &str| -> bool { cutoff.as_ref().is_none_or(|c| date >= c.as_str()) };
 
     // Build daily list (filtered by date range)
     let daily: Vec<DailyAggregate> = daily_map
