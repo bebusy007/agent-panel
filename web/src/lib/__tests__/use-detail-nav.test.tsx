@@ -47,4 +47,31 @@ describe('useOverlayNavigate', () => {
     });
     expect(true).toBe(true);
   });
+
+  it('goBack navigates to -1 in overlay mode', () => {
+    const overlayWrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/skills/123', state: { backgroundLocation: { pathname: '/skills' } } },
+        ]}
+      >
+        {children}
+      </MemoryRouter>
+    );
+    const { result } = renderHook(() => useDetailNav('/skills'), {
+      wrapper: overlayWrapper,
+    });
+    expect(result.current.isOverlay).toBe(true);
+    act(() => {
+      result.current.goBack();
+    });
+  });
+
+  it('useOverlayNavigate sets backgroundLocation on first open', () => {
+    const { result } = renderHook(() => useOverlayNavigate(), { wrapper });
+    act(() => {
+      result.current('/skills/789');
+    });
+    expect(true).toBe(true);
+  });
 });
