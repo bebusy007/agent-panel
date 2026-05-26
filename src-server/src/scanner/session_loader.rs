@@ -927,7 +927,7 @@ pub fn resolve_image(
     // Step 1: Try image-cache file.
     // We need to compute the global image number (1-based) by scanning the JSONL.
     if let Some(raw_id) = session_id_raw
-        && let Some(home) = dirs::home_dir()
+        && let Some(home) = crate::scanner::home_dir()
     {
         let cache_dir = home.join(".claude").join("image-cache").join(raw_id);
         if cache_dir.is_dir() {

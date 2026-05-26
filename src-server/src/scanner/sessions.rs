@@ -175,7 +175,7 @@ pub fn scan_all_sessions() -> ScanResult {
 fn scan_all_sessions_uncached() -> ScanResult {
     let start = Instant::now();
 
-    let home = match dirs::home_dir() {
+    let home = match crate::scanner::home_dir() {
         Some(h) => h,
         None => return ScanResult::empty(),
     };

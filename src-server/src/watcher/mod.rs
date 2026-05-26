@@ -30,7 +30,7 @@ pub fn start_watching() -> EventSender {
     let tx_clone = tx.clone();
 
     std::thread::spawn(move || {
-        let home = match dirs::home_dir() {
+        let home = match crate::scanner::home_dir() {
             Some(h) => h,
             None => {
                 tracing::warn!("cannot determine home dir, watcher disabled");
