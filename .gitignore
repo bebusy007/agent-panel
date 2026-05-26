@@ -37,3 +37,4 @@ src-server/.vite/
 web/coverage/
 .claude/worktrees/
 logs/
+.claude/settings.local.json
