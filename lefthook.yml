@@ -1,0 +1,27 @@
+pre-commit:
+  parallel: true
+  commands:
+    frontend-fmt:
+      glob: "web/**/*.{ts,tsx,css,json}"
+      run: ./web/node_modules/.bin/prettier --write {staged_files}
+      stage_fixed: true
+    backend-fmt:
+      glob: "src-server/**/*.rs"
+      run: cd src-server && cargo fmt
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      glob: "web/**/*.{ts,tsx}"
+      run: cd web && npx tsc --noEmit
+    backend-clippy:
+      glob: "src-server/**/*.rs"
+      run: cd src-server && cargo clippy
+    frontend-test:
+      glob: "web/**/*.{ts,tsx}"
+      run: cd web && npx vitest run
+    backend-test:
+      glob: "src-server/**/*.rs"
+      run: cd src-server && cargo test

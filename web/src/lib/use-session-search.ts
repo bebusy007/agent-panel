@@ -1,33 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Message, MessageRole } from "./api";
-import { canonicalTool } from "./tool-aliases";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Message, MessageRole } from './api';
+import { canonicalTool } from './tool-aliases';
 
-export type FilterRole = MessageRole | "subagent" | "image";
+export type FilterRole = MessageRole | 'subagent' | 'image';
 export const ALL_FILTERS: FilterRole[] = [
-  "user",
-  "assistant",
-  "tool_use",
-  "subagent",
-  "tool_result",
-  "system",
-  "meta",
-  "image",
+  'user',
+  'assistant',
+  'tool_use',
+  'subagent',
+  'tool_result',
+  'system',
+  'meta',
+  'image',
 ];
 
 function messageBodyText(m: Message): string {
   switch (m.role) {
-    case "assistant":
-      return m.text || "";
-    case "tool_use":
+    case 'assistant':
+      return m.text || '';
+    case 'tool_use':
       return m.toolInput != null
-        ? typeof m.toolInput === "string"
+        ? typeof m.toolInput === 'string'
           ? m.toolInput
           : JSON.stringify(m.toolInput, null, 2)
-        : "";
-    case "tool_result":
-      return m.toolOutput || m.text || "";
+        : '';
+    case 'tool_result':
+      return m.toolOutput || m.text || '';
     default:
-      return m.text || "";
+      return m.text || '';
   }
 }
 
@@ -63,15 +63,13 @@ export interface SessionSearchState {
   searchActive: boolean;
   searchMatchTotal: number;
   searchActiveIndex: number;
-  navigateSearch: (direction: "next" | "prev") => void;
+  navigateSearch: (direction: 'next' | 'prev') => void;
   navTarget: NavTarget | null;
 }
 
 export function useSessionSearch(allMessages: Message[]): SessionSearchState {
-  const [selectedRoles, setSelectedRoles] = useState<Set<FilterRole>>(
-    new Set(ALL_FILTERS),
-  );
-  const [search, setSearch] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<Set<FilterRole>>(new Set(ALL_FILTERS));
+  const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchActiveIndex, setSearchActiveIndex] = useState(-1);
   const [searchNavNonce, setSearchNavNonce] = useState(0);
@@ -81,16 +79,15 @@ export function useSessionSearch(allMessages: Message[]): SessionSearchState {
     if (selectedRoles.size < ALL_FILTERS.length) {
       arr = arr.filter((m) => {
         const hasImages = (m.images?.length ?? 0) > 0;
-        if (hasImages && !selectedRoles.has("image")) return false;
-        const isSubagent =
-          m.role === "tool_use" && canonicalTool(m.toolName) === "Task";
-        if (isSubagent) return selectedRoles.has("subagent");
-        if (m.role === "tool_result" && m.toolUseId) {
+        if (hasImages && !selectedRoles.has('image')) return false;
+        const isSubagent = m.role === 'tool_use' && canonicalTool(m.toolName) === 'Task';
+        if (isSubagent) return selectedRoles.has('subagent');
+        if (m.role === 'tool_result' && m.toolUseId) {
           const parent = allMessages.find(
-            (p) => p.role === "tool_use" && p.toolUseId === m.toolUseId,
+            (p) => p.role === 'tool_use' && p.toolUseId === m.toolUseId,
           );
-          if (parent && canonicalTool(parent.toolName) === "Task") {
-            return selectedRoles.has("subagent");
+          if (parent && canonicalTool(parent.toolName) === 'Task') {
+            return selectedRoles.has('subagent');
           }
         }
         return selectedRoles.has(m.role);
@@ -102,9 +99,8 @@ export function useSessionSearch(allMessages: Message[]): SessionSearchState {
         if (m.text?.toLowerCase().includes(q)) return true;
         if (m.toolName?.toLowerCase().includes(q)) return true;
         if (m.toolOutput?.toLowerCase().includes(q)) return true;
-        if (typeof m.toolInput === "string" && m.toolInput.toLowerCase().includes(q))
-          return true;
-        if (m.toolInput && typeof m.toolInput !== "string") {
+        if (typeof m.toolInput === 'string' && m.toolInput.toLowerCase().includes(q)) return true;
+        if (m.toolInput && typeof m.toolInput !== 'string') {
           try {
             if (JSON.stringify(m.toolInput).toLowerCase().includes(q)) return true;
           } catch {
@@ -128,8 +124,7 @@ export function useSessionSearch(allMessages: Message[]): SessionSearchState {
     }
     const counts = filtered.map((m) => countOccurrences(messageBodyText(m), q));
     const offsets: number[] = [0];
-    for (let i = 0; i < counts.length; i++)
-      offsets.push(offsets[i]! + counts[i]!);
+    for (let i = 0; i < counts.length; i++) offsets.push(offsets[i]! + counts[i]!);
     return {
       messageCounts: counts,
       cumOffsets: offsets,
@@ -143,12 +138,11 @@ export function useSessionSearch(allMessages: Message[]): SessionSearchState {
   }, [search, searchMatchTotal]);
 
   const navigateSearch = useCallback(
-    (direction: "next" | "prev") => {
+    (direction: 'next' | 'prev') => {
       if (searchMatchTotal <= 0) return;
       setSearchActiveIndex((cur) => {
         if (cur < 0) return 0;
-        if (direction === "next")
-          return cur + 1 >= searchMatchTotal ? 0 : cur + 1;
+        if (direction === 'next') return cur + 1 >= searchMatchTotal ? 0 : cur + 1;
         return cur - 1 < 0 ? searchMatchTotal - 1 : cur - 1;
       });
       setSearchNavNonce((n) => n + 1);
@@ -159,10 +153,7 @@ export function useSessionSearch(allMessages: Message[]): SessionSearchState {
   const navTarget = useMemo(() => {
     if (searchActiveIndex < 0 || cumOffsets.length < 2) return null;
     for (let i = 0; i < messageCounts.length; i++) {
-      if (
-        searchActiveIndex >= cumOffsets[i]! &&
-        searchActiveIndex < cumOffsets[i + 1]!
-      ) {
+      if (searchActiveIndex >= cumOffsets[i]! && searchActiveIndex < cumOffsets[i + 1]!) {
         return {
           msgIdx: i,
           localIdx: searchActiveIndex - cumOffsets[i]!,

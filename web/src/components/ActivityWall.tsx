@@ -1,8 +1,8 @@
-import { useMemo } from "react";
-import { api, type ActivityDay } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
-import { cn, formatTokens } from "@/lib/utils";
-import { DEFAULT_ACTIVITY_WEEKS } from "@/lib/constants";
+import { useMemo } from 'react';
+import { api, type ActivityDay } from '@/lib/api';
+import { useAsync } from '@/lib/hooks';
+import { cn, formatTokens } from '@/lib/utils';
+import { DEFAULT_ACTIVITY_WEEKS } from '@/lib/constants';
 
 /**
  * GitHub-style activity heatmap. Each cell = one day; colour depth scales with
@@ -38,7 +38,7 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
 
     const cols: Array<Array<{ date: string; day?: ActivityDay } | null>> = Array.from(
       { length: weeks },
-      () => Array(7).fill(null)
+      () => Array(7).fill(null),
     );
 
     for (let c = 0; c < weeks; c++) {
@@ -53,7 +53,10 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
     }
 
     // Adaptive thresholds from non-zero days
-    const nonzero = days.map((d) => d.tokens).filter((n) => n > 0).sort((a, b) => a - b);
+    const nonzero = days
+      .map((d) => d.tokens)
+      .filter((n) => n > 0)
+      .sort((a, b) => a - b);
     const q = (p: number) =>
       nonzero.length === 0 ? 0 : nonzero[Math.floor((nonzero.length - 1) * p)]!;
     const thresholds = [q(0.25), q(0.5), q(0.75), q(0.9)];
@@ -64,7 +67,7 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
     for (let c = 0; c < weeks; c++) {
       const firstCell = cols[c]!.find((x) => x !== null);
       if (!firstCell) continue;
-      const d = new Date(firstCell.date + "T00:00:00");
+      const d = new Date(firstCell.date + 'T00:00:00');
       const m = d.getMonth();
       if (m !== lastMonth && d.getDate() <= 7) {
         labels.set(c, `${m + 1}月`);
@@ -89,7 +92,7 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
         </div>
         {!loading && (
           <div className="text-right text-[11px] text-muted-foreground">
-            总计 <span className="text-fg">{formatTokens(totalTokens)}</span> tokens ·{" "}
+            总计 <span className="text-fg">{formatTokens(totalTokens)}</span> tokens ·{' '}
             <span className="text-fg">{totalSessions}</span> sessions
           </div>
         )}
@@ -107,11 +110,11 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
           <div className="flex gap-1.5 items-start overflow-x-auto pb-1">
             {/* Weekday labels on the left (only Mon/Wed/Fri) */}
             <div className="flex flex-col gap-[3px] mt-[18px] text-[9px] text-muted-foreground pr-1 select-none">
-              {["日", "一", "二", "三", "四", "五", "六"].map((w, i) => (
+              {['日', '一', '二', '三', '四', '五', '六'].map((w, i) => (
                 <div
                   key={i}
                   className="h-[11px] leading-[11px]"
-                  style={{ visibility: i === 1 || i === 3 || i === 5 ? "visible" : "hidden" }}
+                  style={{ visibility: i === 1 || i === 3 || i === 5 ? 'visible' : 'hidden' }}
                 >
                   {w}
                 </div>
@@ -123,7 +126,7 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
               <div className="flex gap-[3px] mb-1 text-[9px] text-muted-foreground h-[14px] select-none">
                 {grid.map((_, ci) => (
                   <div key={ci} className="w-[11px]">
-                    {monthLabels.get(ci) ?? ""}
+                    {monthLabels.get(ci) ?? ''}
                   </div>
                 ))}
               </div>
@@ -143,26 +146,27 @@ export function ActivityWall({ weeks = DEFAULT_ACTIVITY_WEEKS }: { weeks?: numbe
                         );
                       }
                       const tok = cell.day?.tokens ?? 0;
-                      const cls = tok === 0
-                        ? "bg-emerald-500/10 ring-1 ring-emerald-500/15 ring-inset"
-                        : tok <= thresholds[0]!
-                          ? "bg-emerald-900/70"
-                          : tok <= thresholds[1]!
-                            ? "bg-emerald-700/80"
-                            : tok <= thresholds[2]!
-                              ? "bg-emerald-500/80"
-                              : tok <= thresholds[3]!
-                                ? "bg-emerald-400"
-                                : "bg-emerald-300";
+                      const cls =
+                        tok === 0
+                          ? 'bg-emerald-500/10 ring-1 ring-emerald-500/15 ring-inset'
+                          : tok <= thresholds[0]!
+                            ? 'bg-emerald-900/70'
+                            : tok <= thresholds[1]!
+                              ? 'bg-emerald-700/80'
+                              : tok <= thresholds[2]!
+                                ? 'bg-emerald-500/80'
+                                : tok <= thresholds[3]!
+                                  ? 'bg-emerald-400'
+                                  : 'bg-emerald-300';
                       const tip =
                         tok === 0
                           ? `${cell.date} · 无消耗`
-                          : `${cell.date} · ${formatTokens(tok)} tokens · ${cell.day!.sessions} session${cell.day!.sessions > 1 ? "s" : ""}`;
+                          : `${cell.date} · ${formatTokens(tok)} tokens · ${cell.day!.sessions} session${cell.day!.sessions > 1 ? 's' : ''}`;
                       return (
                         <div
                           key={ci}
                           title={tip}
-                          className={cn("w-[11px] h-[11px] rounded-[2px]", cls)}
+                          className={cn('w-[11px] h-[11px] rounded-[2px]', cls)}
                         />
                       );
                     })}

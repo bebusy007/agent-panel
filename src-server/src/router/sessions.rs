@@ -1,8 +1,12 @@
-use axum::{extract::{Path, Query}, routing::get, Json, Router};
+use crate::router::resume::build_resume_hints;
+use crate::scanner::{session_loader, sessions};
+use axum::{
+    Json, Router,
+    extract::{Path, Query},
+    routing::get,
+};
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::scanner::{sessions, session_loader};
-use crate::router::resume::build_resume_hints;
 
 #[derive(Deserialize)]
 struct ListParams {
@@ -46,7 +50,9 @@ async fn get_subagent(Path((id, agent_hash)): Path<(String, String)>) -> Json<se
     };
 
     if session.source != "claude-code" {
-        return Json(serde_json::json!({ "error": "subagents only exist for claude-code sessions" }));
+        return Json(
+            serde_json::json!({ "error": "subagents only exist for claude-code sessions" }),
+        );
     }
 
     // Subagent files live at: <session_file_without_.jsonl>/subagents/agent-<hash>.jsonl
@@ -83,8 +89,8 @@ async fn health() -> Json<serde_json::Value> {
 }
 
 async fn export_session_md(Path(id): Path<String>) -> axum::response::Response {
-    use axum::response::IntoResponse;
     use axum::http::header;
+    use axum::response::IntoResponse;
 
     tracing::info!(session_id = %id, "export_session_md request");
     let result = sessions::scan_all_sessions();
@@ -125,12 +131,19 @@ async fn export_session_md(Path(id): Path<String>) -> axum::response::Response {
                 let name = msg.tool_name.as_deref().unwrap_or("tool");
                 md.push_str(&format!("### 🔧 {}\n\n", name));
                 if let Some(ref input) = msg.tool_input {
-                    md.push_str(&format!("```json\n{}\n```\n\n", serde_json::to_string_pretty(input).unwrap_or_default()));
+                    md.push_str(&format!(
+                        "```json\n{}\n```\n\n",
+                        serde_json::to_string_pretty(input).unwrap_or_default()
+                    ));
                 }
             }
             "tool_result" => {
                 if let Some(ref output) = msg.tool_output {
-                    let truncated = if output.len() > crate::constants::EXPORT_TOOL_OUTPUT_MAX_LEN { &output[..crate::constants::EXPORT_TOOL_OUTPUT_MAX_LEN] } else { output.as_str() };
+                    let truncated = if output.len() > crate::constants::EXPORT_TOOL_OUTPUT_MAX_LEN {
+                        &output[..crate::constants::EXPORT_TOOL_OUTPUT_MAX_LEN]
+                    } else {
+                        output.as_str()
+                    };
                     md.push_str(&format!("```\n{}\n```\n\n", truncated));
                 }
             }
@@ -163,7 +176,11 @@ async fn list_sessions(Query(params): Query<ListParams>) -> Json<serde_json::Val
         let ql = q.to_lowercase();
         sessions_list.retain(|s| {
             s.title.to_lowercase().contains(&ql)
-                || s.first_user_message.as_deref().unwrap_or("").to_lowercase().contains(&ql)
+                || s.first_user_message
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_lowercase()
+                    .contains(&ql)
                 || s.cwd.as_deref().unwrap_or("").to_lowercase().contains(&ql)
         });
     }
@@ -171,13 +188,19 @@ async fn list_sessions(Query(params): Query<ListParams>) -> Json<serde_json::Val
     // Sort
     let sort_by = params.sort_by.as_deref().unwrap_or("lastActivity");
     match sort_by {
-        "tokens" => sessions_list.sort_by(|a, b| b.tokens_total.cmp(&a.tokens_total)),
-        "messageCount" => sessions_list.sort_by(|a, b| b.message_count.cmp(&a.message_count)),
+        "tokens" => sessions_list.sort_by_key(|a| std::cmp::Reverse(a.tokens_total)),
+        "messageCount" => sessions_list.sort_by_key(|a| std::cmp::Reverse(a.message_count)),
         "startedAt" => sessions_list.sort_by(|a, b| {
-            b.started_at.as_deref().unwrap_or("").cmp(a.started_at.as_deref().unwrap_or(""))
+            b.started_at
+                .as_deref()
+                .unwrap_or("")
+                .cmp(a.started_at.as_deref().unwrap_or(""))
         }),
         _ => sessions_list.sort_by(|a, b| {
-            b.last_activity.as_deref().unwrap_or("").cmp(a.last_activity.as_deref().unwrap_or(""))
+            b.last_activity
+                .as_deref()
+                .unwrap_or("")
+                .cmp(a.last_activity.as_deref().unwrap_or(""))
         }),
     }
 
@@ -186,7 +209,12 @@ async fn list_sessions(Query(params): Query<ListParams>) -> Json<serde_json::Val
         sessions_list.truncate(limit);
     }
 
-    tracing::info!(total = total, returned = sessions_list.len(), scan_time_ms = result.scan_time_ms, "list_sessions → ok");
+    tracing::info!(
+        total = total,
+        returned = sessions_list.len(),
+        scan_time_ms = result.scan_time_ms,
+        "list_sessions → ok"
+    );
 
     Json(serde_json::json!({
         "total": total,
@@ -203,20 +231,24 @@ async fn list_projects() -> Json<serde_json::Value> {
         projects.entry(s.project_dir.clone()).or_default().push(s);
     }
 
-    let mut project_list: Vec<serde_json::Value> = projects.iter().map(|(dir, sessions)| {
-        let total_tokens: u64 = sessions.iter().filter_map(|s| s.tokens_total).sum();
-        let latest = sessions.iter()
-            .filter_map(|s| s.last_activity.as_deref())
-            .max()
-            .unwrap_or("");
+    let mut project_list: Vec<serde_json::Value> = projects
+        .iter()
+        .map(|(dir, sessions)| {
+            let total_tokens: u64 = sessions.iter().filter_map(|s| s.tokens_total).sum();
+            let latest = sessions
+                .iter()
+                .filter_map(|s| s.last_activity.as_deref())
+                .max()
+                .unwrap_or("");
 
-        serde_json::json!({
-            "projectDir": dir,
-            "sessionCount": sessions.len(),
-            "totalTokens": total_tokens,
-            "lastActivity": latest,
+            serde_json::json!({
+                "projectDir": dir,
+                "sessionCount": sessions.len(),
+                "totalTokens": total_tokens,
+                "lastActivity": latest,
+            })
         })
-    }).collect();
+        .collect();
 
     project_list.sort_by(|a, b| {
         let ta = b["lastActivity"].as_str().unwrap_or("");
@@ -241,7 +273,8 @@ async fn search_sessions(Query(params): Query<SearchParams>) -> Json<serde_json:
         message_type: None,
         projects: vec![],
         date_from: None,
-        date_to: None, ..Default::default()
+        date_to: None,
+        ..Default::default()
     };
     let response = crate::search::full_text::search_all_sessions(&q, &filters, Some(limit), None);
 
@@ -298,7 +331,11 @@ async fn get_session(Path(id): Path<String>) -> Json<serde_json::Value> {
 async fn refresh_sessions() -> Json<serde_json::Value> {
     tracing::info!("refresh_sessions request");
     let result = sessions::scan_all_sessions();
-    tracing::info!(session_count = result.sessions.len(), scan_time_ms = result.scan_time_ms, "refresh_sessions → ok");
+    tracing::info!(
+        session_count = result.sessions.len(),
+        scan_time_ms = result.scan_time_ms,
+        "refresh_sessions → ok"
+    );
     Json(serde_json::json!({
         "ok": true,
         "sessionCount": result.sessions.len(),
@@ -306,7 +343,10 @@ async fn refresh_sessions() -> Json<serde_json::Value> {
     }))
 }
 
-async fn search_in_session(Path(id): Path<String>, Query(params): Query<SearchParams>) -> Json<serde_json::Value> {
+async fn search_in_session(
+    Path(id): Path<String>,
+    Query(params): Query<SearchParams>,
+) -> Json<serde_json::Value> {
     let q = params.q.unwrap_or_default();
     tracing::info!(session_id = %id, q = %q, "search_in_session request");
     if q.trim().is_empty() {

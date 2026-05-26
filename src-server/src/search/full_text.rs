@@ -17,8 +17,8 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 use walkdir::WalkDir;
 
@@ -37,9 +37,12 @@ struct CachedResult {
 }
 
 static SEARCH_CACHE: std::sync::LazyLock<Mutex<LruCache<u64, CachedResult>>> =
-    std::sync::LazyLock::new(|| Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_CAPACITY).unwrap())));
+    std::sync::LazyLock::new(|| {
+        Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_CAPACITY).unwrap()))
+    });
 
 /// Call this when files change (from the watcher) to invalidate cache.
+#[allow(dead_code)]
 pub fn invalidate_cache() {
     CACHE_GENERATION.fetch_add(1, Ordering::Release);
 }
@@ -112,7 +115,12 @@ fn make_snippet(text: &str, match_start: usize, match_end: usize) -> String {
 
 /// Search in a single JSONL file using mmap for zero-copy access.
 /// Returns matching messages with snippets.
-pub(crate) fn search_in_file(file_path: &Path, matcher: &AhoCorasick, query: &str, filters: &SearchFilters) -> Vec<SearchHit> {
+pub(crate) fn search_in_file(
+    file_path: &Path,
+    matcher: &AhoCorasick,
+    query: &str,
+    filters: &SearchFilters,
+) -> Vec<SearchHit> {
     let file = match fs::File::open(file_path) {
         Ok(f) => f,
         Err(_) => return vec![],
@@ -162,20 +170,18 @@ pub(crate) fn search_in_file(file_path: &Path, matcher: &AhoCorasick, query: &st
         };
 
         // Extract message type
-        let msg_type = entry
-            .get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let msg_type = entry.get("type").and_then(|v| v.as_str()).unwrap_or("");
 
         if msg_type != "user" && msg_type != "assistant" {
             continue;
         }
 
         // Apply message type filter
-        if let Some(ref filter_type) = filters.message_type {
-            if filter_type != "all" && msg_type != filter_type {
-                continue;
-            }
+        if let Some(ref filter_type) = filters.message_type
+            && filter_type != "all"
+            && msg_type != filter_type
+        {
+            continue;
         }
 
         // Extract text content for snippet generation
@@ -209,15 +215,15 @@ pub(crate) fn search_in_file(file_path: &Path, matcher: &AhoCorasick, query: &st
             .map(|s| s.to_string());
 
         // Apply date filter
-        if let (Some(from), Some(ts)) = (&filters.date_from, &timestamp) {
-            if ts.as_str() < from.as_str() {
-                continue;
-            }
+        if let (Some(from), Some(ts)) = (&filters.date_from, &timestamp)
+            && ts.as_str() < from.as_str()
+        {
+            continue;
         }
-        if let (Some(to), Some(ts)) = (&filters.date_to, &timestamp) {
-            if ts.as_str() > to.as_str() {
-                continue;
-            }
+        if let (Some(to), Some(ts)) = (&filters.date_to, &timestamp)
+            && ts.as_str() > to.as_str()
+        {
+            continue;
         }
 
         // Apply advanced filters (CCHV-style)
@@ -263,10 +269,14 @@ pub(crate) fn search_in_file(file_path: &Path, matcher: &AhoCorasick, query: &st
 
 /// Check if a message entry contains tool_use blocks.
 fn has_tool_calls_in_entry(entry: &serde_json::Value) -> bool {
-    if let Some(content) = entry.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
-        content.iter().any(|item| {
-            item.get("type").and_then(|v| v.as_str()) == Some("tool_use")
-        })
+    if let Some(content) = entry
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .and_then(|c| c.as_array())
+    {
+        content
+            .iter()
+            .any(|item| item.get("type").and_then(|v| v.as_str()) == Some("tool_use"))
     } else {
         false
     }
@@ -275,11 +285,19 @@ fn has_tool_calls_in_entry(entry: &serde_json::Value) -> bool {
 /// Check if a message entry contains error indicators.
 fn has_errors_in_entry(entry: &serde_json::Value) -> bool {
     let msg_type = entry.get("type").and_then(|v| v.as_str()).unwrap_or("");
-    if msg_type == "error" { return true; }
+    if msg_type == "error" {
+        return true;
+    }
 
-    if let Some(content) = entry.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
+    if let Some(content) = entry
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .and_then(|c| c.as_array())
+    {
         content.iter().any(|item| {
-            item.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false)
+            item.get("is_error")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
         })
     } else {
         false
@@ -288,7 +306,11 @@ fn has_errors_in_entry(entry: &serde_json::Value) -> bool {
 
 /// Check if a message entry contains file modification tool calls (Edit/Write/MultiEdit).
 fn has_file_changes_in_entry(entry: &serde_json::Value) -> bool {
-    if let Some(content) = entry.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
+    if let Some(content) = entry
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .and_then(|c| c.as_array())
+    {
         content.iter().any(|item| {
             if item.get("type").and_then(|v| v.as_str()) != Some("tool_use") {
                 return false;
@@ -309,10 +331,10 @@ fn extract_text_from_entry(entry: &serde_json::Value) -> String {
     let mut parts = Vec::new();
 
     // message.content
-    if let Some(message) = entry.get("message") {
-        if let Some(content) = message.get("content") {
-            extract_text_from_content(content, &mut parts);
-        }
+    if let Some(message) = entry.get("message")
+        && let Some(content) = message.get("content")
+    {
+        extract_text_from_content(content, &mut parts);
     }
 
     parts.join(" ")
@@ -398,13 +420,12 @@ pub fn search_all_sessions(
     // Check LRU cache (keyed on query+filters+limit+offset)
     let cache_key = compute_cache_key(query, filters, max_results + skip);
     let current_gen = CACHE_GENERATION.load(Ordering::Acquire);
-    if let Ok(mut cache) = SEARCH_CACHE.lock() {
-        if let Some(cached) = cache.get(&cache_key) {
-            if cached.generation == current_gen {
-                tracing::info!(query = %query, total_matches = cached.response.total_matches, cache_hit = true, "search complete");
-                return cached.response.clone();
-            }
-        }
+    if let Ok(mut cache) = SEARCH_CACHE.lock()
+        && let Some(cached) = cache.get(&cache_key)
+        && cached.generation == current_gen
+    {
+        tracing::info!(query = %query, total_matches = cached.response.total_matches, cache_hit = true, "search complete");
+        return cached.response.clone();
     }
 
     let home = match dirs::home_dir() {
@@ -433,12 +454,7 @@ pub fn search_all_sessions(
     let file_paths: Vec<PathBuf> = WalkDir::new(&projects_path)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .extension()
-                .and_then(|s| s.to_str())
-                == Some("jsonl")
-        })
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
         .map(|e| e.path().to_path_buf())
         .collect();
 
@@ -478,10 +494,13 @@ pub fn search_all_sessions(
 
     // Store in LRU cache
     if let Ok(mut cache) = SEARCH_CACHE.lock() {
-        cache.put(cache_key, CachedResult {
-            generation: current_gen,
-            response: response.clone(),
-        });
+        cache.put(
+            cache_key,
+            CachedResult {
+                generation: current_gen,
+                response: response.clone(),
+            },
+        );
     }
 
     tracing::info!(
@@ -741,7 +760,12 @@ mod unit_tests {
     fn test_search_in_file_nonexistent() {
         let matcher = build_matcher("test");
         let filters = SearchFilters::default();
-        let results = search_in_file(Path::new("/nonexistent/xyz.jsonl"), &matcher, "test", &filters);
+        let results = search_in_file(
+            Path::new("/nonexistent/xyz.jsonl"),
+            &matcher,
+            "test",
+            &filters,
+        );
         assert!(results.is_empty());
     }
 

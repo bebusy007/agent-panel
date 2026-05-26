@@ -1,26 +1,22 @@
-import { useMemo, useState } from "react";
-import { api } from "@/lib/api";
-import { useCachedAsync, useDebounced } from "@/lib/hooks";
-import { useOverlayNavigate } from "@/lib/use-detail-nav";
-import { SearchBar } from "@/components/SearchBar";
-import { FilterChips } from "@/components/FilterChips";
-import { MasonryGrid } from "@/components/MasonryGrid";
-import { MCPCard } from "@/components/MCPCard";
-import { describeMcpSource } from "@/lib/utils";
-import type { MCPSummary } from "@/lib/api";
+import { useMemo, useState } from 'react';
+import { api } from '@/lib/api';
+import { useCachedAsync, useDebounced } from '@/lib/hooks';
+import { useOverlayNavigate } from '@/lib/use-detail-nav';
+import { SearchBar } from '@/components/SearchBar';
+import { FilterChips } from '@/components/FilterChips';
+import { MasonryGrid } from '@/components/MasonryGrid';
+import { MCPCard } from '@/components/MCPCard';
+import { describeMcpSource } from '@/lib/utils';
+import type { MCPSummary } from '@/lib/api';
 
 /** Mirror of SkillsView (cached fetch + overlay detail + plain
  *  useState for filters because the list never unmounts). See
  *  SkillsView for the rationale. */
 export default function MCPsView() {
-  const { data, loading, error, refetch } = useCachedAsync(
-    "mcps:list",
-    () => api.mcps(),
-    [],
-  );
+  const { data, loading, error, refetch } = useCachedAsync('mcps:list', () => api.mcps(), []);
   const openOverlay = useOverlayNavigate();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const debouncedQuery = useDebounced(query, 150);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
@@ -43,7 +39,7 @@ export default function MCPsView() {
       if (!q) return true;
       const hay = [m.serverName, m.description, ...m.toolNames]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .toLowerCase();
       return hay.includes(q);
     });
@@ -67,7 +63,7 @@ export default function MCPsView() {
         <div>
           <h1 className="typo-h1">MCP Servers</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            共 <span className="text-fg">{mcps.length}</span> 个 server，当前显示{" "}
+            共 <span className="text-fg">{mcps.length}</span> 个 server，当前显示{' '}
             <span className="text-fg">{filtered.length}</span>
           </p>
         </div>

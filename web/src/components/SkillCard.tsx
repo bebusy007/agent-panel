@@ -1,8 +1,8 @@
-import type { SkillSummary } from "@/lib/api";
-import { SkillSourceBadge } from "./SourceBadge";
-import { Link2, Terminal, Tag } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { highlightJsx } from "@/lib/highlight";
+import type { SkillSummary } from '@/lib/api';
+import { SkillSourceBadge } from './SourceBadge';
+import { Link2, Terminal, Tag } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { highlightJsx } from '@/lib/highlight';
 
 export function SkillCard({
   skill,
@@ -20,9 +20,11 @@ export function SkillCard({
     <button
       onClick={onClick}
       className={cn(
-        "group block w-full text-left rounded-xl border bg-card p-4 transition-all duration-200 hover:shadow-e2 focus:outline-none",
-        active ? "border-2 border-primary bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]" : "border-border",
-        broken && "border-destructive/40 bg-destructive/5"
+        'group block w-full text-left rounded-xl border bg-card p-4 transition-all duration-200 hover:shadow-e2 focus:outline-none',
+        active
+          ? 'border-2 border-primary bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]'
+          : 'border-border',
+        broken && 'border-destructive/40 bg-destructive/5',
       )}
     >
       <div className="flex items-start gap-2">
@@ -83,7 +85,9 @@ export function SkillCard({
             </span>
           ))}
           {skill.cliCommands.length > 4 && (
-            <span className="text-[10px] text-muted-foreground">+{skill.cliCommands.length - 4}</span>
+            <span className="text-[10px] text-muted-foreground">
+              +{skill.cliCommands.length - 4}
+            </span>
           )}
         </div>
       )}

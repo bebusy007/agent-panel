@@ -1,6 +1,9 @@
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::{routing::{get, post}, Json, Router};
+use axum::{
+    Json, Router,
+    routing::{get, post},
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -93,7 +96,11 @@ async fn list_files(State(log_dir): State<Arc<String>>) -> Json<serde_json::Valu
             }
             let size_bytes = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
             let date = extract_date_from_filename(&name);
-            files.push(LogFileInfo { name, size_bytes, date });
+            files.push(LogFileInfo {
+                name,
+                size_bytes,
+                date,
+            });
         }
     }
 
@@ -148,7 +155,11 @@ async fn read_content(
 ) -> Json<serde_json::Value> {
     // Security: prevent directory traversal
     let filename = &params.file;
-    if filename.contains("..") || filename.contains('/') || filename.contains('\\') || !filename.ends_with(".log") {
+    if filename.contains("..")
+        || filename.contains('/')
+        || filename.contains('\\')
+        || !filename.ends_with(".log")
+    {
         return Json(serde_json::json!({ "error": "invalid filename" }));
     }
 
@@ -192,9 +203,21 @@ async fn read_content(
             }
         };
 
-        let timestamp = json.get("timestamp").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let level = json.get("level").and_then(|v| v.as_str()).unwrap_or("INFO").to_string();
-        let target = json.get("target").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let timestamp = json
+            .get("timestamp")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let level = json
+            .get("level")
+            .and_then(|v| v.as_str())
+            .unwrap_or("INFO")
+            .to_string();
+        let target = json
+            .get("target")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
 
         // Extract message from fields.message
         let fields_obj = json.get("fields");
@@ -205,7 +228,7 @@ async fn read_content(
             .to_string();
 
         // Format span info
-        let span = json.get("span").map(|s| format_span(s));
+        let span = json.get("span").map(format_span);
 
         // Collect remaining fields (exclude "message" since we extracted it)
         let fields = fields_obj.and_then(|f| {
@@ -225,7 +248,14 @@ async fn read_content(
             }
         });
 
-        entries.push(ParsedLogEntry { timestamp, level, target, message, span, fields });
+        entries.push(ParsedLogEntry {
+            timestamp,
+            level,
+            target,
+            message,
+            span,
+            fields,
+        });
     }
 
     Json(serde_json::json!({
@@ -265,12 +295,18 @@ mod tests {
 
     #[test]
     fn test_extract_date_from_filename_standard() {
-        assert_eq!(extract_date_from_filename("agent-panel.2026-05-10.log"), "2026-05-10");
+        assert_eq!(
+            extract_date_from_filename("agent-panel.2026-05-10.log"),
+            "2026-05-10"
+        );
     }
 
     #[test]
     fn test_extract_date_from_filename_error_log() {
-        assert_eq!(extract_date_from_filename("agent-panel-error.2026-05-10.log"), "2026-05-10");
+        assert_eq!(
+            extract_date_from_filename("agent-panel-error.2026-05-10.log"),
+            "2026-05-10"
+        );
     }
 
     #[test]

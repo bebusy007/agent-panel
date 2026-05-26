@@ -1,5 +1,5 @@
-import { useLocation } from "react-router-dom";
-import { SessionsSidebar } from "./SessionsSidebar";
+import { useLocation } from 'react-router-dom';
+import { SessionsSidebar } from './SessionsSidebar';
 
 /**
  * The second-tier sidebar. Layout only mounts this on routes that
@@ -13,7 +13,7 @@ import { SessionsSidebar } from "./SessionsSidebar";
  */
 export function SidebarPanel() {
   const path = useLocation().pathname;
-  if (path.startsWith("/sessions") || path.startsWith("/favorites")) {
+  if (path.startsWith('/sessions') || path.startsWith('/favorites')) {
     return <SessionsSidebar />;
   }
   // Defensive — Layout shouldn't mount us here, but if a new route

@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
-import { Copy, Check, ExternalLink, FileText } from "lucide-react";
-import { COPY_FEEDBACK_LONG_MS } from "@/lib/constants";
-import { api } from "@/lib/api";
-import { SkillSourceBadge } from "./SourceBadge";
-import { formatRelative } from "@/lib/utils";
-import { InPaneSearchBar, useInPaneSearch } from "./InPaneSearch";
-import type { Skill } from "@/lib/api";
+import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import { Copy, Check, ExternalLink, FileText } from 'lucide-react';
+import { COPY_FEEDBACK_LONG_MS } from '@/lib/constants';
+import { api } from '@/lib/api';
+import { SkillSourceBadge } from './SourceBadge';
+import { formatRelative } from '@/lib/utils';
+import { InPaneSearchBar, useInPaneSearch } from './InPaneSearch';
+import type { Skill } from '@/lib/api';
 
 export function SkillDetail({ id }: { id: string }) {
   const [skill, setSkill] = useState<Skill | null>(null);
@@ -25,7 +25,7 @@ export function SkillDetail({ id }: { id: string }) {
     api
       .skill(id)
       .then((r) => {
-        if (!cancelled) setSkill(("skill" in r) ? r.skill : null);
+        if (!cancelled) setSkill('skill' in r ? r.skill : null);
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e : new Error(String(e)));
@@ -46,15 +46,14 @@ export function SkillDetail({ id }: { id: string }) {
   };
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
-  if (error)
-    return <div className="p-6 text-sm text-red-300">加载失败：{error.message}</div>;
+  if (error) return <div className="p-6 text-sm text-red-300">加载失败：{error.message}</div>;
   if (!skill) return <div className="p-6 text-sm text-muted-foreground">未找到</div>;
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-5 pt-3 pb-2 border-b border-border flex flex-wrap items-center gap-2">
         <SkillSourceBadge source={skill.source} full />
-        <span className="text-xs text-muted-foreground">{formatRelative("")}</span>
+        <span className="text-xs text-muted-foreground">{formatRelative('')}</span>
         <div className="ml-auto flex flex-col items-end gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
           <InPaneSearchBar state={search} inputId="skill-detail-search" />
         </div>
@@ -83,7 +82,9 @@ export function SkillDetail({ id }: { id: string }) {
           {skill.symlinkTo && (
             <div className="mt-2 flex items-start gap-2">
               <ExternalLink className="size-3 mt-0.5 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground text-[10px] uppercase tracking-wider mr-1">软链 →</span>
+              <span className="text-muted-foreground text-[10px] uppercase tracking-wider mr-1">
+                软链 →
+              </span>
               <code className="font-mono break-all text-muted-foreground text-[11px] flex-1">
                 {skill.symlinkTo}
               </code>
@@ -134,7 +135,7 @@ export function SkillDetail({ id }: { id: string }) {
           <div className="text-xs text-muted-foreground mb-2">SKILL.md</div>
           <div className="md-body">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-              {skill.description || "*（空）*"}
+              {skill.description || '*（空）*'}
             </ReactMarkdown>
           </div>
         </section>

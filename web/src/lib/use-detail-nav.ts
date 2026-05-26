@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { useLocation, useNavigate, type Location } from "react-router-dom";
+import { useCallback } from 'react';
+import { useLocation, useNavigate, type Location } from 'react-router-dom';
 
 /**
  * Helper hook for detail-route components that may be rendered in

@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
-import { Star, Trash2, ExternalLink, Check, FolderOpen } from "lucide-react";
-import { api, type RustFavoriteItem } from "@/lib/api";
-import { useOverlayNavigate } from "@/lib/use-detail-nav";
-import { formatRelative, cn, describeSessionSource, sourceColor } from "@/lib/utils";
-import { MessageBlock } from "@/components/session/MessageBlock";
+import { useEffect, useState, useCallback } from 'react';
+import { Star, Trash2, ExternalLink, Check, FolderOpen } from 'lucide-react';
+import { api, type RustFavoriteItem } from '@/lib/api';
+import { useOverlayNavigate } from '@/lib/use-detail-nav';
+import { formatRelative, cn, describeSessionSource, sourceColor } from '@/lib/utils';
+import { MessageBlock } from '@/components/session/MessageBlock';
 
 export default function FavoritesView() {
   const [items, setItems] = useState<RustFavoriteItem[]>([]);
@@ -26,18 +26,25 @@ export default function FavoritesView() {
     }
   };
 
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+  }, []);
 
-  const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 1500); };
+  const flash = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1500);
+  };
 
   const handleRemove = async (item: RustFavoriteItem) => {
     await api.favoritesRemove(item.id);
     setItems((prev) => prev.filter((x) => x.id !== item.id));
-    flash("已取消收藏");
+    flash('已取消收藏');
   };
 
   const handleJump = (item: RustFavoriteItem) => {
-    openOverlay(`/sessions/${encodeURIComponent(item.sessionId)}?msg=${encodeURIComponent(item.messageId)}`);
+    openOverlay(
+      `/sessions/${encodeURIComponent(item.sessionId)}?msg=${encodeURIComponent(item.messageId)}`,
+    );
   };
 
   const toggleExpanded = useCallback((msgId: string) => {
@@ -61,7 +68,9 @@ export default function FavoritesView() {
       </header>
 
       {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error.message}</div>
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error.message}
+        </div>
       )}
 
       {loading ? (
@@ -114,10 +123,12 @@ function FavoriteCard({
       {/* Session context header */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 bg-muted/30">
         {item.sessionSource && (
-          <span className={cn(
-            "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] ring-1 ring-inset font-medium shrink-0",
-            sourceColor(item.sessionSource),
-          )}>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] ring-1 ring-inset font-medium shrink-0',
+              sourceColor(item.sessionSource),
+            )}
+          >
             {describeSessionSource(item.sessionSource)}
           </span>
         )}
@@ -127,7 +138,7 @@ function FavoriteCard({
         {item.sessionCwd && (
           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
             <FolderOpen className="size-3" />
-            {item.sessionCwd.replace(/^\/Users\/[^/]+/, "~")}
+            {item.sessionCwd.replace(/^\/Users\/[^/]+/, '~')}
           </span>
         )}
         <span className="text-[10px] text-muted-foreground shrink-0">

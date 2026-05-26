@@ -1,8 +1,8 @@
-import { createElement } from "react";
-import { highlightSegments } from "@/lib/highlight-shared";
-import type { ReactNode } from "react";
+import { createElement } from 'react';
+import { highlightSegments } from '@/lib/highlight-shared';
+import type { ReactNode } from 'react';
 
-const MARK_BASE = "search-mark bg-amber-300/40 text-fg rounded px-0.5";
+const MARK_BASE = 'search-mark bg-amber-300/40 text-fg rounded px-0.5';
 
 /**
  * Render text with query matches wrapped in <mark class="search-mark"> elements.
@@ -19,11 +19,11 @@ export function HighlightText({
 }): ReactNode {
   if (!q || !q.trim() || !text) return text;
   const segs = highlightSegments(text, q);
-  if (segs.length === 1 && segs[0]!.type === "text") return text;
+  if (segs.length === 1 && segs[0]!.type === 'text') return text;
   return segs.map((seg, i) =>
-    seg.type === "mark"
-      ? createElement("mark", { key: i, className: className ?? MARK_BASE }, seg.value)
-      : seg.value
+    seg.type === 'mark'
+      ? createElement('mark', { key: i, className: className ?? MARK_BASE }, seg.value)
+      : seg.value,
   );
 }
 
@@ -59,7 +59,7 @@ export function highlightDom(container: HTMLElement, q: string): HighlightDomRes
   }
 
   for (const node of textNodes) {
-    const text = node.textContent ?? "";
+    const text = node.textContent ?? '';
     const tl = text.toLowerCase();
     let searchFrom = 0;
     const ranges: Array<{ start: number; end: number }> = [];
@@ -76,7 +76,7 @@ export function highlightDom(container: HTMLElement, q: string): HighlightDomRes
       const range = document.createRange();
       range.setStart(node, start);
       range.setEnd(node, end);
-      const mark = document.createElement("mark");
+      const mark = document.createElement('mark');
       mark.className = MARK_BASE;
       try {
         range.surroundContents(mark);
@@ -110,7 +110,7 @@ export function centerMarkInScroller(mark: HTMLElement): void {
   while (node) {
     const style = getComputedStyle(node);
     if (
-      (style.overflowY === "auto" || style.overflowY === "scroll") &&
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
       node.scrollHeight > node.clientHeight
     ) {
       scroller = node;
@@ -126,5 +126,5 @@ export function centerMarkInScroller(mark: HTMLElement): void {
     (markRect.top - scrollerRect.top) -
     scrollerRect.height / 2 +
     markRect.height / 2;
-  scroller.scrollTo({ top: desiredScrollTop, behavior: "smooth" });
+  scroller.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
 }

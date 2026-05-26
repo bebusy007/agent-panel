@@ -1,9 +1,9 @@
-import { extractOutputText } from "@/lib/tool-rendering";
-import type { Message } from "@/lib/api";
-import { CopyButton } from "../ToolCardHeader";
-import { MarkdownWithHighlight } from "@/components/session/MarkdownWithHighlight";
-import { SystemXmlBlock } from "@/components/session/SystemXmlBlock";
-import { detectXmlTag } from "@/lib/xml-tag-parser";
+import { extractOutputText } from '@/lib/tool-rendering';
+import type { Message } from '@/lib/api';
+import { CopyButton } from '../ToolCardHeader';
+import { MarkdownWithHighlight } from '@/components/session/MarkdownWithHighlight';
+import { SystemXmlBlock } from '@/components/session/SystemXmlBlock';
+import { detectXmlTag } from '@/lib/xml-tag-parser';
 
 export function DefaultCard({ tool, result }: { tool: Message; result?: Message }) {
   const inputStr = formatInput(tool.toolInput);
@@ -84,8 +84,8 @@ function SmartOutputBlock({ body }: { body: string }) {
 }
 
 function formatInput(v: unknown): string {
-  if (v === undefined || v === null) return "";
-  if (typeof v === "string") return v;
+  if (v === undefined || v === null) return '';
+  if (typeof v === 'string') return v;
   try {
     return JSON.stringify(v, null, 2);
   } catch {

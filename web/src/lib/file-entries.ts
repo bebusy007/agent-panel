@@ -7,11 +7,11 @@
  * reflects the most recent operation per file.
  */
 
-import type { Message } from "@/lib/api";
-import { canonicalTool, type CanonicalTool } from "@/lib/tool-aliases";
-import { turnIndexForMessage, type TurnEntry } from "@/lib/turn-grouping";
+import type { Message } from '@/lib/api';
+import { canonicalTool, type CanonicalTool } from '@/lib/tool-aliases';
+import { turnIndexForMessage, type TurnEntry } from '@/lib/turn-grouping';
 
-export type FileAction = "read" | "write" | "edit";
+export type FileAction = 'read' | 'write' | 'edit';
 
 export interface FileEntry {
   path: string;
@@ -25,11 +25,11 @@ export interface FileEntry {
 }
 
 const ACTION_BY_TOOL: Record<string, FileAction | undefined> = {
-  Read: "read",
-  Write: "write",
-  Edit: "edit",
-  MultiEdit: "edit",
-  NotebookEdit: "edit",
+  Read: 'read',
+  Write: 'write',
+  Edit: 'edit',
+  MultiEdit: 'edit',
+  NotebookEdit: 'edit',
 };
 
 function actionForTool(name: CanonicalTool): FileAction | undefined {
@@ -38,11 +38,11 @@ function actionForTool(name: CanonicalTool): FileAction | undefined {
 
 /** Pull a file path out of a tool input (works across Claude / Cursor / Codex). */
 function pathFromInput(input: unknown): string | undefined {
-  if (!input || typeof input !== "object") return undefined;
+  if (!input || typeof input !== 'object') return undefined;
   const o = input as Record<string, unknown>;
-  for (const key of ["file_path", "path", "notebook_path", "filePath", "filename"]) {
+  for (const key of ['file_path', 'path', 'notebook_path', 'filePath', 'filename']) {
     const v = o[key];
-    if (typeof v === "string" && v.trim()) return v;
+    if (typeof v === 'string' && v.trim()) return v;
   }
   return undefined;
 }
@@ -56,7 +56,7 @@ export function extractFileEntries(messages: Message[], turns?: TurnEntry[]): Fi
   for (let i = 0; i < messages.length; i++) msgIdToIndex.set(messages[i].id, i);
 
   for (const m of messages) {
-    if (m.role !== "tool_use") continue;
+    if (m.role !== 'tool_use') continue;
     const canon = canonicalTool(m.toolName);
     const action = actionForTool(canon);
     if (!action) continue;
@@ -65,7 +65,7 @@ export function extractFileEntries(messages: Message[], turns?: TurnEntry[]): Fi
 
     const ti = turns ? turnIndexForMessage(turns, msgIdToIndex.get(m.id) ?? 0) : undefined;
 
-    if (action === "write" || action === "edit") {
+    if (action === 'write' || action === 'edit') {
       const existingIdx = lastByPath.get(path);
       if (existingIdx !== undefined) {
         const existing = collected[existingIdx]!;
@@ -90,7 +90,7 @@ export function extractFileEntries(messages: Message[], turns?: TurnEntry[]): Fi
     const prev = seen.get(e.path);
     if (!prev) {
       seen.set(e.path, e);
-    } else if (e.action !== "read" && prev.action === "read") {
+    } else if (e.action !== 'read' && prev.action === 'read') {
       // upgrade read → write/edit
       seen.set(e.path, e);
     }

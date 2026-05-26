@@ -18,12 +18,12 @@
 
 /** Wrapper tags whose *contents* are the real prompt — strip the shell. */
 const WRAPPER_TAGS = [
-  "user_query",
-  "user_message",
-  "user_input",
-  "query",
-  "system_reminder",
-  "system_notification",
+  'user_query',
+  'user_message',
+  'user_input',
+  'query',
+  'system_reminder',
+  'system_notification',
 ] as const;
 
 /** Strip wrapper tags. Tries the full `^<tag>…</tag>$` form first
@@ -36,14 +36,14 @@ function stripWrapper(text: string): string {
   let s = text.trim();
   // Pass 1: full balanced wrapper (preferred).
   for (const tag of WRAPPER_TAGS) {
-    const re = new RegExp(`^<${tag}>\\s*([\\s\\S]*?)\\s*<\\/${tag}>\\s*$`, "i");
+    const re = new RegExp(`^<${tag}>\\s*([\\s\\S]*?)\\s*<\\/${tag}>\\s*$`, 'i');
     const m = s.match(re);
     if (m) s = m[1]!.trim();
   }
   // Pass 2: dangling opener / closer (truncated previews).
   for (const tag of WRAPPER_TAGS) {
-    s = s.replace(new RegExp(`^<${tag}>\\s*`, "i"), "");
-    s = s.replace(new RegExp(`\\s*<\\/${tag}>\\s*$`, "i"), "");
+    s = s.replace(new RegExp(`^<${tag}>\\s*`, 'i'), '');
+    s = s.replace(new RegExp(`\\s*<\\/${tag}>\\s*$`, 'i'), '');
     // Also handle a closing tag with the trailing ellipsis truncation marker
     // we add server-side ("…</user_query>" never happens but "<user_query>…"
     // does — this catches it after wrapper strip).
@@ -62,9 +62,9 @@ function collapseSlashCommand(text: string): string {
     /<command-message>([^<]*)<\/command-message>\s*<command-name>([^<]*)<\/command-name>(?:\s*<command-args>([^<]*)<\/command-args>)?/i,
   );
   if (!m) return text;
-  const name = m[2]?.trim() ?? "";
-  const args = (m[3] ?? "").trim();
-  const display = name ? `/${name.replace(/^\//, "")}` : "(slash command)";
+  const name = m[2]?.trim() ?? '';
+  const args = (m[3] ?? '').trim();
+  const display = name ? `/${name.replace(/^\//, '')}` : '(slash command)';
   return args ? `${display} ${args}` : display;
 }
 
@@ -74,8 +74,8 @@ function collapseSlashCommand(text: string): string {
  *  inside it; otherwise just strip the tags and keep going. */
 function stripLocalCommandEnvelopes(text: string): string {
   return text
-    .replace(/<\/?local-command-(?:stdout|stderr|caveat)>/gi, "")
-    .replace(/<\/?command-(?:message|name|args)>/gi, "")
+    .replace(/<\/?local-command-(?:stdout|stderr|caveat)>/gi, '')
+    .replace(/<\/?command-(?:message|name|args)>/gi, '')
     .trim();
 }
 
@@ -83,17 +83,21 @@ function stripLocalCommandEnvelopes(text: string): string {
  *  Strips wrapper tags + slash command envelopes, then collapses
  *  whitespace and (optionally) truncates. */
 export function cleanupPromptPreview(raw: string | undefined, maxLen = 80): string {
-  if (!raw) return "";
+  if (!raw) return '';
   let s = raw.trim();
   s = stripWrapper(s);
   s = collapseSlashCommand(s);
   s = stripLocalCommandEnvelopes(s);
   // Take the first non-empty line — the rest is usually elaboration.
-  const firstLine = s.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
+  const firstLine =
+    s
+      .split('\n')
+      .map((l) => l.trim())
+      .find(Boolean) ?? '';
   // Collapse runs of whitespace within that line.
-  const collapsed = firstLine.replace(/\s+/g, " ").trim();
+  const collapsed = firstLine.replace(/\s+/g, ' ').trim();
   if (collapsed.length <= maxLen) return collapsed;
-  return collapsed.slice(0, maxLen) + "…";
+  return collapsed.slice(0, maxLen) + '…';
 }
 
 /** Public: clean prompt text for *full* display (favorites detail,
@@ -102,7 +106,7 @@ export function cleanupPromptPreview(raw: string | undefined, maxLen = 80): stri
  *  Use this when the whole text is shown and only the surrounding
  *  XML-style scaffolding should disappear. */
 export function cleanupPromptText(raw: string | undefined): string {
-  if (!raw) return "";
+  if (!raw) return '';
   let s = raw.trim();
   s = stripWrapper(s);
   s = collapseSlashCommand(s);

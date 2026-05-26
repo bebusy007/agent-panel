@@ -3,6 +3,7 @@
 //! Produces a SessionSummary per file with rich metadata extracted in a single pass.
 //! Uses per-project `.session_cache.json` for incremental scanning.
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -10,7 +11,6 @@ use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, UNIX_EPOCH};
-use rayon::prelude::*;
 use walkdir::WalkDir;
 
 const CACHE_VERSION: u32 = 1;
@@ -109,17 +109,17 @@ fn determine_strategy(
     mtime_secs: u64,
     cache: &Option<ProjectCache>,
 ) -> ScanStrategy {
-    if let Some(pc) = cache {
-        if let Some(entry) = pc.entries.get(file_name) {
-            if entry.mtime_secs == mtime_secs && entry.size == file_size {
-                return ScanStrategy::UseCached(entry.summary.clone());
-            }
-            if file_size > entry.size && entry.byte_offset > 0 {
-                return ScanStrategy::Incremental {
-                    offset: entry.byte_offset,
-                    cached: entry.summary.clone(),
-                };
-            }
+    if let Some(pc) = cache
+        && let Some(entry) = pc.entries.get(file_name)
+    {
+        if entry.mtime_secs == mtime_secs && entry.size == file_size {
+            return ScanStrategy::UseCached(entry.summary.clone());
+        }
+        if file_size > entry.size && entry.byte_offset > 0 {
+            return ScanStrategy::Incremental {
+                offset: entry.byte_offset,
+                cached: entry.summary.clone(),
+            };
         }
     }
     ScanStrategy::FullParse
@@ -151,12 +151,11 @@ pub fn scan_all_sessions() -> ScanResult {
     let ttl = Duration::from_secs(crate::constants::SESSION_CACHE_TTL_SECS);
 
     // Try to return cached result
-    if let Ok(guard) = SCAN_CACHE.lock() {
-        if let Some(ref cache) = *guard {
-            if cache.created_at.elapsed() < ttl {
-                return cache.result.clone();
-            }
-        }
+    if let Ok(guard) = SCAN_CACHE.lock()
+        && let Some(ref cache) = *guard
+        && cache.created_at.elapsed() < ttl
+    {
+        return cache.result.clone();
     }
 
     let result = scan_all_sessions_uncached();
@@ -277,9 +276,7 @@ fn scan_single_project(project_dir: &Path) -> Vec<SessionSummary> {
                 ScanStrategy::Incremental { offset, cached } => {
                     summarize_incremental(path, offset, cached, &project_dir_name).ok()??
                 }
-                ScanStrategy::FullParse => {
-                    summarize_file(path, &project_dir_name).ok()??
-                }
+                ScanStrategy::FullParse => summarize_file(path, &project_dir_name).ok()??,
             };
 
             // Count subagents
@@ -310,15 +307,20 @@ fn scan_single_project(project_dir: &Path) -> Vec<SessionSummary> {
         entries: HashMap::new(),
     };
     for (path, size, mtime) in &file_entries {
-        if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
-            if let Some(summary) = summaries.iter().find(|s| s.file_path == path.to_string_lossy()) {
-                new_cache.entries.insert(file_name.to_string(), CacheEntry {
+        if let Some(file_name) = path.file_name().and_then(|s| s.to_str())
+            && let Some(summary) = summaries
+                .iter()
+                .find(|s| s.file_path == path.to_string_lossy())
+        {
+            new_cache.entries.insert(
+                file_name.to_string(),
+                CacheEntry {
                     mtime_secs: *mtime,
                     size: *size,
                     byte_offset: *size,
                     summary: summary.clone(),
-                });
-            }
+                },
+            );
         }
     }
     save_project_cache(project_dir, &new_cache);
@@ -335,7 +337,10 @@ pub struct ScanResult {
 
 impl ScanResult {
     fn empty() -> Self {
-        Self { sessions: vec![], scan_time_ms: 0 }
+        Self {
+            sessions: vec![],
+            scan_time_ms: 0,
+        }
     }
 }
 
@@ -359,7 +364,12 @@ fn summarize_file(file_path: &Path, project_dir: &str) -> Result<Option<SessionS
         process_line(&line, &mut state);
     }
 
-    Ok(Some(build_summary(file_path, project_dir, meta.len(), &state)))
+    Ok(Some(build_summary(
+        file_path,
+        project_dir,
+        meta.len(),
+        &state,
+    )))
 }
 
 /// Incremental parse: reuse cached summary, only parse new bytes from offset.
@@ -379,7 +389,8 @@ fn summarize_incremental(
     }
 
     let mut file = fs::File::open(file_path).map_err(|e| e.to_string())?;
-    file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|e| e.to_string())?;
     let reader = BufReader::new(file);
 
     let mut new_messages: u32 = 0;
@@ -413,10 +424,22 @@ fn summarize_incremental(
         }
 
         if let Some(usage) = entry.get("message").and_then(|m| m.get("usage")) {
-            new_tokens_input += usage.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-            new_tokens_output += usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-            new_tokens_cache_read += usage.get("cache_read_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-            new_tokens_cache_write += usage.get("cache_creation_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+            new_tokens_input += usage
+                .get("input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            new_tokens_output += usage
+                .get("output_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            new_tokens_cache_read += usage
+                .get("cache_read_input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            new_tokens_cache_write += usage
+                .get("cache_creation_input_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
         }
     }
 
@@ -427,14 +450,17 @@ fn summarize_incremental(
     }
 
     let add_tokens = |existing: Option<u64>, delta: u64| -> Option<u64> {
-        if delta == 0 { return existing; }
+        if delta == 0 {
+            return existing;
+        }
         Some(existing.unwrap_or(0) + delta)
     };
     cached.tokens_input = add_tokens(cached.tokens_input, new_tokens_input);
     cached.tokens_output = add_tokens(cached.tokens_output, new_tokens_output);
     cached.tokens_cache_read = add_tokens(cached.tokens_cache_read, new_tokens_cache_read);
     cached.tokens_cache_write = add_tokens(cached.tokens_cache_write, new_tokens_cache_write);
-    let total_delta = new_tokens_input + new_tokens_output + new_tokens_cache_read + new_tokens_cache_write;
+    let total_delta =
+        new_tokens_input + new_tokens_output + new_tokens_cache_read + new_tokens_cache_write;
     cached.tokens_total = add_tokens(cached.tokens_total, total_delta);
 
     Ok(Some(cached))
@@ -476,33 +502,36 @@ fn process_line(line: &str, state: &mut ParseState) {
         _ => {}
     }
 
-    if state.first_user_text.is_none() && msg_type == "user" {
-        if let Some(text) = extract_text_from_message(&entry) {
-            if !text.trim().is_empty() {
-                state.first_user_text = Some(truncate(&text, crate::constants::FIRST_MESSAGE_MAX_LEN));
-            }
-        }
+    if state.first_user_text.is_none()
+        && msg_type == "user"
+        && let Some(text) = extract_text_from_message(&entry)
+        && !text.trim().is_empty()
+    {
+        state.first_user_text = Some(truncate(&text, crate::constants::FIRST_MESSAGE_MAX_LEN));
     }
 
-    if state.cwd.is_none() {
-        if let Some(c) = entry.get("cwd").and_then(|v| v.as_str()) {
-            state.cwd = Some(c.to_string());
-        }
+    if state.cwd.is_none()
+        && let Some(c) = entry.get("cwd").and_then(|v| v.as_str())
+    {
+        state.cwd = Some(c.to_string());
     }
-    if state.git_branch.is_none() {
-        if let Some(b) = entry.get("gitBranch").and_then(|v| v.as_str()) {
-            state.git_branch = Some(b.to_string());
-        }
+    if state.git_branch.is_none()
+        && let Some(b) = entry.get("gitBranch").and_then(|v| v.as_str())
+    {
+        state.git_branch = Some(b.to_string());
     }
-    if state.session_id_raw.is_none() {
-        if let Some(s) = entry.get("sessionId").and_then(|v| v.as_str()) {
-            state.session_id_raw = Some(s.to_string());
-        }
+    if state.session_id_raw.is_none()
+        && let Some(s) = entry.get("sessionId").and_then(|v| v.as_str())
+    {
+        state.session_id_raw = Some(s.to_string());
     }
-    if state.model.is_none() {
-        if let Some(m) = entry.get("message").and_then(|msg| msg.get("model")).and_then(|v| v.as_str()) {
-            state.model = Some(m.to_string());
-        }
+    if state.model.is_none()
+        && let Some(m) = entry
+            .get("message")
+            .and_then(|msg| msg.get("model"))
+            .and_then(|v| v.as_str())
+    {
+        state.model = Some(m.to_string());
     }
 
     if let Some(ts) = entry.get("timestamp").and_then(|v| v.as_str()) {
@@ -513,22 +542,45 @@ fn process_line(line: &str, state: &mut ParseState) {
     }
 
     if let Some(usage) = entry.get("message").and_then(|m| m.get("usage")) {
-        state.tokens_input += usage.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-        state.tokens_output += usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-        state.tokens_cache_read += usage.get("cache_read_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-        state.tokens_cache_write += usage.get("cache_creation_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+        state.tokens_input += usage
+            .get("input_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        state.tokens_output += usage
+            .get("output_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        state.tokens_cache_read += usage
+            .get("cache_read_input_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        state.tokens_cache_write += usage
+            .get("cache_creation_input_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
     }
 }
 
-fn build_summary(file_path: &Path, project_dir: &str, size_bytes: u64, state: &ParseState) -> SessionSummary {
+fn build_summary(
+    file_path: &Path,
+    project_dir: &str,
+    size_bytes: u64,
+    state: &ParseState,
+) -> SessionSummary {
     let id = file_path
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("unknown")
         .to_string();
 
-    let title = truncate(state.first_user_text.as_deref().unwrap_or("(无标题)"), crate::constants::TITLE_MAX_LEN);
-    let tokens_total = state.tokens_input + state.tokens_output + state.tokens_cache_read + state.tokens_cache_write;
+    let title = truncate(
+        state.first_user_text.as_deref().unwrap_or("(无标题)"),
+        crate::constants::TITLE_MAX_LEN,
+    );
+    let tokens_total = state.tokens_input
+        + state.tokens_output
+        + state.tokens_cache_read
+        + state.tokens_cache_write;
 
     SessionSummary {
         id,
@@ -546,11 +598,31 @@ fn build_summary(file_path: &Path, project_dir: &str, size_bytes: u64, state: &P
         message_count: state.message_count,
         size_bytes,
         subagent_count: 0,
-        tokens_total: if tokens_total > 0 { Some(tokens_total) } else { None },
-        tokens_input: if state.tokens_input > 0 { Some(state.tokens_input) } else { None },
-        tokens_output: if state.tokens_output > 0 { Some(state.tokens_output) } else { None },
-        tokens_cache_read: if state.tokens_cache_read > 0 { Some(state.tokens_cache_read) } else { None },
-        tokens_cache_write: if state.tokens_cache_write > 0 { Some(state.tokens_cache_write) } else { None },
+        tokens_total: if tokens_total > 0 {
+            Some(tokens_total)
+        } else {
+            None
+        },
+        tokens_input: if state.tokens_input > 0 {
+            Some(state.tokens_input)
+        } else {
+            None
+        },
+        tokens_output: if state.tokens_output > 0 {
+            Some(state.tokens_output)
+        } else {
+            None
+        },
+        tokens_cache_read: if state.tokens_cache_read > 0 {
+            Some(state.tokens_cache_read)
+        } else {
+            None
+        },
+        tokens_cache_write: if state.tokens_cache_write > 0 {
+            Some(state.tokens_cache_write)
+        } else {
+            None
+        },
         estimated_cost_usd: None,
     }
 }
@@ -566,7 +638,11 @@ fn extract_text_from_message(entry: &serde_json::Value) -> Option<String> {
                     parts.push(text.to_string());
                 }
             }
-            if parts.is_empty() { None } else { Some(parts.join("\n")) }
+            if parts.is_empty() {
+                None
+            } else {
+                Some(parts.join("\n"))
+            }
         }
         _ => None,
     }
@@ -576,7 +652,8 @@ fn truncate(s: &str, max: usize) -> String {
     if s.len() <= max {
         s.to_string()
     } else {
-        let boundary = s.char_indices()
+        let boundary = s
+            .char_indices()
             .take_while(|(i, _)| *i < max)
             .last()
             .map(|(i, c)| i + c.len_utf8())
@@ -592,11 +669,15 @@ mod tests {
     use tempfile::TempDir;
 
     fn make_user_line(text: &str, ts: &str) -> String {
-        format!(r#"{{"type":"user","timestamp":"{ts}","sessionId":"s1","cwd":"/home/test","message":{{"role":"user","content":"{text}"}}}}"#)
+        format!(
+            r#"{{"type":"user","timestamp":"{ts}","sessionId":"s1","cwd":"/home/test","message":{{"role":"user","content":"{text}"}}}}"#
+        )
     }
 
     fn make_assistant_line(text: &str, ts: &str, tokens: u64) -> String {
-        format!(r#"{{"type":"assistant","timestamp":"{ts}","message":{{"role":"assistant","model":"claude-sonnet-4","content":[{{"type":"text","text":"{text}"}}],"usage":{{"input_tokens":{tokens},"output_tokens":100}}}}}}"#)
+        format!(
+            r#"{{"type":"assistant","timestamp":"{ts}","message":{{"role":"assistant","model":"claude-sonnet-4","content":[{{"type":"text","text":"{text}"}}],"usage":{{"input_tokens":{tokens},"output_tokens":100}}}}}}"#
+        )
     }
 
     fn write_session(dir: &TempDir, project: &str, session: &str, lines: &[String]) -> PathBuf {
@@ -613,10 +694,15 @@ mod tests {
     #[test]
     fn test_summarize_basic() {
         let dir = TempDir::new().unwrap();
-        let file = write_session(&dir, "proj-a", "sess-1", &[
-            make_user_line("Hello world", "2026-05-01T10:00:00Z"),
-            make_assistant_line("Hi there", "2026-05-01T10:01:00Z", 500),
-        ]);
+        let file = write_session(
+            &dir,
+            "proj-a",
+            "sess-1",
+            &[
+                make_user_line("Hello world", "2026-05-01T10:00:00Z"),
+                make_assistant_line("Hi there", "2026-05-01T10:01:00Z", 500),
+            ],
+        );
 
         let result = summarize_file(&file, "proj-a").unwrap().unwrap();
         assert_eq!(result.source, "claude-code");
@@ -627,7 +713,10 @@ mod tests {
         assert_eq!(result.model, Some("claude-sonnet-4".to_string()));
         assert_eq!(result.tokens_total, Some(600));
         assert_eq!(result.started_at, Some("2026-05-01T10:00:00Z".to_string()));
-        assert_eq!(result.last_activity, Some("2026-05-01T10:01:00Z".to_string()));
+        assert_eq!(
+            result.last_activity,
+            Some("2026-05-01T10:01:00Z".to_string())
+        );
         assert_eq!(result.subagent_count, 0);
     }
 
@@ -647,9 +736,12 @@ mod tests {
     fn test_summarize_truncates_long_title() {
         let dir = TempDir::new().unwrap();
         let long_text = "a".repeat(200);
-        let file = write_session(&dir, "p", "s", &[
-            make_user_line(&long_text, "2026-05-01T10:00:00Z"),
-        ]);
+        let file = write_session(
+            &dir,
+            "p",
+            "s",
+            &[make_user_line(&long_text, "2026-05-01T10:00:00Z")],
+        );
 
         let result = summarize_file(&file, "p").unwrap().unwrap();
         assert!(result.title.len() <= 84); // 80 + "…" (3 bytes in utf8)
@@ -658,12 +750,17 @@ mod tests {
     #[test]
     fn test_token_accumulation() {
         let dir = TempDir::new().unwrap();
-        let file = write_session(&dir, "p", "s", &[
-            make_user_line("q1", "2026-05-01T10:00:00Z"),
-            make_assistant_line("a1", "2026-05-01T10:01:00Z", 1000),
-            make_user_line("q2", "2026-05-01T10:02:00Z"),
-            make_assistant_line("a2", "2026-05-01T10:03:00Z", 2000),
-        ]);
+        let file = write_session(
+            &dir,
+            "p",
+            "s",
+            &[
+                make_user_line("q1", "2026-05-01T10:00:00Z"),
+                make_assistant_line("a1", "2026-05-01T10:01:00Z", 1000),
+                make_user_line("q2", "2026-05-01T10:02:00Z"),
+                make_assistant_line("a2", "2026-05-01T10:03:00Z", 2000),
+            ],
+        );
 
         let result = summarize_file(&file, "p").unwrap().unwrap();
         assert_eq!(result.message_count, 4);
@@ -682,7 +779,12 @@ mod tests {
         let file = proj_dir.join("sess-1.jsonl");
         let mut f = fs::File::create(&file).unwrap();
         writeln!(f, "{}", make_user_line("Hello", "2026-05-01T10:00:00Z")).unwrap();
-        writeln!(f, "{}", make_assistant_line("Hi", "2026-05-01T10:01:00Z", 500)).unwrap();
+        writeln!(
+            f,
+            "{}",
+            make_assistant_line("Hi", "2026-05-01T10:01:00Z", 500)
+        )
+        .unwrap();
 
         // First scan — full parse
         let results1 = scan_single_project(&proj_dir);
@@ -763,7 +865,10 @@ mod tests {
             "type": "user",
             "message": {"content": "Hello string"}
         });
-        assert_eq!(extract_text_from_message(&entry), Some("Hello string".to_string()));
+        assert_eq!(
+            extract_text_from_message(&entry),
+            Some("Hello string".to_string())
+        );
     }
 
     #[test]
@@ -772,7 +877,10 @@ mod tests {
             "type": "user",
             "message": {"content": [{"type": "text", "text": "part1"}, {"type": "text", "text": "part2"}]}
         });
-        assert_eq!(extract_text_from_message(&entry), Some("part1\npart2".to_string()));
+        assert_eq!(
+            extract_text_from_message(&entry),
+            Some("part1\npart2".to_string())
+        );
     }
 
     #[test]
@@ -799,21 +907,42 @@ mod tests {
     #[test]
     fn test_determine_strategy_cached_match() {
         let summary = SessionSummary {
-            id: "test".to_string(), source: "claude-code".to_string(),
-            title: "t".to_string(), file_path: "/f".to_string(),
-            project_dir: "p".to_string(), first_user_message: None,
-            cwd: None, git_branch: None, model: None, session_id_raw: None,
-            started_at: None, last_activity: None, message_count: 5,
-            size_bytes: 100, subagent_count: 0,
-            tokens_total: None, tokens_input: None, tokens_output: None,
-            tokens_cache_read: None, tokens_cache_write: None,
+            id: "test".to_string(),
+            source: "claude-code".to_string(),
+            title: "t".to_string(),
+            file_path: "/f".to_string(),
+            project_dir: "p".to_string(),
+            first_user_message: None,
+            cwd: None,
+            git_branch: None,
+            model: None,
+            session_id_raw: None,
+            started_at: None,
+            last_activity: None,
+            message_count: 5,
+            size_bytes: 100,
+            subagent_count: 0,
+            tokens_total: None,
+            tokens_input: None,
+            tokens_output: None,
+            tokens_cache_read: None,
+            tokens_cache_write: None,
             estimated_cost_usd: None,
         };
         let mut entries = HashMap::new();
-        entries.insert("test.jsonl".to_string(), CacheEntry {
-            mtime_secs: 1000, size: 100, byte_offset: 100, summary: summary.clone(),
+        entries.insert(
+            "test.jsonl".to_string(),
+            CacheEntry {
+                mtime_secs: 1000,
+                size: 100,
+                byte_offset: 100,
+                summary: summary.clone(),
+            },
+        );
+        let cache = Some(ProjectCache {
+            version: CACHE_VERSION,
+            entries,
         });
-        let cache = Some(ProjectCache { version: CACHE_VERSION, entries });
         let strategy = determine_strategy("test.jsonl", 100, 1000, &cache);
         assert!(matches!(strategy, ScanStrategy::UseCached(_)));
     }
@@ -821,21 +950,42 @@ mod tests {
     #[test]
     fn test_determine_strategy_incremental() {
         let summary = SessionSummary {
-            id: "test".to_string(), source: "claude-code".to_string(),
-            title: "t".to_string(), file_path: "/f".to_string(),
-            project_dir: "p".to_string(), first_user_message: None,
-            cwd: None, git_branch: None, model: None, session_id_raw: None,
-            started_at: None, last_activity: None, message_count: 5,
-            size_bytes: 100, subagent_count: 0,
-            tokens_total: None, tokens_input: None, tokens_output: None,
-            tokens_cache_read: None, tokens_cache_write: None,
+            id: "test".to_string(),
+            source: "claude-code".to_string(),
+            title: "t".to_string(),
+            file_path: "/f".to_string(),
+            project_dir: "p".to_string(),
+            first_user_message: None,
+            cwd: None,
+            git_branch: None,
+            model: None,
+            session_id_raw: None,
+            started_at: None,
+            last_activity: None,
+            message_count: 5,
+            size_bytes: 100,
+            subagent_count: 0,
+            tokens_total: None,
+            tokens_input: None,
+            tokens_output: None,
+            tokens_cache_read: None,
+            tokens_cache_write: None,
             estimated_cost_usd: None,
         };
         let mut entries = HashMap::new();
-        entries.insert("test.jsonl".to_string(), CacheEntry {
-            mtime_secs: 999, size: 100, byte_offset: 100, summary: summary.clone(),
+        entries.insert(
+            "test.jsonl".to_string(),
+            CacheEntry {
+                mtime_secs: 999,
+                size: 100,
+                byte_offset: 100,
+                summary: summary.clone(),
+            },
+        );
+        let cache = Some(ProjectCache {
+            version: CACHE_VERSION,
+            entries,
         });
-        let cache = Some(ProjectCache { version: CACHE_VERSION, entries });
         // File grew: size=200 > entry.size=100, offset=100 > 0
         let strategy = determine_strategy("test.jsonl", 200, 1001, &cache);
         assert!(matches!(strategy, ScanStrategy::Incremental { .. }));
@@ -844,21 +994,42 @@ mod tests {
     #[test]
     fn test_determine_strategy_full_reparse_on_shrink() {
         let summary = SessionSummary {
-            id: "test".to_string(), source: "claude-code".to_string(),
-            title: "t".to_string(), file_path: "/f".to_string(),
-            project_dir: "p".to_string(), first_user_message: None,
-            cwd: None, git_branch: None, model: None, session_id_raw: None,
-            started_at: None, last_activity: None, message_count: 5,
-            size_bytes: 100, subagent_count: 0,
-            tokens_total: None, tokens_input: None, tokens_output: None,
-            tokens_cache_read: None, tokens_cache_write: None,
+            id: "test".to_string(),
+            source: "claude-code".to_string(),
+            title: "t".to_string(),
+            file_path: "/f".to_string(),
+            project_dir: "p".to_string(),
+            first_user_message: None,
+            cwd: None,
+            git_branch: None,
+            model: None,
+            session_id_raw: None,
+            started_at: None,
+            last_activity: None,
+            message_count: 5,
+            size_bytes: 100,
+            subagent_count: 0,
+            tokens_total: None,
+            tokens_input: None,
+            tokens_output: None,
+            tokens_cache_read: None,
+            tokens_cache_write: None,
             estimated_cost_usd: None,
         };
         let mut entries = HashMap::new();
-        entries.insert("test.jsonl".to_string(), CacheEntry {
-            mtime_secs: 999, size: 100, byte_offset: 100, summary: summary.clone(),
+        entries.insert(
+            "test.jsonl".to_string(),
+            CacheEntry {
+                mtime_secs: 999,
+                size: 100,
+                byte_offset: 100,
+                summary: summary.clone(),
+            },
+        );
+        let cache = Some(ProjectCache {
+            version: CACHE_VERSION,
+            entries,
         });
-        let cache = Some(ProjectCache { version: CACHE_VERSION, entries });
         // Size same but mtime changed — no growth, triggers FullParse
         let strategy = determine_strategy("test.jsonl", 100, 1001, &cache);
         assert!(matches!(strategy, ScanStrategy::FullParse));
@@ -884,14 +1055,24 @@ mod tests {
 
         // Append more content
         let mut f = fs::OpenOptions::new().append(true).open(&file).unwrap();
-        writeln!(f, "{}", make_assistant_line("Hi", "2026-05-01T10:01:00Z", 500)).unwrap();
+        writeln!(
+            f,
+            "{}",
+            make_assistant_line("Hi", "2026-05-01T10:01:00Z", 500)
+        )
+        .unwrap();
         writeln!(f, "{}", make_user_line("Thanks", "2026-05-01T10:02:00Z")).unwrap();
         drop(f);
 
         // Incremental parse
-        let result = summarize_incremental(&file, offset, initial, "inc-proj").unwrap().unwrap();
+        let result = summarize_incremental(&file, offset, initial, "inc-proj")
+            .unwrap()
+            .unwrap();
         assert_eq!(result.message_count, 3);
-        assert_eq!(result.last_activity, Some("2026-05-01T10:02:00Z".to_string()));
+        assert_eq!(
+            result.last_activity,
+            Some("2026-05-01T10:02:00Z".to_string())
+        );
         assert_eq!(result.tokens_input, Some(500));
     }
 

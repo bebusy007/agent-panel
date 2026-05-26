@@ -1,7 +1,7 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-import { SkillDetail } from "@/components/SkillDetail";
-import { useDetailNav } from "@/lib/use-detail-nav";
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { SkillDetail } from '@/components/SkillDetail';
+import { useDetailNav } from '@/lib/use-detail-nav';
 
 /**
  * Skill detail page. Two render modes:
@@ -17,7 +17,7 @@ import { useDetailNav } from "@/lib/use-detail-nav";
 export default function SkillDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { goBack } = useDetailNav("/extensions?section=skills");
+  const { goBack } = useDetailNav('/extensions?section=skills');
 
   if (!id) {
     return (
@@ -40,7 +40,7 @@ export default function SkillDetailView() {
         </button>
         <ChevronRight className="size-3 text-muted-foreground" />
         <button
-          onClick={() => navigate("/extensions?section=skills")}
+          onClick={() => navigate('/extensions?section=skills')}
           className="text-xs text-muted-foreground hover:text-fg transition-colors"
         >
           扩展 / Skills

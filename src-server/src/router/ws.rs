@@ -1,11 +1,11 @@
 //! WebSocket endpoint — streams file watcher events to connected clients.
 
 use axum::{
-    extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    Router,
     extract::State,
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
     routing::get,
-    Router,
 };
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -18,10 +18,7 @@ pub fn routes(tx: EventSender) -> Router {
         .with_state(Arc::new(tx))
 }
 
-async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(tx): State<Arc<EventSender>>,
-) -> impl IntoResponse {
+async fn ws_handler(ws: WebSocketUpgrade, State(tx): State<Arc<EventSender>>) -> impl IntoResponse {
     tracing::info!("ws client connecting");
     let rx = tx.subscribe();
     ws.on_upgrade(move |socket| handle_socket(socket, rx))
@@ -48,6 +45,7 @@ async fn handle_socket(mut socket: WebSocket, mut rx: broadcast::Receiver<WatchE
                         tracing::info!("ws client disconnected");
                         break;
                     }
+                    #[allow(clippy::collapsible_match)]
                     Some(Ok(Message::Ping(data))) => {
                         if socket.send(Message::Pong(data)).await.is_err() {
                             break;

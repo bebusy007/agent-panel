@@ -1,49 +1,47 @@
-import { renderHook, act } from "@testing-library/react";
-import { emitAppEvent, useAppEvent } from "../events";
+import { renderHook, act } from '@testing-library/react';
+import { emitAppEvent, useAppEvent } from '../events';
 
-describe("emitAppEvent", () => {
-  it("dispatches a CustomEvent on window", () => {
+describe('emitAppEvent', () => {
+  it('dispatches a CustomEvent on window', () => {
     const handler = vi.fn();
-    window.addEventListener("sessions:changed", handler);
-    emitAppEvent("sessions:changed");
+    window.addEventListener('sessions:changed', handler);
+    emitAppEvent('sessions:changed');
     expect(handler).toHaveBeenCalledTimes(1);
-    window.removeEventListener("sessions:changed", handler);
+    window.removeEventListener('sessions:changed', handler);
   });
 
-  it("dispatches favorites:changed event", () => {
+  it('dispatches favorites:changed event', () => {
     const handler = vi.fn();
-    window.addEventListener("favorites:changed", handler);
-    emitAppEvent("favorites:changed");
+    window.addEventListener('favorites:changed', handler);
+    emitAppEvent('favorites:changed');
     expect(handler).toHaveBeenCalledTimes(1);
-    window.removeEventListener("favorites:changed", handler);
+    window.removeEventListener('favorites:changed', handler);
   });
 });
 
-describe("useAppEvent", () => {
-  it("calls handler when event is emitted", () => {
+describe('useAppEvent', () => {
+  it('calls handler when event is emitted', () => {
     const handler = vi.fn();
-    renderHook(() => useAppEvent("sessions:changed", handler));
+    renderHook(() => useAppEvent('sessions:changed', handler));
     act(() => {
-      emitAppEvent("sessions:changed");
+      emitAppEvent('sessions:changed');
     });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it("cleans up listener on unmount", () => {
+  it('cleans up listener on unmount', () => {
     const handler = vi.fn();
-    const { unmount } = renderHook(() =>
-      useAppEvent("sessions:changed", handler),
-    );
+    const { unmount } = renderHook(() => useAppEvent('sessions:changed', handler));
     unmount();
-    emitAppEvent("sessions:changed");
+    emitAppEvent('sessions:changed');
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it("does not fire for unrelated events", () => {
+  it('does not fire for unrelated events', () => {
     const handler = vi.fn();
-    renderHook(() => useAppEvent("favorites:changed", handler));
+    renderHook(() => useAppEvent('favorites:changed', handler));
     act(() => {
-      emitAppEvent("sessions:changed");
+      emitAppEvent('sessions:changed');
     });
     expect(handler).not.toHaveBeenCalled();
   });

@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles } from 'lucide-react';
 
 export function GlobalLoading() {
   return (
@@ -7,9 +7,7 @@ export function GlobalLoading() {
         <div className="flex size-12 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-lg animate-pulse">
           <Sparkles className="size-6" />
         </div>
-        <div className="text-sm text-muted-foreground animate-fade-in">
-          加载中…
-        </div>
+        <div className="text-sm text-muted-foreground animate-fade-in">加载中…</div>
       </div>
     </div>
   );

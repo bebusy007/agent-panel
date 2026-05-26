@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -64,9 +64,7 @@ export function useCachedAsync<T>(
   deps: unknown[] = [],
 ): AsyncState<T> {
   const cached = asyncCache.get(key);
-  const [data, setData] = useState<T | null>(
-    cached ? (cached.data as T) : null,
-  );
+  const [data, setData] = useState<T | null>(cached ? (cached.data as T) : null);
   // First fetch for this key shows a spinner; revalidations don't.
   const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<Error | null>(null);
@@ -112,7 +110,7 @@ export function invalidateAsyncCache(arg?: string | { prefix: string }) {
     asyncCache.clear();
     return;
   }
-  if (typeof arg === "string") {
+  if (typeof arg === 'string') {
     asyncCache.delete(arg);
     return;
   }

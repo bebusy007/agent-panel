@@ -1,8 +1,7 @@
-use axum::{routing::get, Json, Router};
+use axum::{Json, Router, routing::get};
 
 pub fn routes() -> Router {
-    Router::new()
-        .route("/version", get(get_version))
+    Router::new().route("/version", get(get_version))
 }
 
 async fn get_version() -> Json<serde_json::Value> {

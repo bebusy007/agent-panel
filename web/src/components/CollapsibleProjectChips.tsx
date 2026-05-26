@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Search as SearchIcon, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { DEFAULT_COLLAPSED_CHIP_LIMIT } from "@/lib/constants";
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronUp, Search as SearchIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { DEFAULT_COLLAPSED_CHIP_LIMIT } from '@/lib/constants';
 
 export interface ProjectChip {
   value: string;
@@ -24,13 +24,13 @@ export function CollapsibleProjectChips({
   collapsedLimit = DEFAULT_COLLAPSED_CHIP_LIMIT,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState('');
 
   const filtered = useMemo(() => {
     if (!filter.trim()) return options;
     const q = filter.toLowerCase();
     return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)
+      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
     );
   }, [options, filter]);
 
@@ -52,7 +52,10 @@ export function CollapsibleProjectChips({
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <div className="typo-label">
-          项目（cwd） <span className="ml-1 text-muted-foreground normal-case tracking-normal">{options.length}</span>
+          项目（cwd）{' '}
+          <span className="ml-1 text-muted-foreground normal-case tracking-normal">
+            {options.length}
+          </span>
         </div>
         {expanded && (
           <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-0.5">
@@ -65,7 +68,10 @@ export function CollapsibleProjectChips({
               autoFocus
             />
             {filter && (
-              <button onClick={() => setFilter("")} className="text-muted-foreground hover:text-muted-foreground">
+              <button
+                onClick={() => setFilter('')}
+                className="text-muted-foreground hover:text-muted-foreground"
+              >
                 <X className="size-3" />
               </button>
             )}
@@ -76,12 +82,12 @@ export function CollapsibleProjectChips({
         {visible.map((p) => (
           <button
             key={p.value}
-            onClick={() => onSelect(selected === p.value ? "" : p.value)}
+            onClick={() => onSelect(selected === p.value ? '' : p.value)}
             className={cn(
-              "text-[11px] rounded-full px-2 py-0.5 border transition-colors",
+              'text-[11px] rounded-full px-2 py-0.5 border transition-colors',
               selected === p.value
-                ? "border-accent/50 bg-accent/10 text-accent"
-                : "border-border bg-card text-muted-foreground hover:border-border hover:text-fg"
+                ? 'border-accent/50 bg-accent/10 text-accent'
+                : 'border-border bg-card text-muted-foreground hover:border-border hover:text-fg',
             )}
             title={p.value}
           >
@@ -101,7 +107,7 @@ export function CollapsibleProjectChips({
           <button
             onClick={() => {
               setExpanded(false);
-              setFilter("");
+              setFilter('');
             }}
             className="text-[11px] rounded-full px-2 py-0.5 border border-dashed border-border text-muted-foreground hover:text-muted-foreground hover:border-border inline-flex items-center gap-1"
           >
@@ -110,7 +116,7 @@ export function CollapsibleProjectChips({
         )}
         {selected && (
           <button
-            onClick={() => onSelect("")}
+            onClick={() => onSelect('')}
             className="text-[11px] rounded-full px-2 py-0.5 text-muted-foreground hover:text-muted-foreground"
           >
             清空

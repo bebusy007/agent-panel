@@ -1,26 +1,10 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { api } from "@/lib/api";
-import type {
-  Message,
-  SessionSummary,
-  SessionFull,
-  SubagentMeta,
-  ResumeHints,
-} from "@/lib/api";
-import { buildTurns, type TurnEntry } from "@/lib/turn-grouping";
-import { emitAppEvent } from "@/lib/events";
-import {
-  useSessionSearch,
-  type SessionSearchState,
-} from "@/lib/use-session-search";
-import { useDragResize } from "@/lib/use-drag-resize";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { api } from '@/lib/api';
+import type { Message, SessionSummary, SessionFull, SubagentMeta, ResumeHints } from '@/lib/api';
+import { buildTurns, type TurnEntry } from '@/lib/turn-grouping';
+import { emitAppEvent } from '@/lib/events';
+import { useSessionSearch, type SessionSearchState } from '@/lib/use-session-search';
+import { useDragResize } from '@/lib/use-drag-resize';
 import {
   TURN_PANEL_BOUNDS,
   loadTurnPanelWidth,
@@ -30,7 +14,7 @@ import {
   RIGHT_PANEL_BOUNDS,
   loadRightPanelWidth,
   saveRightPanelWidth,
-} from "@/lib/sidebar-state";
+} from '@/lib/sidebar-state';
 
 interface SessionContextValue {
   id: string;
@@ -73,18 +57,11 @@ const SessionCtx = createContext<SessionContextValue | null>(null);
 
 export function useSession(): SessionContextValue {
   const ctx = useContext(SessionCtx);
-  if (!ctx)
-    throw new Error("useSession must be used within a SessionProvider");
+  if (!ctx) throw new Error('useSession must be used within a SessionProvider');
   return ctx;
 }
 
-export function SessionProvider({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) {
+export function SessionProvider({ id, children }: { id: string; children: React.ReactNode }) {
   const [data, setData] = useState<SessionFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -93,7 +70,7 @@ export function SessionProvider({
   useEffect(() => {
     if (!id) {
       setLoading(false);
-      setError(new Error("session id is empty"));
+      setError(new Error('session id is empty'));
       return;
     }
     let cancelled = false;
@@ -109,8 +86,7 @@ export function SessionProvider({
         }
       })
       .catch((e) => {
-        if (!cancelled)
-          setError(e instanceof Error ? e : new Error(String(e)));
+        if (!cancelled) setError(e instanceof Error ? e : new Error(String(e)));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -118,8 +94,7 @@ export function SessionProvider({
     api
       .favoritesForSession(id)
       .then((r) => {
-        if (!cancelled)
-          setFavIds(new Set(r.favorites.map((f) => f.messageId)));
+        if (!cancelled) setFavIds(new Set(r.favorites.map((f) => f.messageId)));
       })
       .catch(() => {});
     return () => {
@@ -151,14 +126,8 @@ export function SessionProvider({
   }, []);
 
   // Turn panel resize + collapse
-  const turnResize = useDragResize(
-    TURN_PANEL_BOUNDS,
-    loadTurnPanelWidth(),
-    saveTurnPanelWidth,
-  );
-  const [turnPanelCollapsed, setTurnPanelCollapsed] = useState(
-    () => loadTurnPanelCollapsed(),
-  );
+  const turnResize = useDragResize(TURN_PANEL_BOUNDS, loadTurnPanelWidth(), saveTurnPanelWidth);
+  const [turnPanelCollapsed, setTurnPanelCollapsed] = useState(() => loadTurnPanelCollapsed());
   const toggleTurnPanel = useCallback(() => {
     setTurnPanelCollapsed((v) => {
       saveTurnPanelCollapsed(!v);
@@ -167,10 +136,7 @@ export function SessionProvider({
   }, []);
 
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const toggleRightPanel = useCallback(
-    () => setRightPanelOpen((v) => !v),
-    [],
-  );
+  const toggleRightPanel = useCallback(() => setRightPanelOpen((v) => !v), []);
 
   const rightResize = useDragResize(
     RIGHT_PANEL_BOUNDS,
@@ -203,7 +169,7 @@ export function SessionProvider({
         await api.favoritesAdd({ sessionId: id, messageId: m.id });
         setFavIds((s) => new Set(s).add(m.id));
       }
-      emitAppEvent("favorites:changed");
+      emitAppEvent('favorites:changed');
     },
     [id, data, favIds],
   );

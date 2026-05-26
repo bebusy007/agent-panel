@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { COPY_FEEDBACK_MS } from "@/lib/constants";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { COPY_FEEDBACK_MS } from '@/lib/constants';
 import {
   X,
   Download,
@@ -12,10 +12,10 @@ import {
   Copy,
   Check,
   FolderOpen,
-} from "lucide-react";
-import { cn, copyToClipboard } from "@/lib/utils";
-import { api } from "@/lib/api";
-import type { ImageMeta } from "@/lib/api";
+} from 'lucide-react';
+import { cn, copyToClipboard } from '@/lib/utils';
+import { api } from '@/lib/api';
+import type { ImageMeta } from '@/lib/api';
 
 interface Props {
   open: boolean;
@@ -41,7 +41,7 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
   const total = images.length;
   const currentImage = images[currentIndex]!;
   const currentUrl = urls[currentIndex]!;
-  const sourcePath = currentImage.cachePath || currentImage.filePath || "";
+  const sourcePath = currentImage.cachePath || currentImage.filePath || '';
 
   const resetView = useCallback(() => {
     setScale(1);
@@ -59,12 +59,9 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
     [currentIndex, total, resetView],
   );
 
-  const zoom = useCallback(
-    (delta: number) => {
-      setScale((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta)));
-    },
-    [],
-  );
+  const zoom = useCallback((delta: number) => {
+    setScale((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta)));
+  }, []);
 
   const fitToScreen = useCallback(() => {
     setScale(1);
@@ -75,29 +72,29 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       switch (e.key) {
-        case "Escape":
+        case 'Escape':
           onClose();
           break;
-        case "ArrowLeft":
+        case 'ArrowLeft':
           navigate(-1);
           break;
-        case "ArrowRight":
+        case 'ArrowRight':
           navigate(1);
           break;
-        case "+":
-        case "=":
+        case '+':
+        case '=':
           zoom(SCALE_STEP);
           break;
-        case "-":
+        case '-':
           zoom(-SCALE_STEP);
           break;
-        case "0":
+        case '0':
           fitToScreen();
           break;
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose, navigate, zoom, fitToScreen]);
 
   const handleWheel = useCallback(
@@ -149,7 +146,7 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
   }, [sourcePath]);
 
   const downloadName = sourcePath
-    ? sourcePath.split("/").pop() || `image-${currentImage.index}.png`
+    ? sourcePath.split('/').pop() || `image-${currentImage.index}.png`
     : `image-${currentImage.index}.png`;
 
   if (!open) return null;
@@ -164,9 +161,7 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
         className="relative z-10 flex items-center gap-3 bg-black/40 px-4 py-2 text-white/80"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="text-xs font-medium">
-          {downloadName}
-        </span>
+        <span className="text-xs font-medium">{downloadName}</span>
         {sourcePath && (
           <button
             onClick={handleCopyPath}
@@ -174,10 +169,16 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
             title="点击复制路径"
           >
             <span className="truncate">{sourcePath}</span>
-            {copied ? <Check className="size-3 shrink-0 text-emerald-400" /> : <Copy className="size-3 shrink-0" />}
+            {copied ? (
+              <Check className="size-3 shrink-0 text-emerald-400" />
+            ) : (
+              <Copy className="size-3 shrink-0" />
+            )}
           </button>
         )}
-        <span className="shrink-0 text-[11px] text-white/40 uppercase">{currentImage.mediaType.split("/")[1]}</span>
+        <span className="shrink-0 text-[11px] text-white/40 uppercase">
+          {currentImage.mediaType.split('/')[1]}
+        </span>
         <span className="flex-1" />
         {sourcePath && (
           <button
@@ -218,9 +219,9 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
           alt={`图片 ${currentIndex + 1}`}
           draggable={false}
           className={cn(
-            "max-h-full max-w-full select-none transition-transform duration-100",
-            scale > 1 ? "cursor-grab" : "cursor-zoom-in",
-            isDragging && "cursor-grabbing",
+            'max-h-full max-w-full select-none transition-transform duration-100',
+            scale > 1 ? 'cursor-grab' : 'cursor-zoom-in',
+            isDragging && 'cursor-grabbing',
           )}
           style={{
             transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
@@ -234,7 +235,10 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
         {/* Navigation arrows */}
         {total > 1 && currentIndex > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); navigate(-1); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(-1);
+            }}
             className="absolute left-4 rounded-full bg-black/40 p-2 text-white/70 hover:bg-black/60 hover:text-white transition-colors"
           >
             <ChevronLeft className="size-6" />
@@ -242,7 +246,10 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
         )}
         {total > 1 && currentIndex < total - 1 && (
           <button
-            onClick={(e) => { e.stopPropagation(); navigate(1); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(1);
+            }}
             className="absolute right-4 rounded-full bg-black/40 p-2 text-white/70 hover:bg-black/60 hover:text-white transition-colors"
           >
             <ChevronRight className="size-6" />
@@ -256,9 +263,7 @@ export function ImageLightbox({ open, onClose, images, urls, initialIndex }: Pro
         onClick={(e) => e.stopPropagation()}
       >
         {/* Scale display */}
-        <span className="text-[11px] tabular-nums text-white/60">
-          {Math.round(scale * 100)}%
-        </span>
+        <span className="text-[11px] tabular-nums text-white/60">{Math.round(scale * 100)}%</span>
 
         {/* Page indicator */}
         {total > 1 && (

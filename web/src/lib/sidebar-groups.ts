@@ -8,8 +8,8 @@
  * Pure functions only — no React, no localStorage. Easy to unit-test.
  */
 
-import type { SessionSource, SessionSummary } from "@/lib/api";
-import { cleanupPromptPreview } from "@/lib/text-cleanup";
+import type { SessionSource, SessionSummary } from '@/lib/api';
+import { cleanupPromptPreview } from '@/lib/text-cleanup';
 
 export interface ConversationGroup {
   /** "s:<sessionIdRaw>" if available, otherwise "i:<id>" — stable key for collapse state. */
@@ -51,24 +51,24 @@ export interface ProjectFolder {
  * Returns "" for "/", "\", or empty.
  */
 export function normalizeCwd(cwd: string | undefined): string {
-  let s = (cwd ?? "").trim();
-  if (!s || s === "/" || s === "\\") return "";
+  let s = (cwd ?? '').trim();
+  if (!s || s === '/' || s === '\\') return '';
   // Windows: backslash → forward slash
-  s = s.replace(/\\/g, "/");
+  s = s.replace(/\\/g, '/');
   // Windows: drive letter uppercase (c:/Repo → C:/Repo)
-  s = s.replace(/^([a-z]):/, (_, d: string) => d.toUpperCase() + ":");
+  s = s.replace(/^([a-z]):/, (_, d: string) => d.toUpperCase() + ':');
   // Bare drive letter "C:" → "C:/"
-  if (/^[A-Z]:$/.test(s)) return s + "/";
+  if (/^[A-Z]:$/.test(s)) return s + '/';
   // Preserve drive root "C:/"
   if (/^[A-Z]:\/$/.test(s)) return s;
   // Preserve UNC root "//server" (strip trailing slash if "//server/")
-  if (/^\/\/[^/]+\/?$/.test(s)) return s.replace(/\/$/, "");
+  if (/^\/\/[^/]+\/?$/.test(s)) return s.replace(/\/$/, '');
   // Strip trailing slashes
-  return s.replace(/\/+$/, "");
+  return s.replace(/\/+$/, '');
 }
 
 function sortKey(s: SessionSummary): string {
-  return s.lastActivity || s.startedAt || "";
+  return s.lastActivity || s.startedAt || '';
 }
 
 function pickGroupKey(s: SessionSummary): string {
@@ -88,10 +88,8 @@ export function buildProjectFolders(
 ): ProjectFolder[] {
   // 1. Normalize removed/pinned
   const removedSet = new Set(removedCwds.map(normalizeCwd));
-  removedSet.delete("");
-  const cleanPinned = pinnedCwds
-    .map(normalizeCwd)
-    .filter((c) => c !== "" && !removedSet.has(c));
+  removedSet.delete('');
+  const cleanPinned = pinnedCwds.map(normalizeCwd).filter((c) => c !== '' && !removedSet.has(c));
 
   // 2. Bucket by normalized cwd
   const cwdBuckets = new Map<string, SessionSummary[]>();
@@ -117,8 +115,8 @@ export function buildProjectFolders(
   // 5. Build folders
   const folders: ProjectFolder[] = [];
   for (const [cwd, bucketSessions] of cwdBuckets) {
-    const isUncategorized = cwd === "";
-    const folderKey = isUncategorized ? "uncategorized" : `cwd:${cwd}`;
+    const isUncategorized = cwd === '';
+    const folderKey = isUncategorized ? 'uncategorized' : `cwd:${cwd}`;
 
     // Group by session UUID (or id fallback)
     const groupMap = new Map<string, SessionSummary[]>();
@@ -144,8 +142,8 @@ export function buildProjectFolders(
       const title =
         cleanupPromptPreview(latest.title, 60) ||
         cleanupPromptPreview(latest.firstUserMessage, 60) ||
-        latest.cwd?.replace(/^\/Users\/[^\/]+/, "~") ||
-        "(无标题)";
+        latest.cwd?.replace(/^\/Users\/[^\/]+/, '~') ||
+        '(无标题)';
       conversations.push({
         groupKey,
         sessions: group,
@@ -156,22 +154,21 @@ export function buildProjectFolders(
         isRunning,
       });
     }
-    conversations.sort((a, b) =>
-      sortKey(a.latestSession) > sortKey(b.latestSession) ? -1 : 1,
-    );
+    conversations.sort((a, b) => (sortKey(a.latestSession) > sortKey(b.latestSession) ? -1 : 1));
 
     const latestInFolder = conversations[0]?.latestSession;
     folders.push({
       cwd,
       folderKey,
       label: isUncategorized
-        ? "未分类"
-        : (bucketSessions.find((s) => !!s.cwd?.replace(/^\/Users\/[^\/]+/, "~"))?.cwd?.replace(/^\/Users\/[^\/]+/, "~") ??
-          shortenLastSegment(cwd)),
+        ? '未分类'
+        : (bucketSessions
+            .find((s) => !!s.cwd?.replace(/^\/Users\/[^\/]+/, '~'))
+            ?.cwd?.replace(/^\/Users\/[^\/]+/, '~') ?? shortenLastSegment(cwd)),
       isUncategorized,
       conversations,
       conversationCount: conversations.length,
-      latestActivityAt: latestInFolder ? sortKey(latestInFolder) : "",
+      latestActivityAt: latestInFolder ? sortKey(latestInFolder) : '',
       isRunning: conversations.some((c) => c.isRunning),
     });
   }
@@ -194,7 +191,7 @@ export function buildProjectFolders(
 }
 
 function shortenLastSegment(cwd: string): string {
-  const parts = cwd.split("/").filter(Boolean);
+  const parts = cwd.split('/').filter(Boolean);
   return parts.length ? parts[parts.length - 1] : cwd;
 }
 

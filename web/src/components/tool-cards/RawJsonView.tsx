@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
-import { Check, Copy } from "lucide-react";
-import { copyToClipboard } from "@/lib/utils";
-import { COPY_FEEDBACK_MS } from "@/lib/constants";
+import { useMemo, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
+import { copyToClipboard } from '@/lib/utils';
+import { COPY_FEEDBACK_MS } from '@/lib/constants';
 
 /**
  * Two-pane raw view: left = input JSON, right = result JSON. Used by
@@ -20,14 +20,12 @@ export function RawJsonView({
 }) {
   const inputStr = useMemo(() => safeStringify(input), [input]);
   const outputStr = useMemo(() => safeStringify(output), [output]);
-  const rawStr = useMemo(() => (raw === undefined ? "" : safeStringify(raw)), [raw]);
+  const rawStr = useMemo(() => (raw === undefined ? '' : safeStringify(raw)), [raw]);
 
   return (
     <div className="space-y-2">
-      {input !== undefined && (
-        <Block title="Input" content={inputStr} />
-      )}
-      {output !== undefined && output !== null && output !== "" && (
+      {input !== undefined && <Block title="Input" content={inputStr} />}
+      {output !== undefined && output !== null && output !== '' && (
         <Block title="Output" content={outputStr} />
       )}
       {raw !== undefined && (
@@ -50,7 +48,7 @@ function Block({ title, content, bare }: { title: string; content: string; bare?
     setTimeout(() => setCopied(false), COPY_FEEDBACK_MS);
   };
   return (
-    <div className={bare ? "" : "rounded-md border border-border bg-background/40"}>
+    <div className={bare ? '' : 'rounded-md border border-border bg-background/40'}>
       <div className="flex items-center justify-between px-2.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
         <span>{title}</span>
         <button
@@ -69,8 +67,8 @@ function Block({ title, content, bare }: { title: string; content: string; bare?
 }
 
 function safeStringify(v: unknown): string {
-  if (v === undefined || v === null) return "";
-  if (typeof v === "string") return v;
+  if (v === undefined || v === null) return '';
+  if (typeof v === 'string') return v;
   try {
     return JSON.stringify(v, null, 2);
   } catch {

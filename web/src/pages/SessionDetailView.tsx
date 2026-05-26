@@ -1,40 +1,34 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Download,
-  Trash2,
-  PanelRightClose,
-  PanelRightOpen,
-} from "lucide-react";
-import { api } from "@/lib/api";
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Download, Trash2, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { api } from '@/lib/api';
 import {
   cn,
   describeSessionSource,
   formatAbsolute,
   formatRelative,
   sourceColor,
-} from "@/lib/utils";
-import { SessionDetail } from "@/components/SessionDetail";
-import { TurnSidebar, MiniTurnRail } from "@/components/session/TurnSidebar";
-import { RightSidebar } from "@/components/session/RightSidebar";
-import { SessionProvider, useSession } from "@/components/session/SessionContext";
-import { ResumeMenu } from "@/components/ResumeMenu";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { cleanupPromptPreview } from "@/lib/text-cleanup";
-import { emitAppEvent } from "@/lib/events";
-import { useDetailNav } from "@/lib/use-detail-nav";
-import type { TurnEntry } from "@/lib/turn-grouping";
-import type { SessionSummary } from "@/lib/api";
+} from '@/lib/utils';
+import { SessionDetail } from '@/components/SessionDetail';
+import { TurnSidebar, MiniTurnRail } from '@/components/session/TurnSidebar';
+import { RightSidebar } from '@/components/session/RightSidebar';
+import { SessionProvider, useSession } from '@/components/session/SessionContext';
+import { ResumeMenu } from '@/components/ResumeMenu';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { cleanupPromptPreview } from '@/lib/text-cleanup';
+import { emitAppEvent } from '@/lib/events';
+import { useDetailNav } from '@/lib/use-detail-nav';
+import type { TurnEntry } from '@/lib/turn-grouping';
+import type { SessionSummary } from '@/lib/api';
 
 export default function SessionDetailView() {
-  const { id = "" } = useParams<{ id: string }>();
+  const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const scrollToMsg = searchParams.get("msg");
+  const scrollToMsg = searchParams.get('msg');
 
   useEffect(() => {
-    if (!id) navigate("/sessions", { replace: true });
+    if (!id) navigate('/sessions', { replace: true });
   }, [id, navigate]);
 
   if (!id) return null;
@@ -46,15 +40,9 @@ export default function SessionDetailView() {
   );
 }
 
-function SessionDetailViewInner({
-  id,
-  scrollToMsg,
-}: {
-  id: string;
-  scrollToMsg: string | null;
-}) {
+function SessionDetailViewInner({ id, scrollToMsg }: { id: string; scrollToMsg: string | null }) {
   const navigate = useNavigate();
-  const { goBack } = useDetailNav("/sessions");
+  const { goBack } = useDetailNav('/sessions');
   const {
     summary,
     messages,
@@ -74,7 +62,9 @@ function SessionDetailViewInner({
     onRightPanelResizeDoubleClick,
   } = useSession();
 
-  const { search: { filtered } } = useSession();
+  const {
+    search: { filtered },
+  } = useSession();
 
   const onSelectTurn = useCallback(
     (turn: TurnEntry) => {
@@ -95,7 +85,9 @@ function SessionDetailViewInner({
       const startIdx = turn.userMessageIndex === -1 ? 0 : turn.userMessageIndex;
       const nextTurn = turns.find((t) => t.index === turn.index + 1);
       const endIdx = nextTurn
-        ? nextTurn.userMessageIndex === -1 ? 0 : nextTurn.userMessageIndex
+        ? nextTurn.userMessageIndex === -1
+          ? 0
+          : nextTurn.userMessageIndex
         : messages.length;
 
       for (let i = startIdx; i < endIdx; i++) {
@@ -114,9 +106,7 @@ function SessionDetailViewInner({
   );
 
   // Delete flow
-  const [confirm, setConfirm] = useState<{ cascadeIds: string[] } | null>(
-    null,
-  );
+  const [confirm, setConfirm] = useState<{ cascadeIds: string[] } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const requestDelete = async () => {
@@ -129,8 +119,8 @@ function SessionDetailViewInner({
     setDeleting(true);
     try {
       await api.sessionsTrash([summary.filePath]);
-      emitAppEvent("sessions:changed");
-      navigate("/sessions");
+      emitAppEvent('sessions:changed');
+      navigate('/sessions');
     } finally {
       setDeleting(false);
       setConfirm(null);
@@ -158,10 +148,7 @@ function SessionDetailViewInner({
           />
         ) : (
           <>
-            <div
-              className="shrink-0 overflow-hidden"
-              style={{ width: `${turnPanelWidth}px` }}
-            >
+            <div className="shrink-0 overflow-hidden" style={{ width: `${turnPanelWidth}px` }}>
               <TurnSidebar
                 turns={turns}
                 activeTurnIndex={activeTurnIndex}
@@ -226,9 +213,7 @@ function SessionDetailViewInner({
         <ConfirmDialog
           open
           title="移到回收站"
-          description={
-            <p>把这个会话移到回收站？回收站保留 30 天，期间可恢复。</p>
-          }
+          description={<p>把这个会话移到回收站？回收站保留 30 天，期间可恢复。</p>}
           tone="default"
           loading={deleting}
           onClose={() => setConfirm(null)}
@@ -276,7 +261,7 @@ function PageHeader({
       </button>
       <span
         className={cn(
-          "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset font-medium",
+          'shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset font-medium',
           sourceColor(summary.source),
         )}
       >
@@ -286,17 +271,16 @@ function PageHeader({
         className="min-w-0 flex-1 truncate text-sm font-medium tracking-tight text-fg"
         title={summary.title}
       >
-        {cleanupPromptPreview(summary.title, 200) || "(无标题)"}
+        {cleanupPromptPreview(summary.title, 200) || '(无标题)'}
       </h1>
       <div
         className="hidden shrink-0 items-baseline gap-1.5 text-[11px] text-muted-foreground md:inline-flex"
         title={[
-          summary.startedAt &&
-            `创建 ${new Date(summary.startedAt).toLocaleString()}`,
-          `最后 ${new Date(summary.lastActivity || "").toLocaleString()}`,
+          summary.startedAt && `创建 ${new Date(summary.startedAt).toLocaleString()}`,
+          `最后 ${new Date(summary.lastActivity || '').toLocaleString()}`,
         ]
           .filter(Boolean)
-          .join("\n")}
+          .join('\n')}
       >
         {summary.startedAt && (
           <>
@@ -311,9 +295,7 @@ function PageHeader({
         <span className="font-mono tabular-nums text-muted-foreground">
           {formatAbsolute(summary.lastActivity)}
         </span>
-        <span className="text-muted-foreground/60">
-          ({formatRelative(summary.lastActivity)})
-        </span>
+        <span className="text-muted-foreground/60">({formatRelative(summary.lastActivity)})</span>
       </div>
       <ResumeMenu session={summary} compact />
       <a
@@ -334,14 +316,10 @@ function PageHeader({
       </button>
       <button
         onClick={onToggleRight}
-        title={rightOpen ? "收起右侧栏" : "展开右侧栏"}
+        title={rightOpen ? '收起右侧栏' : '展开右侧栏'}
         className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-fg"
       >
-        {rightOpen ? (
-          <PanelRightClose className="size-3" />
-        ) : (
-          <PanelRightOpen className="size-3" />
-        )}
+        {rightOpen ? <PanelRightClose className="size-3" /> : <PanelRightOpen className="size-3" />}
       </button>
     </header>
   );

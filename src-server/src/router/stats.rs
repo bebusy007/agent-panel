@@ -1,6 +1,6 @@
-use axum::{extract::Query, routing::get, Json, Router};
+use crate::scanner::{extensions, mcps, sessions, skills};
+use axum::{Json, Router, extract::Query, routing::get};
 use serde::Deserialize;
-use crate::scanner::{skills, mcps, sessions, extensions};
 
 pub fn routes() -> Router {
     Router::new()
@@ -23,12 +23,16 @@ async fn get_stats() -> Json<serde_json::Value> {
     }
 
     // Total tokens
-    let total_tokens: u64 = sessions_result.sessions.iter()
+    let total_tokens: u64 = sessions_result
+        .sessions
+        .iter()
         .filter_map(|s| s.tokens_total)
         .sum();
 
     // Total cost
-    let total_cost: f64 = sessions_result.sessions.iter()
+    let total_cost: f64 = sessions_result
+        .sessions
+        .iter()
         .filter_map(|s| s.estimated_cost_usd)
         .sum();
 
@@ -65,7 +69,9 @@ struct ActivityParams {
     weeks: u32,
 }
 
-fn default_weeks() -> u32 { crate::constants::DEFAULT_ACTIVITY_WEEKS }
+fn default_weeks() -> u32 {
+    crate::constants::DEFAULT_ACTIVITY_WEEKS
+}
 
 async fn get_activity(Query(params): Query<ActivityParams>) -> Json<serde_json::Value> {
     tracing::info!(weeks = params.weeks, "get_activity request");
@@ -73,14 +79,22 @@ async fn get_activity(Query(params): Query<ActivityParams>) -> Json<serde_json::
     let mut daily: std::collections::HashMap<String, DayStats> = std::collections::HashMap::new();
 
     for s in &sessions_result.sessions {
-        let day = s.last_activity.as_deref()
+        let day = s
+            .last_activity
+            .as_deref()
             .unwrap_or("")
             .get(..10)
             .unwrap_or("")
             .to_string();
-        if day.is_empty() { continue; }
+        if day.is_empty() {
+            continue;
+        }
 
-        let entry = daily.entry(day).or_insert(DayStats { tokens: 0, sessions: 0, messages: 0 });
+        let entry = daily.entry(day).or_insert(DayStats {
+            tokens: 0,
+            sessions: 0,
+            messages: 0,
+        });
         entry.tokens += s.tokens_total.unwrap_or(0);
         entry.sessions += 1;
         entry.messages += s.message_count;
@@ -90,20 +104,31 @@ async fn get_activity(Query(params): Query<ActivityParams>) -> Json<serde_json::
     let cutoff = chrono::Utc::now() - chrono::Duration::weeks(params.weeks as i64);
     let cutoff_str = cutoff.format("%Y-%m-%d").to_string();
 
-    let mut days: Vec<serde_json::Value> = daily.into_iter()
+    let mut days: Vec<serde_json::Value> = daily
+        .into_iter()
         .filter(|(date, _)| date.as_str() >= cutoff_str.as_str())
-        .map(|(date, stats)| serde_json::json!({
-            "date": date,
-            "tokens": stats.tokens,
-            "sessions": stats.sessions,
-            "messages": stats.messages,
-        }))
+        .map(|(date, stats)| {
+            serde_json::json!({
+                "date": date,
+                "tokens": stats.tokens,
+                "sessions": stats.sessions,
+                "messages": stats.messages,
+            })
+        })
         .collect();
 
-    days.sort_by(|a, b| a["date"].as_str().unwrap_or("").cmp(b["date"].as_str().unwrap_or("")));
+    days.sort_by(|a, b| {
+        a["date"]
+            .as_str()
+            .unwrap_or("")
+            .cmp(b["date"].as_str().unwrap_or(""))
+    });
 
     let total_tokens: u64 = days.iter().map(|d| d["tokens"].as_u64().unwrap_or(0)).sum();
-    let total_sessions: u32 = days.iter().map(|d| d["sessions"].as_u64().unwrap_or(0) as u32).sum();
+    let total_sessions: u32 = days
+        .iter()
+        .map(|d| d["sessions"].as_u64().unwrap_or(0) as u32)
+        .sum();
 
     Json(serde_json::json!({
         "weeks": params.weeks,

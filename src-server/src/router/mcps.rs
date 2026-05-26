@@ -1,5 +1,5 @@
-use axum::{extract::Path, routing::get, Json, Router};
 use crate::scanner::mcps::scan_mcps;
+use axum::{Json, Router, extract::Path, routing::get};
 
 pub fn routes() -> Router {
     Router::new()

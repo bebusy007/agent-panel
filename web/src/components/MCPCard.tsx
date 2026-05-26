@@ -1,8 +1,8 @@
-import type { MCPSummary } from "@/lib/api";
-import { McpSourceBadge } from "./SourceBadge";
-import { Wrench, Files, Network } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { highlightJsx } from "@/lib/highlight";
+import type { MCPSummary } from '@/lib/api';
+import { McpSourceBadge } from './SourceBadge';
+import { Wrench, Files, Network } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { highlightJsx } from '@/lib/highlight';
 
 export function MCPCard({
   mcp,
@@ -19,8 +19,10 @@ export function MCPCard({
     <button
       onClick={onClick}
       className={cn(
-        "block w-full text-left rounded-xl border bg-card p-4 transition-all duration-200 hover:shadow-e2 focus:outline-none",
-        active ? "border-2 border-primary bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]" : "border-border"
+        'block w-full text-left rounded-xl border bg-card p-4 transition-all duration-200 hover:shadow-e2 focus:outline-none',
+        active
+          ? 'border-2 border-primary bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]'
+          : 'border-border',
       )}
     >
       <div className="flex items-start gap-2">

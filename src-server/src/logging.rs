@@ -2,32 +2,35 @@ use std::fs;
 use std::path::Path;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
-    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer,
+    EnvFilter, Layer, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt,
 };
 
 pub struct LogGuards {
     _file_guard: WorkerGuard,
     _error_guard: WorkerGuard,
+    pub stdout_reload: reload::Handle<EnvFilter, tracing_subscriber::Registry>,
 }
 
 pub fn init(log_dir: &str, release_mode: bool) -> LogGuards {
     fs::create_dir_all(log_dir).expect("failed to create log directory");
 
-    // --- Layer 1: stdout (human-readable, for development) ---
+    // --- Layer 1: stdout (human-readable, with runtime reload) ---
     let default_stdout_filter = if release_mode {
         "agent_panel_server=warn,tower_http=warn"
     } else {
         "agent_panel_server=debug,tower_http=info"
     };
 
+    let stdout_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_stdout_filter));
+
+    let (stdout_filter_layer, stdout_reload) = reload::Layer::new(stdout_filter);
+
     let stdout_layer = fmt::layer()
         .with_target(true)
         .with_file(true)
         .with_line_number(true)
-        .with_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(default_stdout_filter)),
-        );
+        .with_filter(stdout_filter_layer);
 
     // --- Layer 2: file (JSON, daily rotation, 14-day retention) ---
     let file_appender = tracing_appender::rolling::RollingFileAppender::builder()
@@ -85,5 +88,6 @@ pub fn init(log_dir: &str, release_mode: bool) -> LogGuards {
     LogGuards {
         _file_guard: file_guard,
         _error_guard: error_guard,
+        stdout_reload,
     }
 }

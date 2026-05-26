@@ -2,15 +2,14 @@
 //! macOS only for terminal (uses osascript for iTerm/Terminal/Ghostty).
 //! IDE opens via `open -a` on macOS or `code` CLI fallback.
 
-use axum::{routing::post, Json, Router};
+use axum::{Json, Router, routing::post};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 
 use crate::scanner::sessions;
 
 pub fn routes() -> Router {
-    Router::new()
-        .route("/sessions/resume", post(resume_session))
+    Router::new().route("/sessions/resume", post(resume_session))
 }
 
 #[derive(Deserialize)]
@@ -21,7 +20,9 @@ struct ResumeRequest {
     mode: String,
 }
 
-fn default_mode() -> String { "copy".to_string() }
+fn default_mode() -> String {
+    "copy".to_string()
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,8 +35,12 @@ pub struct ResumeHints {
     pub ide_command: Option<String>,
 }
 
-pub fn build_resume_hints(source: &str, cwd: Option<&str>, session_id_raw: Option<&str>) -> ResumeHints {
-    let cwd_quoted = cwd.map(|c| shell_quote(c));
+pub fn build_resume_hints(
+    source: &str,
+    cwd: Option<&str>,
+    session_id_raw: Option<&str>,
+) -> ResumeHints {
+    let cwd_quoted = cwd.map(shell_quote);
 
     match source {
         "claude-code" => {
@@ -64,20 +69,16 @@ pub fn build_resume_hints(source: &str, cwd: Option<&str>, session_id_raw: Optio
                 ide_command: cwd.map(|c| format!("code {}", shell_quote(c))),
             }
         }
-        "cursor-agent" | "cursor-composer" => {
-            ResumeHints {
-                command: cwd.map(|c| format!("cursor {}", shell_quote(c))),
-                terminal_command: cwd.map(|c| format!("cursor {}", shell_quote(c))),
-                ide_command: cwd.map(|c| format!("cursor {}", shell_quote(c))),
-            }
-        }
-        _ => {
-            ResumeHints {
-                command: cwd.map(|c| format!("cd {}", shell_quote(c))),
-                terminal_command: cwd.map(|c| format!("cd {}", shell_quote(c))),
-                ide_command: cwd.map(|c| format!("code {}", shell_quote(c))),
-            }
-        }
+        "cursor-agent" | "cursor-composer" => ResumeHints {
+            command: cwd.map(|c| format!("cursor {}", shell_quote(c))),
+            terminal_command: cwd.map(|c| format!("cursor {}", shell_quote(c))),
+            ide_command: cwd.map(|c| format!("cursor {}", shell_quote(c))),
+        },
+        _ => ResumeHints {
+            command: cwd.map(|c| format!("cd {}", shell_quote(c))),
+            terminal_command: cwd.map(|c| format!("cd {}", shell_quote(c))),
+            ide_command: cwd.map(|c| format!("code {}", shell_quote(c))),
+        },
     }
 }
 
@@ -96,20 +97,24 @@ async fn resume_session(Json(body): Json<ResumeRequest>) -> Json<serde_json::Val
     );
 
     match body.mode.as_str() {
-        "copy" => {
-            Json(serde_json::json!({ "ok": true, "mode": "copy", "hints": hints }))
-        }
+        "copy" => Json(serde_json::json!({ "ok": true, "mode": "copy", "hints": hints })),
         "terminal" => {
             if cfg!(not(target_os = "macos")) {
-                return Json(serde_json::json!({ "error": "terminal resume is only supported on macOS" }));
+                return Json(
+                    serde_json::json!({ "error": "terminal resume is only supported on macOS" }),
+                );
             }
             let cmd = match &hints.terminal_command {
                 Some(c) => c.clone(),
-                None => return Json(serde_json::json!({ "error": "no cwd available for terminal" })),
+                None => {
+                    return Json(serde_json::json!({ "error": "no cwd available for terminal" }));
+                }
             };
             let terminal = detect_terminal();
             match open_terminal(&terminal, &cmd) {
-                Ok(_) => Json(serde_json::json!({ "ok": true, "mode": "terminal", "terminal": terminal, "hints": hints })),
+                Ok(_) => Json(
+                    serde_json::json!({ "ok": true, "mode": "terminal", "terminal": terminal, "hints": hints }),
+                ),
                 Err(e) => {
                     tracing::warn!(session_id = %body.session_id, mode = "terminal", error = %e, "resume failed");
                     Json(serde_json::json!({ "error": e, "hints": hints }))
@@ -122,16 +127,16 @@ async fn resume_session(Json(body): Json<ResumeRequest>) -> Json<serde_json::Val
                 None => return Json(serde_json::json!({ "error": "no cwd available for IDE" })),
             };
             match open_ide(&session.source, &cwd) {
-                Ok(via) => Json(serde_json::json!({ "ok": true, "mode": "ide", "via": via, "hints": hints })),
+                Ok(via) => Json(
+                    serde_json::json!({ "ok": true, "mode": "ide", "via": via, "hints": hints }),
+                ),
                 Err(e) => {
                     tracing::warn!(session_id = %body.session_id, mode = "ide", error = %e, "resume failed");
                     Json(serde_json::json!({ "error": e, "hints": hints }))
                 }
             }
         }
-        other => {
-            Json(serde_json::json!({ "error": format!("unknown mode: {}", other) }))
-        }
+        other => Json(serde_json::json!({ "error": format!("unknown mode: {}", other) })),
     }
 }
 
@@ -259,7 +264,10 @@ mod tests {
 
     #[test]
     fn test_shell_quote_with_spaces() {
-        assert_eq!(shell_quote("/home/user/my project"), "'/home/user/my project'");
+        assert_eq!(
+            shell_quote("/home/user/my project"),
+            "'/home/user/my project'"
+        );
     }
 
     #[test]
@@ -277,7 +285,10 @@ mod tests {
     fn test_resume_hints_claude_code() {
         let hints = build_resume_hints("claude-code", Some("/home/user/proj"), Some("abc-123"));
         assert_eq!(hints.command, Some("claude --resume abc-123".to_string()));
-        assert_eq!(hints.terminal_command, Some("cd /home/user/proj && claude --resume abc-123".to_string()));
+        assert_eq!(
+            hints.terminal_command,
+            Some("cd /home/user/proj && claude --resume abc-123".to_string())
+        );
         assert!(hints.ide_command.unwrap().contains("code"));
     }
 
@@ -285,7 +296,10 @@ mod tests {
     fn test_resume_hints_codex() {
         let hints = build_resume_hints("codex", Some("/work"), Some("xyz"));
         assert_eq!(hints.command, Some("codex --resume xyz".to_string()));
-        assert_eq!(hints.terminal_command, Some("cd /work && codex --resume xyz".to_string()));
+        assert_eq!(
+            hints.terminal_command,
+            Some("cd /work && codex --resume xyz".to_string())
+        );
     }
 
     #[test]
@@ -305,7 +319,10 @@ mod tests {
     fn test_resume_hints_codex_no_session_id() {
         let hints = build_resume_hints("codex", Some("/work"), None);
         assert_eq!(hints.command, Some("codex".to_string()));
-        assert_eq!(hints.terminal_command, Some("cd /work && codex".to_string()));
+        assert_eq!(
+            hints.terminal_command,
+            Some("cd /work && codex".to_string())
+        );
     }
 
     #[test]
@@ -390,6 +407,8 @@ mod tests {
     #[test]
     fn test_select_ide_claude_code() {
         let result = select_ide("claude-code");
-        assert!(result == Some("Visual Studio Code") || result == Some("Cursor") || result.is_none());
+        assert!(
+            result == Some("Visual Studio Code") || result == Some("Cursor") || result.is_none()
+        );
     }
 }

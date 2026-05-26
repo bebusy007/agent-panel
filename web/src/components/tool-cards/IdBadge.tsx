@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Check, Copy } from "lucide-react";
-import { cn, copyToClipboard } from "@/lib/utils";
-import { COPY_FEEDBACK_MS } from "@/lib/constants";
+import { useState } from 'react';
+import { Check, Copy } from 'lucide-react';
+import { cn, copyToClipboard } from '@/lib/utils';
+import { COPY_FEEDBACK_MS } from '@/lib/constants';
 
 interface IdEntry {
   key: string;
@@ -9,17 +9,11 @@ interface IdEntry {
 }
 
 export function entryUuid(id: string): string {
-  const idx = id.lastIndexOf("-");
+  const idx = id.lastIndexOf('-');
   return idx > 0 ? id.slice(0, idx) : id;
 }
 
-export function IdBadge({
-  entries,
-  className,
-}: {
-  entries: IdEntry[];
-  className?: string;
-}) {
+export function IdBadge({ entries, className }: { entries: IdEntry[]; className?: string }) {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const filtered = entries.filter((e) => e.value);
   if (filtered.length === 0) return null;
@@ -27,13 +21,13 @@ export function IdBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100",
+        'inline-flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100',
         className,
       )}
     >
       {filtered.map((e, i) => {
         const full = `${e.key}:${e.value}`;
-        const short = e.value.length > 12 ? e.value.slice(0, 10) + "…" : e.value;
+        const short = e.value.length > 12 ? e.value.slice(0, 10) + '…' : e.value;
         const isCopied = copiedIdx === i;
         return (
           <button

@@ -1,17 +1,20 @@
-import { useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { SessionItem } from "./SessionItem";
-import type { SessionSummary } from "@/lib/api";
-import { ESTIMATE_SESSION_ITEM_HEIGHT } from "@/lib/constants";
+import { useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { SessionItem } from './SessionItem';
+import type { SessionSummary } from '@/lib/api';
+import { ESTIMATE_SESSION_ITEM_HEIGHT } from '@/lib/constants';
 
 interface Props {
   sessions: SessionSummary[];
   selectedIds: Set<string>;
   selectionMode: boolean;
   activeId?: string | null;
-  onSelect: (id: string, mode: "click" | "checkbox") => void;
+  onSelect: (id: string, mode: 'click' | 'checkbox') => void;
   onToggleCheckbox: (id: string) => void;
-  onAction: (s: SessionSummary, action: "hide" | "show" | "trash" | "restore" | "permanent") => void;
+  onAction: (
+    s: SessionSummary,
+    action: 'hide' | 'show' | 'trash' | 'restore' | 'permanent',
+  ) => void;
   highlight?: string;
 }
 
@@ -49,12 +52,16 @@ export function VirtualSessionList({
   });
 
   return (
-    <div ref={parentRef} className="overflow-auto" style={{ height: "calc(100vh - 320px)", minHeight: 480 }}>
+    <div
+      ref={parentRef}
+      className="overflow-auto"
+      style={{ height: 'calc(100vh - 320px)', minHeight: 480 }}
+    >
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
+          width: '100%',
+          position: 'relative',
         }}
       >
         {virtualizer.getVirtualItems().map((vi) => {
@@ -65,7 +72,7 @@ export function VirtualSessionList({
               data-index={vi.index}
               ref={virtualizer.measureElement}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,

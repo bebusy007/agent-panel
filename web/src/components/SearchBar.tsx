@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Search, X, HelpCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { Search, X, HelpCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function SearchBar({
   value,
   onChange,
-  placeholder = "搜索",
+  placeholder = '搜索',
   className,
   tip,
   resultCount,
@@ -26,8 +26,8 @@ export function SearchBar({
     <div className="space-y-1">
       <div
         className={cn(
-          "flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 focus-within:border-border transition-colors",
-          className
+          'flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 focus-within:border-border transition-colors',
+          className,
         )}
       >
         <Search className="size-4 text-muted-foreground shrink-0" />
@@ -39,7 +39,7 @@ export function SearchBar({
         />
         {value && (
           <button
-            onClick={() => onChange("")}
+            onClick={() => onChange('')}
             className="text-muted-foreground hover:text-muted-foreground transition-colors"
             aria-label="清空"
           >

@@ -22,56 +22,56 @@
     /* === Dark Mode (default) ===
      * Deep base + rgba white overlays for natural depth.
      * Text: #F5F5FA → #A8A8B8 → #78788A → #55556A */
-    --background: #0D0D14;
-    --foreground: #F5F5FA;
+    --background: #0d0d14;
+    --foreground: #f5f5fa;
     --card: rgba(255, 255, 255, 0.05);
-    --card-foreground: #F5F5FA;
-    --popover: #1A1A24;
-    --popover-foreground: #F5F5FA;
-    --primary: #34D399;
-    --primary-foreground: #FFFFFF;
+    --card-foreground: #f5f5fa;
+    --popover: #1a1a24;
+    --popover-foreground: #f5f5fa;
+    --primary: #34d399;
+    --primary-foreground: #ffffff;
     --secondary: rgba(255, 255, 255, 0.08);
-    --secondary-foreground: #E0E0EA;
+    --secondary-foreground: #e0e0ea;
     --muted: rgba(255, 255, 255, 0.06);
-    --muted-foreground: #78788A;
-    --accent: #34D399;
-    --accent-foreground: #FFFFFF;
-    --destructive: #FF4444;
-    --destructive-foreground: #FFFFFF;
-    --border: rgba(255, 255, 255, 0.10);
+    --muted-foreground: #78788a;
+    --accent: #34d399;
+    --accent-foreground: #ffffff;
+    --destructive: #ff4444;
+    --destructive-foreground: #ffffff;
+    --border: rgba(255, 255, 255, 0.1);
     --input: rgba(255, 255, 255, 0.08);
-    --ring: #34D399;
+    --ring: #34d399;
     --radius: 0.5rem;
-    --code-bg: rgba(0, 0, 0, 0.30);
+    --code-bg: rgba(0, 0, 0, 0.3);
     --code-border: rgba(255, 255, 255, 0.12);
 
     /* Status */
-    --success: #34D399;
-    --success-foreground: #0D0D14;
-    --warning: #FBBF24;
-    --warning-foreground: #0D0D14;
-    --info: #60A5FA;
-    --info-foreground: #0D0D14;
+    --success: #34d399;
+    --success-foreground: #0d0d14;
+    --warning: #fbbf24;
+    --warning-foreground: #0d0d14;
+    --info: #60a5fa;
+    --info-foreground: #0d0d14;
 
     /* Metric */
-    --metric-purple: #A78BFA;
-    --metric-blue: #60A5FA;
-    --metric-green: #34D399;
-    --metric-amber: #FBBF24;
-    --metric-pink: #F472B6;
-    --metric-teal: #2DD4BF;
+    --metric-purple: #a78bfa;
+    --metric-blue: #60a5fa;
+    --metric-green: #34d399;
+    --metric-amber: #fbbf24;
+    --metric-pink: #f472b6;
+    --metric-teal: #2dd4bf;
 
     /* Tool */
-    --tool-read: #60A5FA;
-    --tool-write: #FBBF24;
-    --tool-edit: #FBBF24;
-    --tool-bash: #34D399;
-    --tool-search: #A78BFA;
-    --tool-web: #38BDF8;
-    --tool-agent: #2DD4BF;
-    --tool-task: #818CF8;
-    --tool-question: #FCD34D;
-    --tool-skill: #FB7185;
+    --tool-read: #60a5fa;
+    --tool-write: #fbbf24;
+    --tool-edit: #fbbf24;
+    --tool-bash: #34d399;
+    --tool-search: #a78bfa;
+    --tool-web: #38bdf8;
+    --tool-agent: #2dd4bf;
+    --tool-task: #818cf8;
+    --tool-question: #fcd34d;
+    --tool-skill: #fb7185;
 
     /* Terminal */
     --terminal-bg: rgba(0, 0, 0, 0.45);
@@ -79,35 +79,35 @@
     --terminal-border: rgba(255, 255, 255, 0.08);
     --terminal-cmd-label: #6ee7b7;
     --terminal-cmd-text: #d1fae5;
-    --terminal-cmd-border: rgba(52, 211, 153, 0.30);
-    --terminal-cmd-border-b: rgba(52, 211, 153, 0.20);
+    --terminal-cmd-border: rgba(52, 211, 153, 0.3);
+    --terminal-cmd-border-b: rgba(52, 211, 153, 0.2);
 
     /* Shadows — Dark (heavier) */
-    --shadow-e1: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-e2: 0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25);
-    --shadow-e3: 0 4px 16px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.2);
-    --shadow-e4: 0 8px 32px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
+    --shadow-e1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-e2: 0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+    --shadow-e3: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2);
+    --shadow-e4: 0 8px 32px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
     --shadow-glow: 0 0 20px rgba(6, 199, 85, 0.15);
 
     /* Chart */
-    --chart-1: #A78BFA;
-    --chart-2: #34D399;
-    --chart-3: #FBBF24;
-    --chart-4: #60A5FA;
-    --chart-5: #FB7185;
+    --chart-1: #a78bfa;
+    --chart-2: #34d399;
+    --chart-3: #fbbf24;
+    --chart-4: #60a5fa;
+    --chart-5: #fb7185;
 
     /* Heatmap */
     --heatmap-empty: rgba(255, 255, 255, 0.04);
     --heatmap-low: rgba(52, 211, 153, 0.25);
-    --heatmap-medium: rgba(52, 211, 153, 0.50);
-    --heatmap-high: #34D399;
+    --heatmap-medium: rgba(52, 211, 153, 0.5);
+    --heatmap-high: #34d399;
 
     /* Sidebar */
-    --sidebar: #0A0A10;
-    --sidebar-foreground: #E0E0EA;
+    --sidebar: #0a0a10;
+    --sidebar-foreground: #e0e0ea;
     --sidebar-border: rgba(255, 255, 255, 0.08);
     --sidebar-accent: rgba(255, 255, 255, 0.06);
-    --sidebar-accent-foreground: #F5F5FA;
+    --sidebar-accent-foreground: #f5f5fa;
 
     /* Timing */
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -130,84 +130,84 @@
     /* === Light Mode ===
      * Background: #FFFFFF page, #FAFAFA card substrate.
      * Text: #111111 → #555555 → #888888 */
-    --background: #FFFFFF;
+    --background: #ffffff;
     --foreground: #111111;
-    --card: #FFFFFF;
+    --card: #ffffff;
     --card-foreground: #111111;
-    --popover: #FFFFFF;
+    --popover: #ffffff;
     --popover-foreground: #111111;
     --primary: #059669;
-    --primary-foreground: #FFFFFF;
-    --secondary: #F3F4F5;
+    --primary-foreground: #ffffff;
+    --secondary: #f3f4f5;
     --secondary-foreground: #333333;
-    --muted: #F3F4F5;
+    --muted: #f3f4f5;
     --muted-foreground: #888888;
     --accent: #059669;
-    --accent-foreground: #FFFFFF;
-    --destructive: #E53935;
-    --destructive-foreground: #FFFFFF;
-    --border: #E8E9EB;
-    --input: #F3F4F5;
+    --accent-foreground: #ffffff;
+    --destructive: #e53935;
+    --destructive-foreground: #ffffff;
+    --border: #e8e9eb;
+    --input: #f3f4f5;
     --ring: #059669;
-    --code-bg: #E8E9EB;
-    --code-border: #DDE0E3;
+    --code-bg: #e8e9eb;
+    --code-border: #dde0e3;
 
-    --success: #16A34A;
-    --success-foreground: #FFFFFF;
-    --warning: #D97706;
-    --warning-foreground: #FFFFFF;
-    --info: #2563EB;
-    --info-foreground: #FFFFFF;
+    --success: #16a34a;
+    --success-foreground: #ffffff;
+    --warning: #d97706;
+    --warning-foreground: #ffffff;
+    --info: #2563eb;
+    --info-foreground: #ffffff;
 
-    --metric-purple: #7C3AED;
-    --metric-blue: #2563EB;
-    --metric-green: #16A34A;
-    --metric-amber: #D97706;
-    --metric-pink: #DB2777;
-    --metric-teal: #0D9488;
+    --metric-purple: #7c3aed;
+    --metric-blue: #2563eb;
+    --metric-green: #16a34a;
+    --metric-amber: #d97706;
+    --metric-pink: #db2777;
+    --metric-teal: #0d9488;
 
-    --tool-read: #2563EB;
-    --tool-write: #D97706;
-    --tool-edit: #D97706;
-    --tool-bash: #16A34A;
-    --tool-search: #7C3AED;
-    --tool-web: #0284C7;
-    --tool-agent: #0D9488;
-    --tool-task: #4F46E5;
-    --tool-question: #CA8A04;
-    --tool-skill: #E11D48;
+    --tool-read: #2563eb;
+    --tool-write: #d97706;
+    --tool-edit: #d97706;
+    --tool-bash: #16a34a;
+    --tool-search: #7c3aed;
+    --tool-web: #0284c7;
+    --tool-agent: #0d9488;
+    --tool-task: #4f46e5;
+    --tool-question: #ca8a04;
+    --tool-skill: #e11d48;
 
     /* Terminal */
-    --terminal-bg: #FFFFFF;
+    --terminal-bg: #ffffff;
     --terminal-fg: #1e1e1e;
-    --terminal-border: #E8E9EB;
+    --terminal-border: #e8e9eb;
     --terminal-cmd-label: #059669;
     --terminal-cmd-text: #111111;
     --terminal-cmd-border: #d1fae5;
     --terminal-cmd-border-b: #d1fae5;
 
     /* Shadows — Light (subtle, dual-layer) */
-    --shadow-e1: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
-    --shadow-e2: 0 2px 8px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.03);
-    --shadow-e3: 0 4px 16px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02);
-    --shadow-e4: 0 8px 32px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.02);
+    --shadow-e1: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-e2: 0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+    --shadow-e3: 0 4px 16px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02);
+    --shadow-e4: 0 8px 32px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(0, 0, 0, 0.02);
     --shadow-glow: 0 0 20px rgba(5, 150, 105, 0.08);
 
-    --chart-1: #5B4CD6;
-    --chart-2: #16A34A;
-    --chart-3: #D97706;
-    --chart-4: #2563EB;
-    --chart-5: #DB2777;
+    --chart-1: #5b4cd6;
+    --chart-2: #16a34a;
+    --chart-3: #d97706;
+    --chart-4: #2563eb;
+    --chart-5: #db2777;
 
-    --heatmap-empty: #F3F4F5;
-    --heatmap-low: #BBF7D0;
-    --heatmap-medium: #4ADE80;
-    --heatmap-high: #16A34A;
+    --heatmap-empty: #f3f4f5;
+    --heatmap-low: #bbf7d0;
+    --heatmap-medium: #4ade80;
+    --heatmap-high: #16a34a;
 
-    --sidebar: #FAFAFA;
+    --sidebar: #fafafa;
     --sidebar-foreground: #333333;
-    --sidebar-border: #E8E9EB;
-    --sidebar-accent: #F3F4F5;
+    --sidebar-border: #e8e9eb;
+    --sidebar-accent: #f3f4f5;
     --sidebar-accent-foreground: #111111;
 
     /* Legacy compat */
@@ -224,15 +224,18 @@
 }
 
 /* === Base === */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -289,19 +292,34 @@ body {
   margin-bottom: 0.5em;
   color: var(--foreground);
 }
-.md-body h1 { font-size: 20px; }
-.md-body h2 { font-size: 16px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
-.md-body h3 { font-size: 15px; }
-.md-body p { margin: 0.6em 0; }
+.md-body h1 {
+  font-size: 20px;
+}
+.md-body h2 {
+  font-size: 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.md-body h3 {
+  font-size: 15px;
+}
+.md-body p {
+  margin: 0.6em 0;
+}
 .md-body ul,
-.md-body ol { margin: 0.6em 0; padding-left: 1.4em; }
-.md-body li { margin: 0.2em 0; }
+.md-body ol {
+  margin: 0.6em 0;
+  padding-left: 1.4em;
+}
+.md-body li {
+  margin: 0.2em 0;
+}
 .md-body code {
   background: var(--code-bg);
   padding: 2px 6px;
   border-radius: 6px;
   font-size: 0.85em;
-  font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
 }
 .md-body pre {
   background: var(--code-bg);
@@ -359,14 +377,26 @@ mark.search-mark-active {
 /* === Typography overrides ===
  * Make Tailwind's text-* classes read from CSS variables so
  * user adjustments in Settings propagate everywhere. */
-.text-2xl     { font-size: var(--text-h1) !important; }
-.text-base    { font-size: var(--text-h2) !important; }
-.text-sm      { font-size: var(--text-body) !important; }
-.text-xs      { font-size: var(--text-caption) !important; }
+.text-2xl {
+  font-size: var(--text-h1) !important;
+}
+.text-base {
+  font-size: var(--text-h2) !important;
+}
+.text-sm {
+  font-size: var(--text-body) !important;
+}
+.text-xs {
+  font-size: var(--text-caption) !important;
+}
 .\!text-\[11px\],
-.text-\[11px\] { font-size: var(--text-label) !important; }
+.text-\[11px\] {
+  font-size: var(--text-label) !important;
+}
 .\!text-\[10px\],
-.text-\[10px\] { font-size: var(--text-sub) !important; }
+.text-\[10px\] {
+  font-size: var(--text-sub) !important;
+}
 
 /* === Typography utility classes ===
  * Spec: docs/ui-update/typography.md

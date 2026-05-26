@@ -1,7 +1,23 @@
-import type { SessionSummary } from "@/lib/api";
-import { cleanupPromptPreview } from "@/lib/text-cleanup";
-import { COPY_FEEDBACK_MS, TITLE_PREVIEW_MAX_LEN, FIRST_MSG_PREVIEW_MAX_LEN } from "@/lib/constants";
-import { Copy, FolderGit2, Hash, Clock, MoreVertical, Eye, EyeOff, Trash2, Check, Zap, Radio } from "lucide-react";
+import type { SessionSummary } from '@/lib/api';
+import { cleanupPromptPreview } from '@/lib/text-cleanup';
+import {
+  COPY_FEEDBACK_MS,
+  TITLE_PREVIEW_MAX_LEN,
+  FIRST_MSG_PREVIEW_MAX_LEN,
+} from '@/lib/constants';
+import {
+  Copy,
+  FolderGit2,
+  Hash,
+  Clock,
+  MoreVertical,
+  Eye,
+  EyeOff,
+  Trash2,
+  Check,
+  Zap,
+  Radio,
+} from 'lucide-react';
 import {
   cn,
   copyToClipboard,
@@ -9,19 +25,19 @@ import {
   formatRelative,
   formatTokens,
   sourceColor,
-} from "@/lib/utils";
-import { highlightJsx } from "@/lib/highlight";
-import { ResumeMenu } from "./ResumeMenu";
-import { useEffect, useRef, useState } from "react";
+} from '@/lib/utils';
+import { highlightJsx } from '@/lib/highlight';
+import { ResumeMenu } from './ResumeMenu';
+import { useEffect, useRef, useState } from 'react';
 
 interface SessionItemProps {
   session: SessionSummary;
   selected: boolean;
-  onSelect: (id: string, mode: "click" | "checkbox") => void;
+  onSelect: (id: string, mode: 'click' | 'checkbox') => void;
   selectionMode: boolean;
   onToggleCheckbox: (id: string) => void;
   active?: boolean;
-  onAction: (action: "hide" | "show" | "trash" | "restore" | "permanent") => void;
+  onAction: (action: 'hide' | 'show' | 'trash' | 'restore' | 'permanent') => void;
   highlight?: string;
 }
 
@@ -44,8 +60,8 @@ export function SessionItem({
     const onClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
   }, [menuOpen]);
 
   const handleCopyCwd = async (e: React.MouseEvent) => {
@@ -58,14 +74,12 @@ export function SessionItem({
 
   return (
     <div
-      onClick={() => onSelect(session.id, "click")}
+      onClick={() => onSelect(session.id, 'click')}
       className={cn(
-        "group relative flex items-stretch gap-3 rounded-lg border bg-card px-4 py-3 cursor-pointer transition-all",
-        active
-          ? "border-2 border-primary"
-          : "border-border hover:shadow-e2",
-        selected && "border-primary bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]",
-        false && "opacity-50"
+        'group relative flex items-stretch gap-3 rounded-lg border bg-card px-4 py-3 cursor-pointer transition-all',
+        active ? 'border-2 border-primary' : 'border-border hover:shadow-e2',
+        selected && 'border-primary bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]',
+        false && 'opacity-50',
       )}
     >
       {selectionMode && (
@@ -90,8 +104,8 @@ export function SessionItem({
         <div className="flex items-start gap-2">
           <span
             className={cn(
-              "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ring-1 ring-inset font-medium",
-              sourceColor(session.source)
+              'shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ring-1 ring-inset font-medium',
+              sourceColor(session.source),
             )}
           >
             {describeSessionSource(session.source)}
@@ -109,7 +123,8 @@ export function SessionItem({
             // Cursor wraps every user prompt in <user_query>…</user_query>;
             // Claude Code's slash commands wrap in <command-message>… —
             // strip the shell so cards show the real first line.
-            const displayTitle = cleanupPromptPreview(session.title, TITLE_PREVIEW_MAX_LEN) || "(无标题)";
+            const displayTitle =
+              cleanupPromptPreview(session.title, TITLE_PREVIEW_MAX_LEN) || '(无标题)';
             return (
               <h3
                 className="text-sm font-medium tracking-tight truncate flex-1"
@@ -127,7 +142,9 @@ export function SessionItem({
             title={session.cwd}
           >
             <FolderGit2 className="size-3 text-muted-foreground shrink-0" />
-            <span className="truncate">{session.cwd?.replace(/^\/Users\/[^\/]+/, "~") || session.cwd}</span>
+            <span className="truncate">
+              {session.cwd?.replace(/^\/Users\/[^\/]+/, '~') || session.cwd}
+            </span>
             {session.gitBranch && (
               <span className="text-muted-foreground truncate">@ {session.gitBranch}</span>
             )}
@@ -141,21 +158,25 @@ export function SessionItem({
           </div>
         )}
 
-        {session.firstUserMessage && (() => {
-          const cleaned = cleanupPromptPreview(session.firstUserMessage, FIRST_MSG_PREVIEW_MAX_LEN);
-          if (!cleaned) return null;
-          return (
-            <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
-              {highlight ? highlightJsx(cleaned, highlight) : cleaned}
-            </p>
-          );
-        })()}
+        {session.firstUserMessage &&
+          (() => {
+            const cleaned = cleanupPromptPreview(
+              session.firstUserMessage,
+              FIRST_MSG_PREVIEW_MAX_LEN,
+            );
+            if (!cleaned) return null;
+            return (
+              <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                {highlight ? highlightJsx(cleaned, highlight) : cleaned}
+              </p>
+            );
+          })()}
 
         <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Hash className="size-3" /> {session.messageCount}
           </span>
-          {typeof session.tokensTotal === "number" && (
+          {typeof session.tokensTotal === 'number' && (
             <span
               className="inline-flex items-center gap-1"
               title={`${session.tokensTotal.toLocaleString()} tokens (input + output + cache)`}
@@ -194,18 +215,18 @@ export function SessionItem({
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
-                      onAction(false ? "show" : "hide");
+                      onAction(false ? 'show' : 'hide');
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-secondary"
                   >
                     {false ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-                    {false ? "取消隐藏" : "隐藏"}
+                    {false ? '取消隐藏' : '隐藏'}
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
-                      onAction("trash");
+                      onAction('trash');
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-red-300 hover:bg-secondary"
                   >
@@ -219,7 +240,7 @@ export function SessionItem({
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
-                      onAction("restore");
+                      onAction('restore');
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-secondary"
                   >
@@ -230,7 +251,7 @@ export function SessionItem({
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
-                      onAction("permanent");
+                      onAction('permanent');
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-red-300 hover:bg-secondary"
                   >

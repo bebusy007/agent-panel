@@ -9,11 +9,11 @@
  * Producers call `emit(event)`; consumers call `useAppEvent(event, fn)`.
  */
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 export type AppEventName =
-  | "sessions:changed" // a session was trashed / restored / hidden / unhidden
-  | "favorites:changed";
+  | 'sessions:changed' // a session was trashed / restored / hidden / unhidden
+  | 'favorites:changed';
 
 export function emitAppEvent(name: AppEventName): void {
   try {

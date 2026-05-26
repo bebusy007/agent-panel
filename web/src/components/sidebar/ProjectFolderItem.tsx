@@ -1,11 +1,11 @@
-import { useLocation } from "react-router-dom";
-import { useOverlayNavigate } from "@/lib/use-detail-nav";
+import { useLocation } from 'react-router-dom';
+import { useOverlayNavigate } from '@/lib/use-detail-nav';
 // useLocation is used inside ConversationRow below.
-import type { SessionSource } from "@/lib/api";
-import { ChevronRight, Folder, FolderOpen, X, Pin, PinOff } from "lucide-react";
-import { cn, describeSessionSource, formatSmartTime } from "@/lib/utils";
-import { FALLBACK_SOURCE_RANK } from "@/lib/constants";
-import type { ConversationGroup, ProjectFolder } from "@/lib/sidebar-groups";
+import type { SessionSource } from '@/lib/api';
+import { ChevronRight, Folder, FolderOpen, X, Pin, PinOff } from 'lucide-react';
+import { cn, describeSessionSource, formatSmartTime } from '@/lib/utils';
+import { FALLBACK_SOURCE_RANK } from '@/lib/constants';
+import type { ConversationGroup, ProjectFolder } from '@/lib/sidebar-groups';
 
 interface Props {
   folder: ProjectFolder;
@@ -38,12 +38,12 @@ export function ProjectFolderItem({
         <button
           onClick={onToggle}
           className="flex w-full items-center gap-1 truncate rounded px-1.5 py-1 pr-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-fg"
-          title={folder.cwd || "未分类"}
+          title={folder.cwd || '未分类'}
         >
           <ChevronRight
             className={cn(
-              "size-3 shrink-0 text-muted-foreground transition-transform duration-150",
-              expanded && "rotate-90",
+              'size-3 shrink-0 text-muted-foreground transition-transform duration-150',
+              expanded && 'rotate-90',
             )}
           />
           {expanded ? (
@@ -135,10 +135,8 @@ function ConversationRow({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-1.5 truncate rounded-r px-2 py-1 text-left text-xs transition-colors",
-        active
-          ? "bg-accent/15 text-fg"
-          : "text-muted-foreground hover:bg-secondary hover:text-fg",
+        'flex w-full items-center gap-1.5 truncate rounded-r px-2 py-1 text-left text-xs transition-colors',
+        active ? 'bg-accent/15 text-fg' : 'text-muted-foreground hover:bg-secondary hover:text-fg',
       )}
       title={`${conv.title} · ${describeSessionSource(conv.latestSession.source)}`}
     >
@@ -181,14 +179,14 @@ function ConversationRow({
 // info on a 12px square without crowding the conversation title. Color
 // matches the source badge palette used elsewhere on the cards.
 const SOURCE_MONOGRAM: Record<SessionSource, { letters: string; cls: string }> = {
-  "claude-code": { letters: "CC", cls: "bg-orange-500/20 text-orange-300" },
-  "claude-history": { letters: "CH", cls: "bg-amber-500/20 text-amber-300" },
-  "cursor-agent": { letters: "CA", cls: "bg-sky-500/20 text-sky-300" },
-  "cursor-composer": { letters: "Co", cls: "bg-sky-500/20 text-sky-200" },
-  codex: { letters: "Cx", cls: "bg-emerald-500/20 text-emerald-300" },
+  'claude-code': { letters: 'CC', cls: 'bg-orange-500/20 text-orange-300' },
+  'claude-history': { letters: 'CH', cls: 'bg-amber-500/20 text-amber-300' },
+  'cursor-agent': { letters: 'CA', cls: 'bg-sky-500/20 text-sky-300' },
+  'cursor-composer': { letters: 'Co', cls: 'bg-sky-500/20 text-sky-200' },
+  codex: { letters: 'Cx', cls: 'bg-emerald-500/20 text-emerald-300' },
 };
 
-function conversationSources(sessions: ConversationGroup["sessions"]): SessionSource[] {
+function conversationSources(sessions: ConversationGroup['sessions']): SessionSource[] {
   // Same conversation often spans claude-code + claude-history (the same
   // sessionId showing up in both projects/.jsonl and history.jsonl). We
   // surface every source that appears so the chip honestly reflects the
@@ -208,9 +206,7 @@ function SourceMonogram({ sources }: { sources: SessionSource[] }) {
   // Show the most distinctive source first when there's a mix; CC wins
   // over CH because the user typically cares about the rich transcript
   // not the prompt-only shadow.
-  const ordered = [...sources].sort((a, b) =>
-    rank(a) - rank(b),
-  );
+  const ordered = [...sources].sort((a, b) => rank(a) - rank(b));
   return (
     <span className="flex shrink-0 items-center gap-px">
       {ordered.slice(0, 2).map((s) => {
@@ -220,7 +216,7 @@ function SourceMonogram({ sources }: { sources: SessionSource[] }) {
             key={s}
             title={describeSessionSource(s)}
             className={cn(
-              "inline-flex h-3.5 min-w-[16px] items-center justify-center rounded px-0.5 text-[9px] font-semibold leading-none",
+              'inline-flex h-3.5 min-w-[16px] items-center justify-center rounded px-0.5 text-[9px] font-semibold leading-none',
               m.cls,
             )}
           >
@@ -235,11 +231,16 @@ function SourceMonogram({ sources }: { sources: SessionSource[] }) {
 function rank(s: SessionSource): number {
   // Lower = shows first.
   switch (s) {
-    case "claude-code": return 0;
-    case "cursor-agent": return 1;
-    case "codex": return 2;
-    case "cursor-composer": return 3;
-    case "claude-history": return 4;
+    case 'claude-code':
+      return 0;
+    case 'cursor-agent':
+      return 1;
+    case 'codex':
+      return 2;
+    case 'cursor-composer':
+      return 3;
+    case 'claude-history':
+      return 4;
   }
   return FALLBACK_SOURCE_RANK;
 }
@@ -253,9 +254,10 @@ function Highlighted({ text, term }: { text: string; term: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded bg-amber-400/40 px-0.5 text-fg">{text.slice(idx, idx + term.length)}</mark>
+      <mark className="rounded bg-amber-400/40 px-0.5 text-fg">
+        {text.slice(idx, idx + term.length)}
+      </mark>
       {text.slice(idx + term.length)}
     </>
   );
 }
-

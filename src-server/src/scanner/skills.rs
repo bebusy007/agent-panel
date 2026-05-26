@@ -8,8 +8,9 @@
 use crate::models::skill::SkillSummary;
 use std::collections::HashSet;
 use std::fs;
-use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+use std::path::Path;
+#[cfg(test)]
+use std::path::PathBuf;
 
 /// Scan all skill sources and return deduplicated results.
 pub fn scan_skills() -> Vec<SkillSummary> {
@@ -32,35 +33,48 @@ pub fn scan_skills() -> Vec<SkillSummary> {
 
     // 2. Plugin cache: ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/
     let cache_root = claude_dir.join("plugins").join("cache");
-    if cache_root.is_dir() {
-        if let Ok(marketplaces) = fs::read_dir(&cache_root) {
-            for mp_entry in marketplaces.flatten() {
-                let mp_name = mp_entry.file_name().to_string_lossy().to_string();
-                if mp_name.starts_with('.') { continue; }
-                let mp_dir = mp_entry.path();
-                if !mp_dir.is_dir() { continue; }
+    if cache_root.is_dir()
+        && let Ok(marketplaces) = fs::read_dir(&cache_root)
+    {
+        for mp_entry in marketplaces.flatten() {
+            let mp_name = mp_entry.file_name().to_string_lossy().to_string();
+            if mp_name.starts_with('.') {
+                continue;
+            }
+            let mp_dir = mp_entry.path();
+            if !mp_dir.is_dir() {
+                continue;
+            }
 
-                if let Ok(plugins) = fs::read_dir(&mp_dir) {
-                    for plugin_entry in plugins.flatten() {
-                        let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
-                        if plugin_name.starts_with('.') { continue; }
-                        let plugin_dir = plugin_entry.path();
-                        if !plugin_dir.is_dir() { continue; }
+            if let Ok(plugins) = fs::read_dir(&mp_dir) {
+                for plugin_entry in plugins.flatten() {
+                    let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
+                    if plugin_name.starts_with('.') {
+                        continue;
+                    }
+                    let plugin_dir = plugin_entry.path();
+                    if !plugin_dir.is_dir() {
+                        continue;
+                    }
 
-                        // Find latest version dir
-                        if let Ok(versions) = fs::read_dir(&plugin_dir) {
-                            for ver_entry in versions.flatten() {
-                                let ver_name = ver_entry.file_name().to_string_lossy().to_string();
-                                if ver_name.starts_with('.') { continue; }
-                                let skills_dir = ver_entry.path().join("skills");
-                                if !skills_dir.is_dir() { continue; }
+                    // Find latest version dir
+                    if let Ok(versions) = fs::read_dir(&plugin_dir) {
+                        for ver_entry in versions.flatten() {
+                            let ver_name = ver_entry.file_name().to_string_lossy().to_string();
+                            if ver_name.starts_with('.') {
+                                continue;
+                            }
+                            let skills_dir = ver_entry.path().join("skills");
+                            if !skills_dir.is_dir() {
+                                continue;
+                            }
 
-                                let source_label = format!("plugin:{mp_name}/{plugin_name}");
-                                for skill in scan_skills_dir(&skills_dir, &source_label, Some(&mp_name)) {
-                                    let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
-                                    installed_keys.insert(key);
-                                    skills.push(skill);
-                                }
+                            let source_label = format!("plugin:{mp_name}/{plugin_name}");
+                            for skill in scan_skills_dir(&skills_dir, &source_label, Some(&mp_name))
+                            {
+                                let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
+                                installed_keys.insert(key);
+                                skills.push(skill);
                             }
                         }
                     }
@@ -71,32 +85,44 @@ pub fn scan_skills() -> Vec<SkillSummary> {
 
     // 3. Marketplace: ~/.claude/plugins/marketplaces/<mp>/(plugins|external_plugins)/<plugin>/skills/
     let market_root = claude_dir.join("plugins").join("marketplaces");
-    if market_root.is_dir() {
-        if let Ok(marketplaces) = fs::read_dir(&market_root) {
-            for mp_entry in marketplaces.flatten() {
-                let mp_name = mp_entry.file_name().to_string_lossy().to_string();
-                if mp_name.starts_with('.') { continue; }
-                let mp_dir = mp_entry.path();
-                if !mp_dir.is_dir() { continue; }
+    if market_root.is_dir()
+        && let Ok(marketplaces) = fs::read_dir(&market_root)
+    {
+        for mp_entry in marketplaces.flatten() {
+            let mp_name = mp_entry.file_name().to_string_lossy().to_string();
+            if mp_name.starts_with('.') {
+                continue;
+            }
+            let mp_dir = mp_entry.path();
+            if !mp_dir.is_dir() {
+                continue;
+            }
 
-                for bucket in &["plugins", "external_plugins"] {
-                    let bucket_dir = mp_dir.join(bucket);
-                    if !bucket_dir.is_dir() { continue; }
+            for bucket in &["plugins", "external_plugins"] {
+                let bucket_dir = mp_dir.join(bucket);
+                if !bucket_dir.is_dir() {
+                    continue;
+                }
 
-                    if let Ok(plugins) = fs::read_dir(&bucket_dir) {
-                        for plugin_entry in plugins.flatten() {
-                            let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
-                            if plugin_name.starts_with('.') { continue; }
-                            let skills_dir = plugin_entry.path().join("skills");
-                            if !skills_dir.is_dir() { continue; }
+                if let Ok(plugins) = fs::read_dir(&bucket_dir) {
+                    for plugin_entry in plugins.flatten() {
+                        let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
+                        if plugin_name.starts_with('.') {
+                            continue;
+                        }
+                        let skills_dir = plugin_entry.path().join("skills");
+                        if !skills_dir.is_dir() {
+                            continue;
+                        }
 
-                            let source_label = format!("marketplace:{mp_name}/{plugin_name}");
-                            for skill in scan_skills_dir(&skills_dir, &source_label, Some(&mp_name)) {
-                                let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
-                                // Deduplicate: skip marketplace copy if already installed
-                                if installed_keys.contains(&key) { continue; }
-                                skills.push(skill);
+                        let source_label = format!("marketplace:{mp_name}/{plugin_name}");
+                        for skill in scan_skills_dir(&skills_dir, &source_label, Some(&mp_name)) {
+                            let key = format!("{mp_name}/{plugin_name}/{}", skill.name);
+                            // Deduplicate: skip marketplace copy if already installed
+                            if installed_keys.contains(&key) {
+                                continue;
                             }
+                            skills.push(skill);
                         }
                     }
                 }
@@ -122,20 +148,20 @@ fn scan_skills_dir(dir: &Path, source: &str, marketplace: Option<&str>) -> Vec<S
         let path = entry.path();
         if !path.is_dir() {
             // Also handle flat .md files directly in the skills dir
-            if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                if let Some(skill) = parse_skill_file(&path, source, marketplace) {
-                    results.push(skill);
-                }
+            if path.extension().and_then(|s| s.to_str()) == Some("md")
+                && let Some(skill) = parse_skill_file(&path, source, marketplace)
+            {
+                results.push(skill);
             }
             continue;
         }
 
         // Look for SKILL.md inside the directory
         let skill_file = path.join("SKILL.md");
-        if skill_file.is_file() {
-            if let Some(skill) = parse_skill_file(&skill_file, source, marketplace) {
-                results.push(skill);
-            }
+        if skill_file.is_file()
+            && let Some(skill) = parse_skill_file(&skill_file, source, marketplace)
+        {
+            results.push(skill);
         }
     }
 
@@ -143,7 +169,11 @@ fn scan_skills_dir(dir: &Path, source: &str, marketplace: Option<&str>) -> Vec<S
 }
 
 /// Parse a single SKILL.md file, extracting frontmatter metadata.
-fn parse_skill_file(file_path: &Path, source: &str, marketplace: Option<&str>) -> Option<SkillSummary> {
+fn parse_skill_file(
+    file_path: &Path,
+    source: &str,
+    marketplace: Option<&str>,
+) -> Option<SkillSummary> {
     let content = fs::read_to_string(file_path).ok()?;
     let file_size = fs::metadata(file_path).map(|m| m.len()).unwrap_or(0);
     let symlink_to = fs::read_link(file_path)
@@ -183,13 +213,17 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Vec<String>, Vec<String>
     // Check for frontmatter delimiters
     if !content.starts_with("---") {
         // No frontmatter — try to extract description from first paragraph
-        let first_para = content.lines()
+        let first_para = content
+            .lines()
             .skip_while(|l| l.trim().is_empty() || l.starts_with('#'))
             .take_while(|l| !l.trim().is_empty())
             .collect::<Vec<_>>()
             .join(" ");
         if !first_para.is_empty() {
-            description = Some(truncate_str(&first_para, crate::constants::SKILL_DESC_MAX_LEN));
+            description = Some(truncate_str(
+                &first_para,
+                crate::constants::SKILL_DESC_MAX_LEN,
+            ));
         }
         return (description, triggers, cli_commands);
     }
@@ -220,7 +254,7 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Vec<String>, Vec<String>
             let mut current = String::new();
             for ch in line.chars() {
                 match ch {
-                    '"' | '\'' | '"' | '"' | '「' | '」' => {
+                    '"' | '\'' | '「' | '」' => {
                         if in_quote {
                             if !current.is_empty() {
                                 triggers.push(current.clone());
@@ -253,12 +287,12 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Vec<String>, Vec<String>
             }
             if let Some(start) = trimmed.find('`') {
                 let rest = &trimmed[start + 1..];
-                if rest.starts_with('/') {
-                    if let Some(end) = rest.find('`') {
-                        let cmd = &rest[..end];
-                        if cmd.len() > 1 && cmd.len() < 40 {
-                            cli_commands.push(cmd.to_string());
-                        }
+                if rest.starts_with('/')
+                    && let Some(end) = rest.find('`')
+                {
+                    let cmd = &rest[..end];
+                    if cmd.len() > 1 && cmd.len() < 40 {
+                        cli_commands.push(cmd.to_string());
                     }
                 }
             }
@@ -272,7 +306,8 @@ fn truncate_str(s: &str, max: usize) -> String {
     if s.len() <= max {
         s.to_string()
     } else {
-        let boundary = s.char_indices()
+        let boundary = s
+            .char_indices()
             .take_while(|(i, _)| *i < max)
             .last()
             .map(|(i, c)| i + c.len_utf8())
@@ -312,7 +347,10 @@ This skill does `/test-command` things.
         let skill = parse_skill_file(&file, "user", None).unwrap();
 
         assert_eq!(skill.name, "test-skill");
-        assert_eq!(skill.description, Some("A test skill for unit testing".to_string()));
+        assert_eq!(
+            skill.description,
+            Some("A test skill for unit testing".to_string())
+        );
         assert_eq!(skill.source, "user");
         assert!(skill.cli_commands.contains(&"/test-command".to_string()));
     }
@@ -325,7 +363,10 @@ This skill does `/test-command` things.
         let skill = parse_skill_file(&file, "user", None).unwrap();
 
         assert_eq!(skill.name, "my-skill");
-        assert_eq!(skill.description, Some("This is a description of the skill.".to_string()));
+        assert_eq!(
+            skill.description,
+            Some("This is a description of the skill.".to_string())
+        );
     }
 
     #[test]
@@ -384,7 +425,11 @@ description: 火车票查询。当用户提到"火车票"、"高铁"、"动车"�
     fn test_flat_md_files() {
         let dir = TempDir::new().unwrap();
         // Write a .md file directly (not in a subdirectory)
-        fs::write(dir.path().join("simple.md"), "---\ndescription: Simple skill\n---\n").unwrap();
+        fs::write(
+            dir.path().join("simple.md"),
+            "---\ndescription: Simple skill\n---\n",
+        )
+        .unwrap();
 
         let results = scan_skills_dir(dir.path(), "user", None);
         assert_eq!(results.len(), 1);

@@ -8,10 +8,10 @@
 //! - ~/.claude/agents/ (agent changes)
 
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::PathBuf;
-use std::sync::Arc;
 use tokio::sync::broadcast;
-use tracing;
+
+#[cfg(test)]
+use std::path::PathBuf;
 
 /// Event types broadcast to WebSocket clients.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -53,10 +53,15 @@ pub fn start_watching() -> EventSender {
                         if kind == "session_changed" {
                             crate::scanner::sessions::invalidate_scan_cache();
                         }
-                        let paths: Vec<String> = event.paths.iter()
+                        let paths: Vec<String> = event
+                            .paths
+                            .iter()
                             .map(|p| p.to_string_lossy().to_string())
                             .collect();
-                        let _ = tx_inner.send(WatchEvent { kind: kind.to_string(), paths });
+                        let _ = tx_inner.send(WatchEvent {
+                            kind: kind.to_string(),
+                            paths,
+                        });
                     }
                 }
             },
@@ -89,13 +94,21 @@ pub fn start_watching() -> EventSender {
                 RecursiveMode::NonRecursive
             };
             match watcher.watch(path, mode) {
-                Ok(()) => { watched += 1; }
+                Ok(()) => {
+                    watched += 1;
+                }
                 Err(e) if path.is_dir() => {
                     // Recursive watch can fail when the directory contains
                     // broken symlinks. Fall back to non-recursive.
-                    tracing::debug!("recursive watch failed for {}, trying non-recursive: {}", path.display(), e);
+                    tracing::debug!(
+                        "recursive watch failed for {}, trying non-recursive: {}",
+                        path.display(),
+                        e
+                    );
                     match watcher.watch(path, RecursiveMode::NonRecursive) {
-                        Ok(()) => { watched += 1; }
+                        Ok(()) => {
+                            watched += 1;
+                        }
                         Err(e2) => {
                             tracing::warn!("failed to watch {}: {}", path.display(), e2);
                         }
@@ -111,7 +124,9 @@ pub fn start_watching() -> EventSender {
 
         // Keep thread alive
         loop {
-            std::thread::sleep(std::time::Duration::from_secs(crate::constants::WATCHER_KEEPALIVE_SECS));
+            std::thread::sleep(std::time::Duration::from_secs(
+                crate::constants::WATCHER_KEEPALIVE_SECS,
+            ));
         }
     });
 
@@ -196,10 +211,7 @@ mod tests {
 
     #[test]
     fn test_classify_empty_paths() {
-        let event = make_event(
-            vec![],
-            notify::EventKind::Create(CreateKind::File),
-        );
+        let event = make_event(vec![], notify::EventKind::Create(CreateKind::File));
         assert_eq!(classify_event(&event), "");
     }
 
@@ -238,7 +250,10 @@ mod tests {
         };
         let json = serde_json::to_value(&event).unwrap();
         assert_eq!(json["kind"], "session_changed");
-        assert_eq!(json["paths"][0], "/Users/test/.claude/projects/proj/session.jsonl");
+        assert_eq!(
+            json["paths"][0],
+            "/Users/test/.claude/projects/proj/session.jsonl"
+        );
     }
 
     #[test]

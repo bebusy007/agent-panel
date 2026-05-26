@@ -1,8 +1,8 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Bot, ChevronRight } from "lucide-react";
-import { api } from "@/lib/api";
-import { useCachedAsync } from "@/lib/hooks";
-import { useDetailNav } from "@/lib/use-detail-nav";
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Bot, ChevronRight } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useCachedAsync } from '@/lib/hooks';
+import { useDetailNav } from '@/lib/use-detail-nav';
 
 /**
  * Standalone Agent detail page. Replaces the in-place AgentDrawer
@@ -18,12 +18,8 @@ import { useDetailNav } from "@/lib/use-detail-nav";
 export default function AgentDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { goBack } = useDetailNav("/extensions?section=agents");
-  const { data, loading, error } = useCachedAsync(
-    "agents:list",
-    () => api.agents(),
-    [],
-  );
+  const { goBack } = useDetailNav('/extensions?section=agents');
+  const { data, loading, error } = useCachedAsync('agents:list', () => api.agents(), []);
   const agent = data?.agents.find((a) => a.name === id);
 
   return (
@@ -39,15 +35,13 @@ export default function AgentDetailView() {
         </button>
         <ChevronRight className="size-3 text-muted-foreground" />
         <button
-          onClick={() => navigate("/extensions?section=agents")}
+          onClick={() => navigate('/extensions?section=agents')}
           className="text-xs text-muted-foreground hover:text-fg transition-colors"
         >
           扩展 / Agents
         </button>
         <ChevronRight className="size-3 text-muted-foreground" />
-        <span className="truncate text-xs font-medium text-fg">
-          {agent?.name ?? id}
-        </span>
+        <span className="truncate text-xs font-medium text-fg">{agent?.name ?? id}</span>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -68,29 +62,22 @@ export default function AgentDetailView() {
               <header className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Bot className="size-5 text-purple-400" />
-                  <h1 className="typo-h1 text-fg">
-                    {agent.name}
-                  </h1>
+                  <h1 className="typo-h1 text-fg">{agent.name}</h1>
                 </div>
                 {agent.description && (
                   <p className="text-sm text-muted-foreground">{agent.description}</p>
                 )}
-                <div className="font-mono text-[11px] text-muted-foreground">
-                  {agent.filePath}
-                </div>
+                <div className="font-mono text-[11px] text-muted-foreground">{agent.filePath}</div>
               </header>
 
               {/* Meta chips */}
-              <div className="flex flex-wrap gap-1.5 text-[11px]">
-              </div>
+              <div className="flex flex-wrap gap-1.5 text-[11px]"></div>
 
               {/* Body */}
               <section className="rounded-lg border border-border bg-card p-4">
-                <div className="mb-2 typo-label">
-                  正文
-                </div>
+                <div className="mb-2 typo-label">正文</div>
                 <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-relaxed text-fg">
-                  {agent.description || "(空)"}
+                  {agent.description || '(空)'}
                 </pre>
               </section>
             </article>

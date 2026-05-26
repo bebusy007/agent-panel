@@ -1,10 +1,15 @@
-import { CheckCircle2, HelpCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Message } from "@/lib/api";
+import { CheckCircle2, HelpCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { Message } from '@/lib/api';
 
 interface QuestionInput {
   question?: string;
-  questions?: Array<{ id?: string; question?: string; options?: Array<{ id?: string; label?: string }>; allow_multiple?: boolean }>;
+  questions?: Array<{
+    id?: string;
+    question?: string;
+    options?: Array<{ id?: string; label?: string }>;
+    allow_multiple?: boolean;
+  }>;
   options?: Array<{ id?: string; label?: string } | string>;
 }
 
@@ -16,12 +21,17 @@ interface QuestionInput {
  *  live agent process, not us. */
 export function AskUserQuestionCard({ tool, result }: { tool: Message; result?: Message }) {
   const input = (tool.toolInput as QuestionInput | undefined) ?? {};
-  const questions = input.questions ?? (
-    input.question
-      ? [{ question: input.question, options: (input.options ?? []).map((o) => (typeof o === "string" ? { label: o } : o)) }]
-      : []
-  );
-  const answer = result?.toolOutput ?? "";
+  const questions =
+    input.questions ??
+    (input.question
+      ? [
+          {
+            question: input.question,
+            options: (input.options ?? []).map((o) => (typeof o === 'string' ? { label: o } : o)),
+          },
+        ]
+      : []);
+  const answer = result?.toolOutput ?? '';
 
   return (
     <div className="space-y-2 px-3 pb-3">
@@ -32,12 +42,12 @@ export function AskUserQuestionCard({ tool, result }: { tool: Message; result?: 
           <div key={i} className="rounded-md border border-yellow-500/30 bg-yellow-500/5">
             <div className="border-b border-yellow-500/20 px-2.5 py-1.5 text-xs font-medium text-yellow-100">
               <HelpCircle className="mr-1.5 inline size-3.5 text-yellow-400" />
-              {q.question || "(无问题文本)"}
+              {q.question || '(无问题文本)'}
             </div>
             {q.options && q.options.length > 0 && (
               <ul className="divide-y divide-yellow-500/10">
                 {q.options.map((opt, j) => {
-                  const label = typeof opt === "string" ? opt : opt.label ?? "";
+                  const label = typeof opt === 'string' ? opt : (opt.label ?? '');
                   // Substring match would mis-fire ("是" matches inside
                   // "是否"). Split the answer on commas / newlines and
                   // compare trimmed tokens instead so "a" doesn't match
@@ -52,8 +62,8 @@ export function AskUserQuestionCard({ tool, result }: { tool: Message; result?: 
                     <li
                       key={j}
                       className={cn(
-                        "flex items-center gap-2 px-2.5 py-1.5 text-xs",
-                        chosen ? "bg-emerald-500/10" : "",
+                        'flex items-center gap-2 px-2.5 py-1.5 text-xs',
+                        chosen ? 'bg-emerald-500/10' : '',
                       )}
                     >
                       {chosen ? (
@@ -61,7 +71,12 @@ export function AskUserQuestionCard({ tool, result }: { tool: Message; result?: 
                       ) : (
                         <span className="size-3.5 shrink-0 rounded-full border border-fg-subtle/40" />
                       )}
-                      <span className={cn("flex-1", chosen ? "text-emerald-200 font-medium" : "text-muted-foreground")}>
+                      <span
+                        className={cn(
+                          'flex-1',
+                          chosen ? 'text-emerald-200 font-medium' : 'text-muted-foreground',
+                        )}
+                      >
                         {label}
                       </span>
                     </li>

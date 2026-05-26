@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface DragResizeBounds {
   min: number;
@@ -42,8 +42,8 @@ export function useDragResize(
     (e: React.MouseEvent) => {
       e.preventDefault();
       dragRef.current = { startX: e.clientX, startWidth: width };
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
       const onMove = (ev: MouseEvent) => {
         const drag = dragRef.current;
         if (!drag) return;
@@ -53,13 +53,13 @@ export function useDragResize(
       };
       const onUp = () => {
         dragRef.current = null;
-        document.body.style.userSelect = "";
-        document.body.style.cursor = "";
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
       };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
     },
     [width, setWidth],
   );

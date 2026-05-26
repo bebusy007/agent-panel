@@ -1,11 +1,5 @@
-type LogLevel = "debug" | "info" | "warn" | "error";
-type LogCategory =
-  | "ui"
-  | "navigation"
-  | "http"
-  | "render"
-  | "error"
-  | "lifecycle";
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogCategory = 'ui' | 'navigation' | 'http' | 'render' | 'error' | 'lifecycle';
 
 interface LogEntry {
   ts: string;
@@ -32,7 +26,7 @@ const MAX_BUFFER_SIZE = 50;
 class Logger {
   private buffer: LogEntry[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
-  private minLevel: LogLevel = import.meta.env.DEV ? "debug" : "info";
+  private minLevel: LogLevel = import.meta.env.DEV ? 'debug' : 'info';
 
   constructor() {
     this.startAutoFlush();
@@ -44,27 +38,27 @@ class Logger {
   }
 
   debug(category: LogCategory, message: string, meta?: Record<string, unknown>) {
-    this.log("debug", category, message, meta);
+    this.log('debug', category, message, meta);
   }
 
   info(category: LogCategory, message: string, meta?: Record<string, unknown>) {
-    this.log("info", category, message, meta);
+    this.log('info', category, message, meta);
   }
 
   warn(category: LogCategory, message: string, meta?: Record<string, unknown>) {
-    this.log("warn", category, message, meta);
+    this.log('warn', category, message, meta);
   }
 
   error(category: LogCategory, message: string, meta?: Record<string, unknown>) {
-    this.log("error", category, message, meta);
+    this.log('error', category, message, meta);
   }
 
   flush() {
     if (this.buffer.length === 0) return;
     const batch = this.buffer.splice(0);
-    fetch("/api/logs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(batch),
     }).catch(() => {
       // Re-queue failed batch (truncate to prevent unbounded growth)
@@ -104,14 +98,14 @@ class Logger {
 
     if (import.meta.env.DEV) {
       const consoleFn =
-        level === "error"
+        level === 'error'
           ? console.error
-          : level === "warn"
+          : level === 'warn'
             ? console.warn
-            : level === "debug"
+            : level === 'debug'
               ? console.debug
               : console.log;
-      consoleFn(`[${category}] ${message}`, meta ?? "");
+      consoleFn(`[${category}] ${message}`, meta ?? '');
     }
 
     if (this.buffer.length >= MAX_BUFFER_SIZE) {
@@ -124,27 +118,27 @@ class Logger {
   }
 
   private installGlobalHandlers() {
-    window.addEventListener("error", (e) => {
-      this.error("error", e.message || "Unknown error", {
+    window.addEventListener('error', (e) => {
+      this.error('error', e.message || 'Unknown error', {
         filename: e.filename,
         lineno: e.lineno,
         colno: e.colno,
       });
     });
 
-    window.addEventListener("unhandledrejection", (e) => {
-      this.error("error", `Unhandled rejection: ${e.reason}`, {
+    window.addEventListener('unhandledrejection', (e) => {
+      this.error('error', `Unhandled rejection: ${e.reason}`, {
         reason: String(e.reason),
       });
     });
 
     // Flush remaining logs when page is being hidden
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden" && this.buffer.length > 0) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && this.buffer.length > 0) {
         const batch = this.buffer.splice(0);
         navigator.sendBeacon(
-          "/api/logs",
-          new Blob([JSON.stringify(batch)], { type: "application/json" }),
+          '/api/logs',
+          new Blob([JSON.stringify(batch)], { type: 'application/json' }),
         );
       }
     });

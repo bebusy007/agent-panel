@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { ImageOff } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { ImageOff } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Props {
   src: string;
@@ -10,13 +10,13 @@ interface Props {
 }
 
 export function ImageThumbnail({ src, alt, onClick, className }: Props) {
-  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
 
-  if (status === "error") {
+  if (status === 'error') {
     return (
       <div
         className={cn(
-          "flex h-[80px] w-[120px] flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted/30",
+          'flex h-[80px] w-[120px] flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted/30',
           className,
         )}
         title={alt}
@@ -33,11 +33,11 @@ export function ImageThumbnail({ src, alt, onClick, className }: Props) {
       alt={alt}
       loading="lazy"
       onClick={onClick}
-      onLoad={() => setStatus("loaded")}
-      onError={() => setStatus("error")}
+      onLoad={() => setStatus('loaded')}
+      onError={() => setStatus('error')}
       className={cn(
-        "max-h-[160px] max-w-[240px] cursor-pointer rounded-md border border-border object-contain transition-opacity hover:opacity-90",
-        status === "loading" && "animate-pulse bg-muted/30",
+        'max-h-[160px] max-w-[240px] cursor-pointer rounded-md border border-border object-contain transition-opacity hover:opacity-90',
+        status === 'loading' && 'animate-pulse bg-muted/30',
         className,
       )}
     />

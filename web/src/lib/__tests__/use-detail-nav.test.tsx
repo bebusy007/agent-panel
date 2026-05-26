@@ -1,20 +1,20 @@
-import { renderHook, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import type { ReactNode } from "react";
-import { useDetailNav, useOverlayNavigate } from "../use-detail-nav";
+import { renderHook, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { useDetailNav, useOverlayNavigate } from '../use-detail-nav';
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter initialEntries={["/skills"]}>{children}</MemoryRouter>;
+  return <MemoryRouter initialEntries={['/skills']}>{children}</MemoryRouter>;
 }
 
-describe("useDetailNav", () => {
-  it("returns isOverlay=false when no backgroundLocation in state", () => {
-    const { result } = renderHook(() => useDetailNav("/skills"), { wrapper });
+describe('useDetailNav', () => {
+  it('returns isOverlay=false when no backgroundLocation in state', () => {
+    const { result } = renderHook(() => useDetailNav('/skills'), { wrapper });
     expect(result.current.isOverlay).toBe(false);
   });
 
-  it("goBack navigates to fallback path in standalone mode", () => {
-    const { result } = renderHook(() => useDetailNav("/skills"), { wrapper });
+  it('goBack navigates to fallback path in standalone mode', () => {
+    const { result } = renderHook(() => useDetailNav('/skills'), { wrapper });
     act(() => {
       result.current.goBack();
     });
@@ -25,25 +25,25 @@ describe("useDetailNav", () => {
   });
 });
 
-describe("useOverlayNavigate", () => {
-  it("returns a function", () => {
+describe('useOverlayNavigate', () => {
+  it('returns a function', () => {
     const { result } = renderHook(() => useOverlayNavigate(), { wrapper });
-    expect(typeof result.current).toBe("function");
+    expect(typeof result.current).toBe('function');
   });
 
-  it("can be called without throwing", () => {
+  it('can be called without throwing', () => {
     const { result } = renderHook(() => useOverlayNavigate(), { wrapper });
     act(() => {
-      result.current("/skills/123");
+      result.current('/skills/123');
     });
     // Verify it doesn't throw
     expect(true).toBe(true);
   });
 
-  it("accepts replace option", () => {
+  it('accepts replace option', () => {
     const { result } = renderHook(() => useOverlayNavigate(), { wrapper });
     act(() => {
-      result.current("/skills/456", { replace: true });
+      result.current('/skills/456', { replace: true });
     });
     expect(true).toBe(true);
   });

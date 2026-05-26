@@ -1,21 +1,21 @@
-import { useState } from "react";
-import type { Message, SubagentMeta } from "@/lib/api";
-import { canonicalTool, getToolDetail } from "@/lib/tool-aliases";
-import { ToolCardHeader, type ViewMode } from "./ToolCardHeader";
-import { RawJsonView } from "./RawJsonView";
-import { getToolColor } from "@/lib/tool-colors";
-import { cn } from "@/lib/utils";
-import { ReadCard } from "./cards/ReadCard";
-import { EditCard } from "./cards/EditCard";
-import { WriteCard } from "./cards/WriteCard";
-import { BashCard } from "./cards/BashCard";
-import { GrepCard } from "./cards/GrepCard";
-import { WebFetchCard } from "./cards/WebFetchCard";
-import { TodoWriteCard } from "./cards/TodoWriteCard";
-import { TaskCard } from "./cards/TaskCard";
-import { ExitPlanModeCard } from "./cards/ExitPlanModeCard";
-import { AskUserQuestionCard } from "./cards/AskUserQuestionCard";
-import { DefaultCard } from "./cards/DefaultCard";
+import { useState } from 'react';
+import type { Message, SubagentMeta } from '@/lib/api';
+import { canonicalTool, getToolDetail } from '@/lib/tool-aliases';
+import { ToolCardHeader, type ViewMode } from './ToolCardHeader';
+import { RawJsonView } from './RawJsonView';
+import { getToolColor } from '@/lib/tool-colors';
+import { cn } from '@/lib/utils';
+import { ReadCard } from './cards/ReadCard';
+import { EditCard } from './cards/EditCard';
+import { WriteCard } from './cards/WriteCard';
+import { BashCard } from './cards/BashCard';
+import { GrepCard } from './cards/GrepCard';
+import { WebFetchCard } from './cards/WebFetchCard';
+import { TodoWriteCard } from './cards/TodoWriteCard';
+import { TaskCard } from './cards/TaskCard';
+import { ExitPlanModeCard } from './cards/ExitPlanModeCard';
+import { AskUserQuestionCard } from './cards/AskUserQuestionCard';
+import { DefaultCard } from './cards/DefaultCard';
 
 interface Props {
   /** The tool_use message we're rendering. */
@@ -30,11 +30,19 @@ interface Props {
   sessionId?: string;
 }
 
-export function ToolCard({ tool, result, favorited, onToggleFav, defaultExpanded, subagentMeta, sessionId }: Props) {
+export function ToolCard({
+  tool,
+  result,
+  favorited,
+  onToggleFav,
+  defaultExpanded,
+  subagentMeta,
+  sessionId,
+}: Props) {
   const canon = canonicalTool(tool.toolName);
   const palette = getToolColor(tool.toolName);
   const detail = getToolDetail(tool.toolInput);
-  const [view, setView] = useState<ViewMode>("pretty");
+  const [view, setView] = useState<ViewMode>('pretty');
   // Every tool card starts collapsed. Earlier we kept Edit / Write /
   // MultiEdit / Read open by default ("heavy" tools — file content /
   // diff was deemed worth the vertical space) but on long sessions
@@ -52,7 +60,7 @@ export function ToolCard({ tool, result, favorited, onToggleFav, defaultExpanded
   return (
     <div
       className={cn(
-        "group overflow-hidden rounded-lg border bg-card transition-colors",
+        'group overflow-hidden rounded-lg border bg-card transition-colors',
         palette.border,
       )}
     >
@@ -69,7 +77,7 @@ export function ToolCard({ tool, result, favorited, onToggleFav, defaultExpanded
       />
       {expanded && (
         <div>
-          {view === "raw" ? (
+          {view === 'raw' ? (
             <div className="px-3 pb-3">
               <RawJsonView
                 input={tool.toolInput}
@@ -86,31 +94,39 @@ export function ToolCard({ tool, result, favorited, onToggleFav, defaultExpanded
   );
 }
 
-function renderPretty(canon: string, tool: Message, result?: Message, subagentMeta?: SubagentMeta, sessionId?: string) {
+function renderPretty(
+  canon: string,
+  tool: Message,
+  result?: Message,
+  subagentMeta?: SubagentMeta,
+  sessionId?: string,
+) {
   switch (canon) {
-    case "Read":
+    case 'Read':
       return <ReadCard tool={tool} result={result} />;
-    case "Edit":
-    case "MultiEdit":
+    case 'Edit':
+    case 'MultiEdit':
       return <EditCard tool={tool} result={result} />;
-    case "Write":
+    case 'Write':
       return <WriteCard tool={tool} result={result} />;
-    case "Bash":
+    case 'Bash':
       return <BashCard tool={tool} result={result} />;
-    case "Grep":
-    case "Glob":
-    case "LS":
+    case 'Grep':
+    case 'Glob':
+    case 'LS':
       return <GrepCard tool={tool} result={result} />;
-    case "WebFetch":
-    case "WebSearch":
+    case 'WebFetch':
+    case 'WebSearch':
       return <WebFetchCard tool={tool} result={result} />;
-    case "TodoWrite":
+    case 'TodoWrite':
       return <TodoWriteCard tool={tool} result={result} />;
-    case "Task":
-      return <TaskCard tool={tool} result={result} subagentMeta={subagentMeta} sessionId={sessionId} />;
-    case "ExitPlanMode":
+    case 'Task':
+      return (
+        <TaskCard tool={tool} result={result} subagentMeta={subagentMeta} sessionId={sessionId} />
+      );
+    case 'ExitPlanMode':
       return <ExitPlanModeCard tool={tool} result={result} />;
-    case "AskUserQuestion":
+    case 'AskUserQuestion':
       return <AskUserQuestionCard tool={tool} result={result} />;
     default:
       return <DefaultCard tool={tool} result={result} />;
