@@ -4,13 +4,14 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build-macos:
-    name: macOS (universal)
+    name: macOS (aarch64)
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v6
@@ -32,15 +33,65 @@ jobs:
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Agent Panel ${{ github.ref_name }}"
           releaseBody: "See the assets for download links."
           releaseDraft: true
           prerelease: true
+
+      - name: Build Tauri app (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          cargo build --release -p agent-panel-server
+          mkdir -p src-tauri/binaries
+          cp target/release/agent-panel-server src-tauri/binaries/agent-panel-server-aarch64-apple-darwin
+          cargo tauri build --target aarch64-apple-darwin
+
+      - name: Verify DMG
+        run: |
+          set -e
+          DMG=$(find src-tauri/target -name "*.dmg" 2>/dev/null | head -1)
+          if [ -z "$DMG" ]; then
+            echo "ERROR: No DMG found"
+            find src-tauri/target -name "*.dmg" 2>/dev/null || true
+            exit 1
+          fi
+          echo "DMG: $DMG ($(ls -lh "$DMG" | awk '{print $5}'))"
+
+          echo "--- Mounting DMG ---"
+          MOUNT_POINT="/tmp/agent-panel-verify"
+          hdiutil attach "$DMG" -mountpoint "$MOUNT_POINT" -nobrowse -quiet
+
+          echo "--- Checking .app bundle ---"
+          APP="$MOUNT_POINT/AgentPanel.app"
+          [ -d "$APP" ] || { echo "ERROR: .app not found"; hdiutil detach "$MOUNT_POINT" -quiet; exit 1; }
+          ls "$APP/Contents/MacOS/"
+          ls "$APP/Contents/Resources/" | head -10
+
+          echo "--- Checking sidecar binary ---"
+          SIDECAR=$(find "$APP/Contents/MacOS" -name "agent-panel-server*" -type f | head -1)
+          [ -n "$SIDECAR" ] || { echo "ERROR: sidecar binary not found"; hdiutil detach "$MOUNT_POINT" -quiet; exit 1; }
+          file "$SIDECAR"
+
+          echo "--- Checking web resources ---"
+          WEB_DIST=$(find "$APP/Contents/Resources" -name "index.html" -path "*/web/*" | head -1)
+          [ -n "$WEB_DIST" ] || { echo "ERROR: web/dist/index.html not found"; hdiutil detach "$MOUNT_POINT" -quiet; exit 1; }
+          echo "web resources OK: $WEB_DIST"
+
+          echo "--- Unmounting ---"
+          hdiutil detach "$MOUNT_POINT" -quiet
+
+          echo "✅ DMG verified successfully"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: AgentPanel-macos-aarch64
+          path: src-tauri/target/**/bundle/dmg/*.dmg
 
   build-linux:
     name: Linux (x86_64)
@@ -70,42 +121,9 @@ jobs:
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Agent Panel ${{ github.ref_name }}"
-          releaseBody: "See the assets for download links."
-          releaseDraft: true
-          prerelease: true
-
-  build-windows:
-    name: Windows (x86_64)
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - run: cd web && pnpm install --frozen-lockfile
-      - run: cd web && pnpm build
-
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Agent Panel ${{ github.ref_name }}"
