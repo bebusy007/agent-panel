@@ -31,19 +31,19 @@ jobs:
       - run: cd web && pnpm install --frozen-lockfile
       - run: cd web && pnpm build
 
-      - name: Extract release notes
+      - name: Generate release notes
         id: notes
         if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if grep -q "## \[$VERSION\]" CHANGELOG.md; then
-            body=$(awk "/^## \[$VERSION\]/{flag=1;next} /^## \[/{flag=0} flag" CHANGELOG.md)
-          else
-            body=$(awk '/^## \[Unreleased\]/{flag=1;next} /^## \[/{flag=0} flag' CHANGELOG.md)
-          fi
+          NEW_VERSION="${GITHUB_REF_NAME#v}"
+          body=$(./scripts/release.sh "$NEW_VERSION")
+          echo "Release notes:"
+          echo "$body"
           {
             echo 'RELEASE_BODY<<EOF'
-            echo -n "$body"
+            echo "$body"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 

@@ -70,6 +70,18 @@
 - commit message 格式：`type(scope): description`
 - 类型：feat / fix / refactor / docs / release
 
+## PR 与 Changelog 规范
+
+- PR 描述必须包含 `## Changelog` 段落，格式：
+  ```
+  - Added: 某功能描述
+  - Fixed: 某修复描述
+  - Changed: 某变更描述
+  ```
+- 纯工程基础设施（CI、lint、格式化、依赖升级）可以不写
+- AI 创建 PR 时必须自动根据改动内容填写 Changelog，不允许留空
+- 发布时 `scripts/release.sh` 自动收集所有 PR 的 Changelog 生成 Release notes
+
 ## 其他
 
 - 截图放 `screenshot/`（gitignored）
