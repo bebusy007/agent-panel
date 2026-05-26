@@ -19,7 +19,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_list_returns_array() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.get("/favorites").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -28,7 +28,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_add_returns_favorite() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server
             .post("/favorites")
             .json(&serde_json::json!({
@@ -44,7 +44,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_by_session() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         server
             .post("/favorites")
             .json(&serde_json::json!({
@@ -60,7 +60,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_add_and_list_with_enrichment() {
-        let (server, dir) = create_test_server();
+        let (server, dir, _guard) = create_test_server();
         setup_test_session(&dir);
 
         // 先刷新扫描以发现测试 session
@@ -88,7 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_remove_nonexistent() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server.delete("/favorites/nonexistent-id").await;
         res.assert_status_ok();
         let body: serde_json::Value = res.json();
@@ -97,7 +97,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_favorites_remove_by_message_not_found() {
-        let (server, _dir) = create_test_server();
+        let (server, _dir, _guard) = create_test_server();
         let res = server
             .delete("/favorites/by-message/no-such-session/no-such-message")
             .await;
