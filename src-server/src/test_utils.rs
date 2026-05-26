@@ -26,7 +26,7 @@ use crate::router;
 pub fn create_test_server() -> (TestServer, TempDir) {
     let dir = TempDir::new().expect("failed to create temp dir");
     let (tx, _) = broadcast::channel(256);
-    let api = router::build_api_router(tx, dir.path().to_str().unwrap().to_string(), None);
+    let api = router::build_api_router(tx, dir.path().to_string_lossy().to_string(), None);
     let server = TestServer::new(api.into_make_service());
     (server, dir)
 }

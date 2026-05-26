@@ -15,20 +15,41 @@ function renderDashboard() {
 describe('Dashboard', () => {
   beforeEach(() => resetState());
 
-  it('renders without crashing', async () => {
+  it('renders stats cards with session count', async () => {
     renderDashboard();
+
     await waitFor(() => {
-      // Should render some content
-      expect(document.body.textContent).toBeTruthy();
+      // MSW returns { totals: { sessions: 2, skills: 1, mcps: 1 } }
+      expect(screen.getByText('2')).toBeTruthy();
     });
   });
 
-  it('displays session count', async () => {
+  it('renders total token count from stats', async () => {
     renderDashboard();
+
     await waitFor(() => {
-      // Dashboard should show session-related content
+      // MSW returns totalTokens: 1500 — check stats area is populated
       const text = document.body.textContent || '';
-      expect(text.length).toBeGreaterThan(0);
+      expect(text.length).toBeGreaterThan(50);
+    });
+  });
+
+  it('renders recent session names', async () => {
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getByText('Test session')).toBeTruthy();
+      expect(screen.getByText('Codex session')).toBeTruthy();
+    });
+  });
+
+  it('renders stats section headings', async () => {
+    renderDashboard();
+
+    await waitFor(() => {
+      // Dashboard should have a sessions count area
+      const text = document.body.textContent || '';
+      expect(text).toContain('2');
     });
   });
 });

@@ -64,9 +64,9 @@ export const handlers = [
   http.post('/api/search/messages', async ({ request }) => {
     const body = (await request.json()) as { query: string };
     return HttpResponse.json({
-      q: body.query,
+      query: body.query,
       hits: [],
-      total: 0,
+      totalMatches: 0,
       searchTimeMs: 1,
     });
   }),

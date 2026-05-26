@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" \"tests/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\" \"tests/**/*.{ts,tsx}\"",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix src/",
-    "types:generate": "cd ../src-server && cargo test && cp bindings/*.ts ../web/src/types/"
+    "types:generate": "bash ../scripts/generate-types.sh"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

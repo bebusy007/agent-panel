@@ -4,9 +4,7 @@ import { useAsync } from '../../src/lib/hooks';
 
 describe('useAsync', () => {
   it('loads data successfully', async () => {
-    const { result } = renderHook(() =>
-      useAsync(async () => 'hello', []),
-    );
+    const { result } = renderHook(() => useAsync(async () => 'hello', []));
 
     expect(result.current.loading).toBe(true);
 
@@ -35,9 +33,7 @@ describe('useAsync', () => {
 
   it('supports refetch', async () => {
     let count = 0;
-    const { result } = renderHook(() =>
-      useAsync(async () => ++count, []),
-    );
+    const { result } = renderHook(() => useAsync(async () => ++count, []));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
