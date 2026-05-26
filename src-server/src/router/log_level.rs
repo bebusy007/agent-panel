@@ -73,15 +73,11 @@ mod tests {
         TestServer,
         reload::Layer<EnvFilter, tracing_subscriber::Registry>,
     ) {
-        let (layer, handle) =
-            reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(EnvFilter::new(
-                "agent_panel_server=debug,tower_http=info",
-            ));
+        let (layer, handle) = reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(
+            EnvFilter::new("agent_panel_server=debug,tower_http=info"),
+        );
         let router = routes(handle);
-        (
-            TestServer::new(router.into_make_service()),
-            layer,
-        )
+        (TestServer::new(router.into_make_service()), layer)
     }
 
     #[test]
@@ -93,13 +89,14 @@ mod tests {
 
     #[test]
     fn test_reload_handle_accepts_target_specific_filter() {
-        let (_layer, handle) =
-            reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(
-                EnvFilter::new("agent_panel_server=debug,tower_http=info"),
-            );
-        assert!(handle
-            .reload(EnvFilter::new("agent_panel_server=debug,tower_http=debug"))
-            .is_ok());
+        let (_layer, handle) = reload::Layer::<EnvFilter, tracing_subscriber::Registry>::new(
+            EnvFilter::new("agent_panel_server=debug,tower_http=info"),
+        );
+        assert!(
+            handle
+                .reload(EnvFilter::new("agent_panel_server=debug,tower_http=debug"))
+                .is_ok()
+        );
     }
 
     #[test]

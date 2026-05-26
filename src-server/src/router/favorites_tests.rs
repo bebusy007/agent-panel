@@ -8,7 +8,11 @@ mod tests {
     use tempfile::TempDir;
 
     fn setup_test_session(dir: &TempDir) {
-        let claude_dir = dir.path().join(".claude").join("projects").join("test-project");
+        let claude_dir = dir
+            .path()
+            .join(".claude")
+            .join("projects")
+            .join("test-project");
         fs::create_dir_all(&claude_dir).unwrap();
         let jsonl = claude_dir.join("test-session-001.jsonl");
         let mut f = fs::File::create(&jsonl).unwrap();

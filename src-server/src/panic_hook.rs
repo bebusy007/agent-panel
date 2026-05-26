@@ -96,10 +96,7 @@ mod tests {
             content.contains("=== Crash Report ==="),
             "应包含 Crash Report 头"
         );
-        assert!(
-            content.contains("test-panic-msg"),
-            "应包含 panic 消息"
-        );
+        assert!(content.contains("test-panic-msg"), "应包含 panic 消息");
         assert!(
             content.contains("=== End Crash Report ==="),
             "应包含 Crash Report 尾"

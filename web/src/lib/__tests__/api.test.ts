@@ -205,10 +205,7 @@ describe('rustApi (fetch mock)', () => {
     mockOk({ session: {}, messages: [], messageCount: 0, resumeHints: null });
     const { rustApi } = await import('../api');
     await rustApi.sessionDetail('session-1');
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      '/api/sessions/session-1',
-      expect.any(Object),
-    );
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/sessions/session-1', expect.any(Object));
   });
 
   it('favoritesForSession fetches favorites for session', async () => {
