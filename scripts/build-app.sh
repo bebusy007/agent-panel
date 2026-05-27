@@ -94,11 +94,13 @@ echo "  单文件行覆盖率阈值: ≥85%"
 cd "$ROOT"
 
 # 跑测试，输出 JSON 报告（stderr 保留给 CI 看 panic 信息）
+set +e
 cargo llvm-cov test -p agent-panel-server \
   --ignore-filename-regex "$EXCLUDE_RUST" \
   --fail-under-lines 90 \
   --json > /tmp/backend-coverage.json 2>/tmp/test-errors.log
 LLVM_EXIT=$?
+set -e
 # 测试失败时打印错误日志
 if [ "$LLVM_EXIT" -ne 0 ]; then
   echo ""
