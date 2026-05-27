@@ -66,6 +66,7 @@ cd "$ROOT"
 cargo build --release -p agent-panel-server
 SIDECAR_SRC="$ROOT/target/release/agent-panel-server"
 SIDECAR_DST="$ROOT/src-tauri/binaries/agent-panel-server-$TARGET"
+mkdir -p "$(dirname "$SIDECAR_DST")"
 cp "$SIDECAR_SRC" "$SIDECAR_DST"
 chmod +x "$SIDECAR_DST"
 echo "  ✓ 侧推文件 → $SIDECAR_DST"
