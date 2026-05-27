@@ -93,10 +93,10 @@ echo "  总行覆盖率阈值: ≥90%"
 echo "  单文件行覆盖率阈值: ≥85%"
 cd "$ROOT"
 
-# 确保 cargo-llvm-cov 已安装（钉版本保证输出格式兼容）
-if ! command -v cargo-llvm-cov &>/dev/null; then
+# 强制安装指定版本 cargo-llvm-cov（保证 JSON 输出格式兼容）
+if ! cargo llvm-cov --version 2>/dev/null | grep -q "0.8.7"; then
   echo "  安装 cargo-llvm-cov (0.8.7)..."
-  cargo install cargo-llvm-cov --locked --version 0.8.7
+  cargo install cargo-llvm-cov --locked --version 0.8.7 --force
 fi
 
 # 跑测试，输出 JSON 报告（stderr 保留给 CI 看 panic 信息）
@@ -139,6 +139,17 @@ for f in data.get('data', [{}])[0].get('files', []):
     lines = summary.get('lines', {})
     total = lines.get('count', 0)
     covered = lines.get('covered', 0)
+    # 新版 llvm-cov 改用 segments，fallback 从 segments 计算
+    if total == 0 and 'segments' in f:
+        lines_set = set()
+        covered_set = set()
+        for seg in f['segments']:
+            if seg[3]:  # has_count
+                lines_set.add(seg[0])
+                if seg[2] > 0:
+                    covered_set.add(seg[0])
+        total = len(lines_set)
+        covered = len(covered_set)
     pct = (covered / total * 100) if total > 0 else 100.0
     # 跳过架构需改造的文件（issue 跟踪中）
     import re
