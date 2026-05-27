@@ -40,7 +40,7 @@ echo "  ✓ 清理完成"
 echo ""
 echo "▸ [2/8] TypeScript 类型检查..."
 cd "$ROOT/web"
-npx tsc --noEmit
+pnpm typecheck
 echo "  ✓ 类型检查通过"
 
 # ── 3. 前端测试 + 覆盖率 ────────────────────────────────

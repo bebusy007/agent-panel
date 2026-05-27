@@ -152,6 +152,7 @@ fn main() {
     });
 
     // Last resort: process exit cleanup
+    #[cfg(unix)]
     kill_sidecar_by_pid();
 }
 
