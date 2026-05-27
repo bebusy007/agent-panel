@@ -136,11 +136,13 @@ fn main() {
     app.run(|app_handle, event| {
         match event {
             tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
-                // Primary: kill via CommandChild handle
-                let state = app_handle.state::<SidecarState>();
-                if let Ok(mut guard) = state.0.lock() {
-                    if let Some(child) = guard.take() {
-                        let _ = child.kill();
+                // Kill via CommandChild handle (limit scope for Windows borrowck)
+                {
+                    let state = app_handle.state::<SidecarState>();
+                    if let Ok(mut guard) = state.0.lock() {
+                        if let Some(child) = guard.take() {
+                            let _ = child.kill();
+                        }
                     }
                 }
                 // Fallback: kill by PID in case handle didn't work
