@@ -93,10 +93,10 @@ echo "  总行覆盖率阈值: ≥90%"
 echo "  单文件行覆盖率阈值: ≥85%"
 cd "$ROOT"
 
-# 确保 cargo-llvm-cov 已安装
+# 确保 cargo-llvm-cov 已安装（钉版本保证输出格式兼容）
 if ! command -v cargo-llvm-cov &>/dev/null; then
-  echo "  安装 cargo-llvm-cov..."
-  cargo install cargo-llvm-cov --locked
+  echo "  安装 cargo-llvm-cov (0.8.7)..."
+  cargo install cargo-llvm-cov --locked --version 0.8.7
 fi
 
 # 跑测试，输出 JSON 报告（stderr 保留给 CI 看 panic 信息）
@@ -123,6 +123,12 @@ import json, sys
 
 with open('/tmp/backend-coverage.json') as f:
     data = json.load(f)
+
+# 调试：打印 JSON 顶层结构
+top = data.get('data', [{}])[0]
+print(f'[debug] files count: {len(top.get(\"files\", []))}')
+if top.get('files'):
+    print(f'[debug] first file: {json.dumps(top[\"files\"][0], indent=2)[:500]}')
 
 bad = []
 good = []
