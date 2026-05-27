@@ -67,6 +67,8 @@ mod integration_tests {
     use tokio::sync::broadcast;
 
     fn test_server(log_dir: &str) -> TestServer {
+        // 确保真实 HOME 下有测试 session 数据（OnceLock 保证只初始化一次）
+        crate::test_utils::ensure_test_session_data();
         let (tx, _) = broadcast::channel(256);
         let router = build_api_router(tx, log_dir.to_string(), None);
         TestServer::new(router.into_make_service())

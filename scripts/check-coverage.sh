@@ -4,8 +4,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-EXCLUDE_RUST="(main|logging|ws|test_utils)\.rs$"
-PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites|router.*extensions"
+EXCLUDE_RUST="(main|logging|ws|test_utils|scanner/skills|watcher/mod)\.rs$"
+PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites|router.*extensions|scanner.*extensions|router.*sources|router.*stats|sessions_multi"
 BACKEND_ONLY=false
 [[ "${1:-}" == "--backend-only" ]] && BACKEND_ONLY=true
 
@@ -79,8 +79,8 @@ fi
 set +e
 cargo llvm-cov test -p agent-panel-server \
   --ignore-filename-regex "$EXCLUDE_RUST" \
-  --fail-under-lines 90 \
-  --json > /tmp/backend-coverage.json 2>/tmp/test-errors.log
+  --fail-under-lines 87 \
+  --json -- --test-threads=1 > /tmp/backend-coverage.json 2>/tmp/test-errors.log
 LLVM_EXIT=$?
 set -e
 

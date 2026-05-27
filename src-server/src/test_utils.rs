@@ -16,23 +16,56 @@
 /// }
 /// ```
 use axum_test::TestServer;
-use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use tempfile::TempDir;
 use tokio::sync::broadcast;
 
 use crate::router;
 
-/// 在隔离的临时 HOME 下创建最小 session 数据集，
-/// 确保集成测试中的扫描器能找到数据。
+static TEST_DATA_SETUP: OnceLock<()> = OnceLock::new();
+
+/// 给真实 HOME 目录写入测试 session 数据（只执行一次）。
+/// 供 `router/mod.rs` 中直接读真实 HOME 的集成测试使用。
+pub fn ensure_test_session_data() {
+    TEST_DATA_SETUP.get_or_init(|| {
+        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
+        let project_dir = home.join(".claude").join("projects").join("test-project");
+        let _ = std::fs::create_dir_all(&project_dir);
+        let fixture_base = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let _ = std::fs::copy(
+            fixture_base.join("test-session.jsonl"),
+            project_dir.join("test-session.jsonl"),
+        );
+        let subagents_src = fixture_base.join("test-session/subagents");
+        if subagents_src.is_dir() {
+            let subagents_dst = project_dir.join("test-session/subagents");
+            let _ = std::fs::create_dir_all(&subagents_dst);
+            for entry in std::fs::read_dir(&subagents_src).into_iter().flatten().flatten() {
+                let _ = std::fs::copy(entry.path(), subagents_dst.join(entry.file_name()));
+            }
+        }
+    });
+}
+
+/// 从 fixtures 目录拷贝真实 session 数据到隔离 HOME，
+/// 确保集成测试中的扫描器能发现覆盖全面的数据。
 fn create_minimal_test_data(home: &Path) {
+    let fixture_base = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let project_dir = home.join(".claude").join("projects").join("test-project");
+    let dest = project_dir.join("test-session.jsonl");
     std::fs::create_dir_all(&project_dir).unwrap();
-    let jsonl = project_dir.join("test-session-001.jsonl");
-    let mut f = std::fs::File::create(&jsonl).unwrap();
-    writeln!(f, r#"{{"type":"summary","session_id":"test-session-001","cwd":"/test/project","git_branch":"main","model":"claude-sonnet-4","timestamp":"2026-01-01T00:00:00Z"}}"#).unwrap();
-    writeln!(f, r#"{{"type":"message","uuid":"msg-001","message":{{"role":"user","content":"Hello, test!"}},"timestamp":"2026-01-01T00:00:01Z"}}"#).unwrap();
-    writeln!(f, r#"{{"type":"message","uuid":"msg-002","message":{{"role":"assistant","content":"Hi! This is a test response."}},"timestamp":"2026-01-01T00:00:02Z"}}"#).unwrap();
+    // 主 session JSONL
+    let _ = std::fs::copy(fixture_base.join("test-session.jsonl"), &dest);
+    // 子 agent 目录
+    let subagents_src = fixture_base.join("test-session/subagents");
+    if subagents_src.is_dir() {
+        let subagents_dst = project_dir.join("test-session/subagents");
+        std::fs::create_dir_all(&subagents_dst).unwrap();
+        for entry in std::fs::read_dir(&subagents_src).into_iter().flatten().flatten() {
+            let _ = std::fs::copy(entry.path(), subagents_dst.join(entry.file_name()));
+        }
+    }
 }
 
 /// 创建隔离的测试服务器，将 HOME 重定向到临时目录以隔离文件 I/O。
