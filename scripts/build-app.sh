@@ -2,26 +2,13 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────
-# AgentPanel 一键打包
-# 在当前分支上跑全量检查 + 打 macOS .dmg
-# 硬性标准：总覆盖率 ≥90%，单文件覆盖率 ≥85%
+# AgentPanel 一键打包（纯打包，不含覆盖率门禁）
+# 覆盖率检查移至 scripts/check-coverage.sh（CI 执行）
 # ─────────────────────────────────────────────────────────
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET=$(rustc -vV | grep host | cut -d' ' -f2)
 BRANCH="$(git branch --show-current)"
-EXCLUDE_RUST="(main|logging|ws|test_utils)\.rs$"
-# 单文件阈值排除：需架构改造后才能有效测试
-# - router/images.rs: 主路径依赖 scanner 扫到含图片 session
-# - router/resume.rs: terminal/ide 模式调系统命令 osascript/open
-# - watcher/mod.rs: start_watching() 启后台线程 + notify
-# - router/sessions.rs: export/subagent 需特定格式数据
-PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites"
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
 
 echo "══════════════════════════════════════════"
 echo "  AgentPanel 打包"
@@ -44,35 +31,11 @@ pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 pnpm typecheck
 echo "  ✓ 类型检查通过"
 
-# ── 3. 前端测试 + 覆盖率 ────────────────────────────────
+# ── 3. 前端测试 ─────────────────────────────────────────
 echo ""
-echo "▸ [3/8] 前端测试 + 覆盖率检查..."
-echo "  排除文件: lib/schemas/ (纯类型定义，无逻辑)"
+echo "▸ [3/8] 前端测试..."
 cd "$ROOT/web"
-npx vitest run --coverage 2>&1 | tee /tmp/frontend-coverage.txt
-echo ""
-echo "  单文件行覆盖率检查（阈值 ≥85%）:"
-
-# 解析 vitest 文本表格，检查每个源文件的行覆盖率
-VIOLATIONS_FE=0
-while IFS= read -r line; do
-  # 匹配数据行: 文件名 | xx.xx | ... | xx.xx | ... | xx.xx |
-  if echo "$line" | grep -qE '^\s+\S+\.(ts|tsx)\s+\|'; then
-    file=$(echo "$line" | awk -F'|' '{print $1}' | xargs)
-    stmts=$(echo "$line" | awk -F'|' '{print $2}' | xargs | sed 's/%//')
-    lines_pct=$(echo "$line" | awk -F'|' '{print $5}' | xargs | sed 's/%//')
-    if [ -n "$lines_pct" ] && [ "$(echo "$lines_pct < 85" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
-      echo -e "  ${RED}❌ $file → ${lines_pct}% (要求 ≥85%)${NC}"
-      VIOLATIONS_FE=$((VIOLATIONS_FE + 1))
-    else
-      echo "  ✅ $file → ${lines_pct}%"
-    fi
-  fi
-done < <(sed -n '/% Coverage report/,/^$/{/^---/d;/^$/d;/^%/d;p}' /tmp/frontend-coverage.txt 2>/dev/null)
-
-if [ "$VIOLATIONS_FE" -gt 0 ]; then
-  echo -e "\n  ${RED}前端: $VIOLATIONS_FE 个文件低于 85% 阈值，请补充测试${NC}"
-fi
+npx vitest run
 echo "  ✓ 前端测试通过"
 
 # ── 4. Rust 代码检查 ────────────────────────────────────
@@ -82,106 +45,12 @@ cd "$ROOT"
 cargo clippy -p agent-panel-server --all-targets 2>&1 | tail -5
 echo "  ✓ clippy 通过"
 
-# ── 5. 后端测试 + 覆盖率 ────────────────────────────────
+# ── 5. 后端测试 ─────────────────────────────────────────
 echo ""
-echo "▸ [5/8] 后端测试 + 覆盖率检查..."
-echo "  排除文件: main.rs, logging.rs, ws.rs (入口/基础设施)"
-echo "           test_utils.rs (测试辅助代码)"
-echo "  单文件阈值暂缓: images.rs, resume.rs, watcher/mod.rs, router/sessions.rs"
-echo "    (需架构改造，见 issue #16)"
-echo "  总行覆盖率阈值: ≥90%"
-echo "  单文件行覆盖率阈值: ≥85%"
+echo "▸ [5/8] 后端测试..."
 cd "$ROOT"
-
-# 强制安装指定版本 cargo-llvm-cov（保证 JSON 输出格式兼容）
-if ! cargo llvm-cov --version 2>/dev/null | grep -q "0.8.7"; then
-  echo "  安装 cargo-llvm-cov (0.8.7)..."
-  cargo install cargo-llvm-cov --locked --version 0.8.7 --force
-fi
-
-# 跑测试，输出 JSON 报告（stderr 保留给 CI 看 panic 信息）
-set +e
-cargo llvm-cov test -p agent-panel-server \
-  --ignore-filename-regex "$EXCLUDE_RUST" \
-  --fail-under-lines 90 \
-  --json > /tmp/backend-coverage.json 2>/tmp/test-errors.log
-LLVM_EXIT=$?
-set -e
-# 测试失败时打印错误日志
-if [ "$LLVM_EXIT" -ne 0 ]; then
-  echo ""
-  echo "  === 测试失败详情 ==="
-  tail -50 /tmp/test-errors.log
-  echo "  ===================="
-fi
-
-# 解析 JSON，检查单文件覆盖率
-echo ""
-echo "  单文件行覆盖率检查:"
-python3 -c "
-import json, sys
-
-with open('/tmp/backend-coverage.json') as f:
-    data = json.load(f)
-
-# 调试：打印 JSON 顶层结构
-top = data.get('data', [{}])[0]
-print(f'[debug] files count: {len(top.get(\"files\", []))}')
-if top.get('files'):
-    print(f'[debug] first file: {json.dumps(top[\"files\"][0], indent=2)[:500]}')
-
-bad = []
-good = []
-for f in data.get('data', [{}])[0].get('files', []):
-    filename = f.get('filename', '')
-    short_name = filename.split('/')[-1]
-    summary = f.get('summary', {})
-    lines = summary.get('lines', {})
-    total = lines.get('count', 0)
-    covered = lines.get('covered', 0)
-    # 新版 llvm-cov 改用 segments，fallback 从 segments 计算
-    if total == 0 and 'segments' in f:
-        lines_set = set()
-        covered_set = set()
-        for seg in f['segments']:
-            if seg[3]:  # has_count
-                lines_set.add(seg[0])
-                if seg[2] > 0:
-                    covered_set.add(seg[0])
-        total = len(lines_set)
-        covered = len(covered_set)
-    pct = (covered / total * 100) if total > 0 else 100.0
-    # 跳过架构需改造的文件（issue 跟踪中）
-    import re
-    if re.search(r'$PER_FILE_EXCLUDE', filename):
-        continue
-    if pct < 85:
-        bad.append((short_name, pct))
-    else:
-        good.append((short_name, pct))
-
-for fn, pct in sorted(bad):
-    print(f'\033[0;31m  ❌ {fn} → {pct:.1f}% (要求 ≥85%)\033[0m')
-for fn, pct in sorted(good):
-    print(f'  ✅ {fn} → {pct:.1f}%')
-
-if bad:
-    print(f'\n\033[0;31m  后端: {len(bad)} 个文件低于 85%，请补充测试\033[0m')
-    sys.exit(1)
-else:
-    print(f'\n  ✅ 全部 {len(good)} 个文件达标')
-" 2>/dev/null
-VIOLATIONS_BE=$?
-
-if [ "$LLVM_EXIT" -ne 0 ]; then
-  echo -e "\n  ${RED}后端: 总覆盖率或测试失败 (exit=$LLVM_EXIT)${NC}"
-  exit 1
-fi
-if [ "$VIOLATIONS_BE" -ne 0 ]; then
-  exit 1
-fi
-echo ""
-echo "  ✓ 后端测试通过，覆盖率达标"
+cargo test -p agent-panel-server
+echo "  ✓ 后端测试通过"
 
 # ── 6. 编译前端 ─────────────────────────────────────────
 echo ""

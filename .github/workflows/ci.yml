@@ -73,3 +73,7 @@ jobs:
 
       - name: Tests
         run: cargo test
+
+      - name: Coverage
+        run: bash scripts/check-coverage.sh
+        working-directory: .

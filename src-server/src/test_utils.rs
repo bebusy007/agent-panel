@@ -16,16 +16,31 @@
 /// }
 /// ```
 use axum_test::TestServer;
-use std::path::PathBuf;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use tokio::sync::broadcast;
 
 use crate::router;
 
+/// 在隔离的临时 HOME 下创建最小 session 数据集，
+/// 确保集成测试中的扫描器能找到数据。
+fn create_minimal_test_data(home: &Path) {
+    let project_dir = home.join(".claude").join("projects").join("test-project");
+    std::fs::create_dir_all(&project_dir).unwrap();
+    let jsonl = project_dir.join("test-session-001.jsonl");
+    let mut f = std::fs::File::create(&jsonl).unwrap();
+    writeln!(f, r#"{{"type":"summary","session_id":"test-session-001","cwd":"/test/project","git_branch":"main","model":"claude-sonnet-4","timestamp":"2026-01-01T00:00:00Z"}}"#).unwrap();
+    writeln!(f, r#"{{"type":"message","uuid":"msg-001","message":{{"role":"user","content":"Hello, test!"}},"timestamp":"2026-01-01T00:00:01Z"}}"#).unwrap();
+    writeln!(f, r#"{{"type":"message","uuid":"msg-002","message":{{"role":"assistant","content":"Hi! This is a test response."}},"timestamp":"2026-01-01T00:00:02Z"}}"#).unwrap();
+}
+
 /// 创建隔离的测试服务器，将 HOME 重定向到临时目录以隔离文件 I/O。
 /// 返回 TestHomeGuard，drop 时自动恢复原始 HOME。
+/// 自动在临时 HOME 下创建最小 session 数据集供集成测试使用。
 pub fn create_test_server() -> (TestServer, TempDir, TestHomeGuard) {
     let dir = TempDir::new().expect("failed to create temp dir");
+    create_minimal_test_data(dir.path());
     let guard = TestHomeGuard::new(dir.path().to_path_buf());
     let (tx, _) = broadcast::channel(256);
     let api = router::build_api_router(tx, dir.path().to_string_lossy().to_string(), None);
