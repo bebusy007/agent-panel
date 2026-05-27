@@ -1,11 +1,13 @@
 #!/bin/bash
 # 质量门禁：前端 + 后端覆盖率检查
-# CI 在每次 PR 时运行，本地也可手动执行
+# Usage: ./check-coverage.sh [--backend-only]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EXCLUDE_RUST="(main|logging|ws|test_utils)\.rs$"
 PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites|router.*extensions"
+BACKEND_ONLY=false
+[[ "${1:-}" == "--backend-only" ]] && BACKEND_ONLY=true
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -16,41 +18,43 @@ echo "  覆盖率质量门禁"
 echo "  总覆盖率 ≥90%  |  单文件 ≥85%"
 echo "══════════════════════════════════════════"
 
-# ── 1. TypeScript 检查 ─────────────────────────────────
-echo ""
-echo "▸ [1/6] TypeScript 类型检查..."
-cd "$ROOT/web"
-pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-pnpm typecheck
-echo "  ✓ 通过"
+if ! $BACKEND_ONLY; then
+  # ── 1. TypeScript 检查 ───────────────────────────────
+  echo ""
+  echo "▸ [1/6] TypeScript 类型检查..."
+  cd "$ROOT/web"
+  pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+  pnpm typecheck
+  echo "  ✓ 通过"
 
-# ── 2. 前端测试 + 覆盖率 ──────────────────────────────
-echo ""
-echo "▸ [2/6] 前端测试 + 覆盖率..."
-echo "  排除: lib/schemas/ (纯类型定义)"
-cd "$ROOT/web"
-npx vitest run --coverage 2>&1 | tee /tmp/frontend-coverage.txt
+  # ── 2. 前端测试 + 覆盖率 ────────────────────────────
+  echo ""
+  echo "▸ [2/6] 前端测试 + 覆盖率..."
+  echo "  排除: lib/schemas/ (纯类型定义)"
+  cd "$ROOT/web"
+  npx vitest run --coverage 2>&1 | tee /tmp/frontend-coverage.txt
 
-echo ""
-echo "  单文件行覆盖率 (≥85%):"
-VIOLATIONS_FE=0
-while IFS= read -r line; do
-  if echo "$line" | grep -qE '^\s+\S+\.(ts|tsx)\s+\|'; then
-    file=$(echo "$line" | awk -F'|' '{print $1}' | xargs)
-    lines_pct=$(echo "$line" | awk -F'|' '{print $5}' | xargs | sed 's/%//')
-    if [ -n "$lines_pct" ] && [ "$(echo "$lines_pct < 85" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
-      echo -e "  ${RED}❌ $file → ${lines_pct}%${NC}"
-      VIOLATIONS_FE=$((VIOLATIONS_FE + 1))
-    else
-      echo "  ✅ $file → ${lines_pct}%"
+  echo ""
+  echo "  单文件行覆盖率 (≥85%):"
+  VIOLATIONS_FE=0
+  while IFS= read -r line; do
+    if echo "$line" | grep -qE '^\s+\S+\.(ts|tsx)\s+\|'; then
+      file=$(echo "$line" | awk -F'|' '{print $1}' | xargs)
+      lines_pct=$(echo "$line" | awk -F'|' '{print $5}' | xargs | sed 's/%//')
+      if [ -n "$lines_pct" ] && [ "$(echo "$lines_pct < 85" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+        echo -e "  ${RED}❌ $file → ${lines_pct}%${NC}"
+        VIOLATIONS_FE=$((VIOLATIONS_FE + 1))
+      else
+        echo "  ✅ $file → ${lines_pct}%"
+      fi
     fi
-  fi
-done < <(sed -n '/% Coverage report/,/^$/{/^---/d;/^$/d;/^%/d;p}' /tmp/frontend-coverage.txt 2>/dev/null)
+  done < <(sed -n '/% Coverage report/,/^$/{/^---/d;/^$/d;/^%/d;p}' /tmp/frontend-coverage.txt 2>/dev/null)
 
-if [ "$VIOLATIONS_FE" -gt 0 ]; then
-  echo -e "\n  ${RED}前端: $VIOLATIONS_FE 个文件低于 85%${NC}"
+  if [ "$VIOLATIONS_FE" -gt 0 ]; then
+    echo -e "\n  ${RED}前端: $VIOLATIONS_FE 个文件低于 85%${NC}"
+  fi
+  echo "  ✓ 前端测试通过"
 fi
-echo "  ✓ 前端测试通过"
 
 # ── 3. Rust 代码检查 ───────────────────────────────────
 echo ""
