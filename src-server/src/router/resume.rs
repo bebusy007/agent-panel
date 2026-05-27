@@ -122,6 +122,30 @@ async fn resume_session(Json(body): Json<ResumeRequest>) -> Json<serde_json::Val
             }
         }
         "ide" => {
+            if cfg!(not(target_os = "macos")) {
+                // 非 macOS 直接调 CLI（code / cursor），不检查 .app 路径
+                let cwd = match &session.cwd {
+                    Some(c) => c.clone(),
+                    None => {
+                        return Json(
+                            serde_json::json!({ "error": "no cwd available for IDE" }),
+                        )
+                    }
+                };
+                let cli = if session.source.contains("cursor") {
+                    "cursor"
+                } else {
+                    "code"
+                };
+                match open_ide_cli(cli, &cwd) {
+                    Ok(()) => {
+                        return Json(serde_json::json!({ "ok": true, "mode": "ide", "via": cli }))
+                    }
+                    Err(e) => {
+                        return Json(serde_json::json!({ "error": e }))
+                    }
+                }
+            }
             let cwd = match &session.cwd {
                 Some(c) => c.clone(),
                 None => return Json(serde_json::json!({ "error": "no cwd available for IDE" })),
@@ -243,6 +267,19 @@ fn open_terminal(terminal: &str, command: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// 跨平台 CLI 启动器（非 macOS 使用，跳过 .app 检查）
+fn open_ide_cli(cli: &str, cwd: &str) -> Result<(), String> {
+    let status = Command::new(cli)
+        .arg(cwd)
+        .status()
+        .map_err(|e| format!("failed to spawn {}: {}", cli, e))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("{} exited with non-zero status", cli))
+    }
 }
 
 fn shell_quote(s: &str) -> String {

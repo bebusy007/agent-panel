@@ -29,7 +29,7 @@ echo ""
 
 # ── 2. Collect PR numbers from merge commits between tags ──
 PR_LIST=$(git log "$PREV_TAG..HEAD" --merges --pretty=format:'%s' 2>/dev/null | \
-  grep -oP '#\K\d+' | sort -n | uniq)
+  grep -oE '#[0-9]+' | sed 's/#//' | sort -n | uniq)
 
 if [ -z "$PR_LIST" ]; then
   echo "No merged PRs found between $PREV_TAG and HEAD."

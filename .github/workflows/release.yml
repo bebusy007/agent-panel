@@ -104,3 +104,63 @@ jobs:
           path: |
             target/**/bundle/dmg/*.dmg
             src-tauri/target/**/bundle/dmg/*.dmg
+
+  build-linux:
+    name: Linux (x86_64)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with: { version: 10 }
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: 'pnpm', cache-dependency-path: 'web/pnpm-lock.yaml' }
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: cd web && pnpm install --frozen-lockfile
+      - run: cd web && pnpm build
+      - name: Build Tauri app
+        run: |
+          cargo build --release -p agent-panel-server
+          mkdir -p src-tauri/binaries
+          cp target/release/agent-panel-server src-tauri/binaries/agent-panel-server-x86_64-unknown-linux-gnu
+          cargo install tauri-cli --locked
+          cargo tauri build --target x86_64-unknown-linux-gnu
+      - name: Verify artifact
+        run: |
+          find target -name "*.AppImage" -o -name "*.deb" | head -5
+          file target/release/agent-panel-server
+      - uses: actions/upload-artifact@v5
+        with:
+          name: AgentPanel-linux-x86_64
+          path: target/**/bundle/{appimage,deb}/*
+
+  build-windows:
+    name: Windows (x86_64)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with: { version: 10 }
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: 'pnpm', cache-dependency-path: 'web/pnpm-lock.yaml' }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cd web && pnpm install --frozen-lockfile
+      - run: cd web && pnpm build
+      - name: Build Tauri app
+        run: |
+          cargo build --release -p agent-panel-server
+          mkdir -p src-tauri/binaries
+          cp target/release/agent-panel-server.exe src-tauri/binaries/agent-panel-server-x86_64-pc-windows-msvc.exe
+          cargo install tauri-cli --locked
+          cargo tauri build --target x86_64-pc-windows-msvc
+      - name: Verify artifact
+        run: |
+          Get-ChildItem -Recurse -Filter "*.msi" target/
+          Get-ChildItem -Recurse -Filter "*.exe" target/release/
+      - uses: actions/upload-artifact@v5
+        with:
+          name: AgentPanel-windows-x86_64
+          path: target/**/bundle/msi/*.msi

@@ -117,12 +117,9 @@ async fn open_folder(Json(body): Json<OpenFolderBody>) -> Response {
     };
 
     let result = if is_file {
-        std::process::Command::new("open")
-            .arg("-R")
-            .arg(&body.path)
-            .spawn()
+        open_file_location(&body.path)
     } else {
-        std::process::Command::new("open").arg(&dir).spawn()
+        open_directory(&dir)
     };
 
     match result {
@@ -132,6 +129,46 @@ async fn open_folder(Json(body): Json<OpenFolderBody>) -> Response {
             format!("failed to open: {e}"),
         )
             .into_response(),
+    }
+}
+
+/// 跨平台：在文件管理器中定位文件
+fn open_file_location(path: &str) -> std::io::Result<std::process::Child> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg("-R").arg(path).spawn()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg("/select,")
+            .arg(path)
+            .spawn()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        // Linux 没有直接的文件定位功能，打开父目录
+        let parent = std::path::Path::new(path)
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| ".".to_string());
+        std::process::Command::new("xdg-open").arg(&parent).spawn()
+    }
+}
+
+/// 跨平台：打开目录
+fn open_directory(dir: &std::path::Path) -> std::io::Result<std::process::Child> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg(dir).spawn()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer").arg(dir).spawn()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open").arg(dir).spawn()
     }
 }
 

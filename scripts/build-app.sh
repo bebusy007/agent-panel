@@ -176,15 +176,15 @@ cargo tauri build 2>&1
 echo ""
 
 # ── 完成 ─────────────────────────────────────────────────
-DMG=$(find "$ROOT/target" -name "*.dmg" 2>/dev/null | head -1)
-if [ -n "$DMG" ]; then
+BUNDLE=$(find "$ROOT/target" \( -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" \) 2>/dev/null | head -1)
+if [ -n "$BUNDLE" ]; then
     echo "══════════════════════════════════════════"
     echo "  ✅ 打包完成！"
     echo ""
-    echo "  产物: $DMG"
-    echo "  大小: $(ls -lh "$DMG" | awk '{print $5}')"
+    echo "  产物: $BUNDLE"
+    echo "  大小: $(ls -lh "$BUNDLE" | awk '{print $5}')"
     echo "══════════════════════════════════════════"
 else
-    echo "  ⚠ 脚本跑完了但没找到 DMG，检查 target/ 目录"
+    echo "  ⚠ 脚本跑完了但没找到安装包，检查 target/ 目录"
     exit 1
 fi

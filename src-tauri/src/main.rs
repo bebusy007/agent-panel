@@ -27,6 +27,7 @@ fn find_available_port() -> u16 {
     BASE_PORT
 }
 
+#[cfg(unix)]
 extern "C" fn kill_sidecar_by_pid() {
     let pid = SIDECAR_PID.swap(0, Ordering::SeqCst);
     if pid != 0 {
@@ -36,6 +37,7 @@ extern "C" fn kill_sidecar_by_pid() {
     }
 }
 
+#[cfg(unix)]
 extern "C" fn signal_handler(_sig: libc::c_int) {
     kill_sidecar_by_pid();
     unsafe {
@@ -46,7 +48,7 @@ extern "C" fn signal_handler(_sig: libc::c_int) {
 fn main() {
     let port = find_available_port();
 
-    // Ensure sidecar is killed on any exit signal
+    #[cfg(unix)]
     unsafe {
         libc::atexit(kill_sidecar_by_pid);
         libc::signal(libc::SIGTERM, signal_handler as libc::sighandler_t);
@@ -142,6 +144,7 @@ fn main() {
                     }
                 }
                 // Fallback: kill by PID in case handle didn't work
+                #[cfg(unix)]
                 kill_sidecar_by_pid();
             }
             _ => {}
@@ -174,7 +177,7 @@ fn resolve_log_dir() -> String {
     #[cfg(target_os = "windows")]
     {
         if let Some(data) = dirs::data_local_dir() {
-            let log_dir = data.join("AgentPanel\\logs");
+            let log_dir = data.join("AgentPanel").join("logs");
             let _ = std::fs::create_dir_all(&log_dir);
             return log_dir.to_string_lossy().to_string();
         }

@@ -139,7 +139,8 @@ fn classify_event(event: &Event) -> &'static str {
         return "";
     }
 
-    let path_str = paths[0].to_string_lossy();
+    // 规范化路径分隔符：Windows \ → /
+    let path_str = paths[0].to_string_lossy().replace('\\', "/");
 
     if path_str.contains("/projects/") && path_str.ends_with(".jsonl") {
         return "session_changed";
