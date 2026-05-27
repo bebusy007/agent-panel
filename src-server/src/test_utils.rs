@@ -41,7 +41,11 @@ pub fn ensure_test_session_data() {
         if subagents_src.is_dir() {
             let subagents_dst = project_dir.join("test-session/subagents");
             let _ = std::fs::create_dir_all(&subagents_dst);
-            for entry in std::fs::read_dir(&subagents_src).into_iter().flatten().flatten() {
+            for entry in std::fs::read_dir(&subagents_src)
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
                 let _ = std::fs::copy(entry.path(), subagents_dst.join(entry.file_name()));
             }
         }
@@ -62,7 +66,11 @@ fn create_minimal_test_data(home: &Path) {
     if subagents_src.is_dir() {
         let subagents_dst = project_dir.join("test-session/subagents");
         std::fs::create_dir_all(&subagents_dst).unwrap();
-        for entry in std::fs::read_dir(&subagents_src).into_iter().flatten().flatten() {
+        for entry in std::fs::read_dir(&subagents_src)
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
             let _ = std::fs::copy(entry.path(), subagents_dst.join(entry.file_name()));
         }
     }
