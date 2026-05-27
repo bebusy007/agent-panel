@@ -93,6 +93,12 @@ echo "  总行覆盖率阈值: ≥90%"
 echo "  单文件行覆盖率阈值: ≥85%"
 cd "$ROOT"
 
+# 确保 cargo-llvm-cov 已安装
+if ! command -v cargo-llvm-cov &>/dev/null; then
+  echo "  安装 cargo-llvm-cov..."
+  cargo install cargo-llvm-cov --locked
+fi
+
 # 跑测试，输出 JSON 报告（stderr 保留给 CI 看 panic 信息）
 set +e
 cargo llvm-cov test -p agent-panel-server \
