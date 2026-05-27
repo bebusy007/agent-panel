@@ -252,7 +252,10 @@ fn scan_single_project(project_dir: &Path) -> Vec<SessionSummary> {
             let name = e.file_name().to_str().unwrap_or("");
             path.extension().and_then(|s| s.to_str()) == Some("jsonl")
                 && !name.starts_with('.')
-                && !path.to_string_lossy().contains("/subagents/")
+                && !path
+                    .to_string_lossy()
+                    .replace('\\', "/")
+                    .contains("/subagents/")
         })
         .filter_map(|e| {
             let path = e.path().to_path_buf();

@@ -16,16 +16,72 @@
 /// }
 /// ```
 use axum_test::TestServer;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use tempfile::TempDir;
 use tokio::sync::broadcast;
 
 use crate::router;
 
+static TEST_DATA_SETUP: OnceLock<()> = OnceLock::new();
+
+/// 给真实 HOME 目录写入测试 session 数据（只执行一次）。
+/// 供 `router/mod.rs` 中直接读真实 HOME 的集成测试使用。
+pub fn ensure_test_session_data() {
+    TEST_DATA_SETUP.get_or_init(|| {
+        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
+        let project_dir = home.join(".claude").join("projects").join("test-project");
+        let _ = std::fs::create_dir_all(&project_dir);
+        let fixture_base = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let _ = std::fs::copy(
+            fixture_base.join("test-session.jsonl"),
+            project_dir.join("test-session.jsonl"),
+        );
+        let subagents_src = fixture_base.join("test-session/subagents");
+        if subagents_src.is_dir() {
+            let subagents_dst = project_dir.join("test-session/subagents");
+            let _ = std::fs::create_dir_all(&subagents_dst);
+            for entry in std::fs::read_dir(&subagents_src)
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
+                let _ = std::fs::copy(entry.path(), subagents_dst.join(entry.file_name()));
+            }
+        }
+    });
+}
+
+/// 从 fixtures 目录拷贝真实 session 数据到隔离 HOME，
+/// 确保集成测试中的扫描器能发现覆盖全面的数据。
+fn create_minimal_test_data(home: &Path) {
+    let fixture_base = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let project_dir = home.join(".claude").join("projects").join("test-project");
+    let dest = project_dir.join("test-session.jsonl");
+    std::fs::create_dir_all(&project_dir).unwrap();
+    // 主 session JSONL
+    let _ = std::fs::copy(fixture_base.join("test-session.jsonl"), &dest);
+    // 子 agent 目录
+    let subagents_src = fixture_base.join("test-session/subagents");
+    if subagents_src.is_dir() {
+        let subagents_dst = project_dir.join("test-session/subagents");
+        std::fs::create_dir_all(&subagents_dst).unwrap();
+        for entry in std::fs::read_dir(&subagents_src)
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
+            let _ = std::fs::copy(entry.path(), subagents_dst.join(entry.file_name()));
+        }
+    }
+}
+
 /// 创建隔离的测试服务器，将 HOME 重定向到临时目录以隔离文件 I/O。
 /// 返回 TestHomeGuard，drop 时自动恢复原始 HOME。
+/// 自动在临时 HOME 下创建最小 session 数据集供集成测试使用。
 pub fn create_test_server() -> (TestServer, TempDir, TestHomeGuard) {
     let dir = TempDir::new().expect("failed to create temp dir");
+    create_minimal_test_data(dir.path());
     let guard = TestHomeGuard::new(dir.path().to_path_buf());
     let (tx, _) = broadcast::channel(256);
     let api = router::build_api_router(tx, dir.path().to_string_lossy().to_string(), None);

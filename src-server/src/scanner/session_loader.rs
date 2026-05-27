@@ -1107,14 +1107,13 @@ pub struct SubagentMeta {
 /// Subagents live at: <session_file_without_.jsonl>/subagents/agent-<hash>.jsonl
 pub fn discover_subagents(session_file_path: &str) -> Vec<SubagentMeta> {
     let base = session_file_path.trim_end_matches(".jsonl");
-    let sub_dir = format!("{}/subagents", base);
-    let sub_path = Path::new(&sub_dir);
+    let sub_path = std::path::Path::new(base).join("subagents");
 
     if !sub_path.is_dir() {
         return vec![];
     }
 
-    let entries = match std::fs::read_dir(sub_path) {
+    let entries = match std::fs::read_dir(&sub_path) {
         Ok(e) => e,
         Err(_) => return vec![],
     };

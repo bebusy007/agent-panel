@@ -3,7 +3,7 @@ pre-commit:
   commands:
     frontend-fmt:
       glob: "web/**/*.{ts,tsx,css,json}"
-      run: ./web/node_modules/.bin/prettier --write {staged_files}
+      run: npx --prefix web prettier --write {staged_files}
       stage_fixed: true
     backend-fmt:
       glob: "src-server/**/*.rs"

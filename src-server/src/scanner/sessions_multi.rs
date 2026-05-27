@@ -241,19 +241,21 @@ fn cursor_project_dir_to_cwd(project_dir: &str) -> Option<String> {
         return None;
     }
     let segments: Vec<&str> = project_dir.split('-').collect();
-    let mut path = String::from("/");
+    let root = if cfg!(target_os = "windows") {
+        // Windows 从 C:\ 开始，第一个 segment 就是盘符根目录
+        let mut p = std::path::PathBuf::from("C:\\");
+        p
+    } else {
+        std::path::PathBuf::from("/")
+    };
+    let mut path = root;
     let mut i = 0;
     while i < segments.len() {
         let mut found = false;
         for end in (i + 1..=segments.len()).rev() {
             let candidate = segments[i..end].join("-");
-            let base = if path.ends_with('/') {
-                path.clone()
-            } else {
-                format!("{}/", path)
-            };
-            let test_path = format!("{}{}", base, candidate);
-            if std::path::Path::new(&test_path).exists() {
+            let test_path = path.join(&candidate);
+            if test_path.exists() {
                 path = test_path;
                 i = end;
                 found = true;
@@ -264,8 +266,8 @@ fn cursor_project_dir_to_cwd(project_dir: &str) -> Option<String> {
             return None;
         }
     }
-    if std::path::Path::new(&path).exists() {
-        Some(path)
+    if path.exists() {
+        Some(path.to_string_lossy().to_string())
     } else {
         None
     }
@@ -326,7 +328,9 @@ fn scan_cursor_file(file_path: &PathBuf) -> Option<SessionSummary> {
     let path_str = file_path.to_string_lossy();
     let name = file_path.file_stem()?.to_str()?.to_string();
 
-    let project_dir = path_str
+    // 规范化路径分隔符
+    let path_normalized = path_str.replace('\\', "/");
+    let project_dir = path_normalized
         .split("/projects/")
         .nth(1)
         .and_then(|rest| rest.split('/').next())
@@ -793,5 +797,21 @@ mod tests {
         assert_eq!(result.cwd, Some("/my/project".to_string()));
         assert_eq!(result.model, Some("claude-sonnet-4".to_string()));
         assert_eq!(result.source, "codex");
+    }
+
+    #[test]
+    fn test_scan_codex_file_non_uuid_filename() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("rollout-2026-05-01T00-00-00-short.jsonl");
+        let mut f = fs::File::create(&file).unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-01T10:00:00Z","type":"session_meta","payload":{{"id":"fallback-id"}}}}"#
+        )
+        .unwrap();
+
+        let result = scan_codex_file(&file).unwrap();
+        // Fallback ID used when filename doesn't contain UUID
+        assert_eq!(result.session_id_raw, Some("fallback-id".to_string()));
     }
 }
