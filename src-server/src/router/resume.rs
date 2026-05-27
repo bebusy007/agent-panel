@@ -127,9 +127,7 @@ async fn resume_session(Json(body): Json<ResumeRequest>) -> Json<serde_json::Val
                 let cwd = match &session.cwd {
                     Some(c) => c.clone(),
                     None => {
-                        return Json(
-                            serde_json::json!({ "error": "no cwd available for IDE" }),
-                        )
+                        return Json(serde_json::json!({ "error": "no cwd available for IDE" }));
                     }
                 };
                 let cli = if session.source.contains("cursor") {
@@ -139,11 +137,9 @@ async fn resume_session(Json(body): Json<ResumeRequest>) -> Json<serde_json::Val
                 };
                 match open_ide_cli(cli, &cwd) {
                     Ok(()) => {
-                        return Json(serde_json::json!({ "ok": true, "mode": "ide", "via": cli }))
+                        return Json(serde_json::json!({ "ok": true, "mode": "ide", "via": cli }));
                     }
-                    Err(e) => {
-                        return Json(serde_json::json!({ "error": e }))
-                    }
+                    Err(e) => return Json(serde_json::json!({ "error": e })),
                 }
             }
             let cwd = match &session.cwd {

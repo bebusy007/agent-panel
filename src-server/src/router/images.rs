@@ -136,7 +136,10 @@ async fn open_folder(Json(body): Json<OpenFolderBody>) -> Response {
 fn open_file_location(path: &str) -> std::io::Result<std::process::Child> {
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open").arg("-R").arg(path).spawn()
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(path)
+            .spawn()
     }
     #[cfg(target_os = "windows")]
     {
