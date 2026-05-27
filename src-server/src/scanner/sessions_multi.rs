@@ -798,4 +798,20 @@ mod tests {
         assert_eq!(result.model, Some("claude-sonnet-4".to_string()));
         assert_eq!(result.source, "codex");
     }
+
+    #[test]
+    fn test_scan_codex_file_non_uuid_filename() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("rollout-2026-05-01T00-00-00-short.jsonl");
+        let mut f = fs::File::create(&file).unwrap();
+        writeln!(
+            f,
+            r#"{{"timestamp":"2026-05-01T10:00:00Z","type":"session_meta","payload":{{"id":"fallback-id"}}}}"#
+        )
+        .unwrap();
+
+        let result = scan_codex_file(&file).unwrap();
+        // Fallback ID used when filename doesn't contain UUID
+        assert_eq!(result.session_id_raw, Some("fallback-id".to_string()));
+    }
 }

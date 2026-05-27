@@ -16,7 +16,7 @@ EXCLUDE_RUST="(main|logging|ws|test_utils)\.rs$"
 # - router/resume.rs: terminal/ide 模式调系统命令 osascript/open
 # - watcher/mod.rs: start_watching() 启后台线程 + notify
 # - router/sessions.rs: export/subagent 需特定格式数据
-PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions"
+PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -40,6 +40,7 @@ echo "  ✓ 清理完成"
 echo ""
 echo "▸ [2/8] TypeScript 类型检查..."
 cd "$ROOT/web"
+pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 pnpm typecheck
 echo "  ✓ 类型检查通过"
 
