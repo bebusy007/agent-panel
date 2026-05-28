@@ -874,4 +874,181 @@ mod tests {
             _ => panic!("expected AssistantMessage with tool_use"),
         }
     }
+
+    #[test]
+    fn parse_content_block_stop() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_stop","index":0}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::ContentBlockStop { index } => assert_eq!(*index, 0),
+            _ => panic!("expected ContentBlockStop"),
+        }
+    }
+
+    #[test]
+    fn parse_message_delta() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":80,"cache_creation_input_tokens":20}}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::MessageDelta { stop_reason, input_tokens, output_tokens, .. } => {
+                assert_eq!(stop_reason.as_deref(), Some("end_turn"));
+                assert_eq!(*input_tokens, 100);
+                assert_eq!(*output_tokens, 50);
+            }
+            _ => panic!("expected MessageDelta"),
+        }
+    }
+
+    #[test]
+    fn parse_signature_delta() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig_abc"}}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::SignatureDelta { signature } => assert_eq!(signature, "sig_abc"),
+            _ => panic!("expected SignatureDelta"),
+        }
+    }
+
+    #[test]
+    fn parse_user_message_echo() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"user","uuid":"echo-001","message":{"role":"user","content":"hello"}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::UserMessageEcho { uuid } => assert_eq!(uuid, "echo-001"),
+            _ => panic!("expected UserMessageEcho"),
+        }
+    }
+
+    #[test]
+    fn parse_hook_callback() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"control_request","request_id":"hook-001","request":{"subtype":"hook_callback","hook_name":"PreToolUse","hook_event":"Bash","command":"/test.sh"}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::HookCallback { request_id, hook_name, .. } => {
+                assert_eq!(request_id, "hook-001");
+                assert_eq!(hook_name, "PreToolUse");
+            }
+            _ => panic!("expected HookCallback"),
+        }
+    }
+
+    #[test]
+    fn parse_elicitation_request() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"control_request","request_id":"el-001","request":{"subtype":"elicitation","mcp_server":"test-srv","message":"Choose option"}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::ElicitationRequest { request_id, mcp_server, .. } => {
+                assert_eq!(request_id, "el-001");
+                assert_eq!(mcp_server, "test-srv");
+            }
+            _ => panic!("expected ElicitationRequest"),
+        }
+    }
+
+    #[test]
+    fn parse_unknown_delta_type_is_filtered() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"future_delta_type","data":"x"}}}"#;
+        let events = p.parse_line(line);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn parse_stream_event_missing_inner() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event"}"#;
+        let events = p.parse_line(line);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn parse_assistant_no_message_field() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"assistant"}"#;
+        let events = p.parse_line(line);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn parse_control_request_unknown_subtype() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"control_request","request_id":"r1","request":{"subtype":"future_control","data":42}}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::Raw { raw_type, .. } => assert!(raw_type.contains("future_control")),
+            _ => panic!("expected Raw"),
+        }
+    }
+
+    #[test]
+    fn parse_system_unknown_subtype() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"system","subtype":"future_subtype","data":42}"#;
+        let events = p.parse_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ChatEvent::Raw { raw_type, .. } => assert!(raw_type.contains("future_subtype")),
+            _ => panic!("expected Raw"),
+        }
+    }
+
+    #[test]
+    fn parse_content_block_start_text() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}}"#;
+        let events = p.parse_line(line);
+        match &events[0] {
+            ChatEvent::ContentBlockStart { block_type, .. } => {
+                assert_eq!(*block_type, ContentBlockType::Text);
+            }
+            _ => panic!("expected ContentBlockStart for text"),
+        }
+    }
+
+    #[test]
+    fn parse_content_block_start_thinking() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}}"#;
+        let events = p.parse_line(line);
+        match &events[0] {
+            ChatEvent::ContentBlockStart { block_type, .. } => {
+                assert_eq!(*block_type, ContentBlockType::Thinking);
+            }
+            _ => panic!("expected ContentBlockStart for thinking"),
+        }
+    }
+
+    #[test]
+    fn parse_content_block_start_unknown_type() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_start","index":5,"content_block":{"type":"future_block"}}}"#;
+        let events = p.parse_line(line);
+        match &events[0] {
+            ChatEvent::ContentBlockStart { block_type, .. } => {
+                assert!(matches!(block_type, ContentBlockType::Unknown(_)));
+            }
+            _ => panic!("expected ContentBlockStart for unknown"),
+        }
+    }
+
+    #[test]
+    fn parse_content_block_start_missing_content_block() {
+        let mut p = ProtocolParser::new();
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_start","index":0}}"#;
+        let events = p.parse_line(line);
+        assert!(events.is_empty());
+    }
 }

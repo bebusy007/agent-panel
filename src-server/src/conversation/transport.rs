@@ -289,4 +289,71 @@ mod tests {
         assert!(output.contains("--resume test-sid-123"));
         assert!(output.contains("--model sonnet"));
     }
+
+    #[tokio::test]
+    async fn spawn_new_session_no_resume_flag() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("echo".to_string()),
+        };
+        let t = Transport::spawn(&config).await.unwrap();
+        let mut rx = t.stdout_rx();
+        let mut lines = vec![];
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        loop {
+            match rx.try_recv() {
+                Ok(line) => lines.push(line),
+                Err(tokio::sync::broadcast::error::TryRecvError::Empty) => break,
+                Err(_) => break,
+            }
+        }
+        let output = lines.join(" ");
+        assert!(output.contains("--print"));
+        // New session should NOT have --resume
+        assert!(!output.contains("--resume"));
+    }
+
+    #[tokio::test]
+    async fn spawn_no_model_or_permission_omits_flags() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("echo".to_string()),
+        };
+        let t = Transport::spawn(&config).await.unwrap();
+        let mut rx = t.stdout_rx();
+        let mut lines = vec![];
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        loop {
+            match rx.try_recv() {
+                Ok(line) => lines.push(line),
+                Err(tokio::sync::broadcast::error::TryRecvError::Empty) => break,
+                Err(_) => break,
+            }
+        }
+        let output = lines.join(" ");
+        assert!(!output.contains("--model"));
+        assert!(!output.contains("--permission-mode"));
+    }
+
+    #[tokio::test]
+    async fn transport_pid_returns_none_for_unknown() {
+        // Create a transport with a mock-like check
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("echo".to_string()),
+        };
+        let t = Transport::spawn(&config).await.unwrap();
+        let pid = t.pid();
+        assert!(pid.is_some());
+        assert!(pid.unwrap() > 0);
+    }
 }

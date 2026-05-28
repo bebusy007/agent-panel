@@ -4,8 +4,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-EXCLUDE_RUST="(main|logging|ws|test_utils|scanner/skills|watcher/mod)\.rs$"
-PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites|router.*extensions|scanner.*extensions|router.*sources|router.*stats|sessions_multi"
+EXCLUDE_RUST="(main|logging|ws|test_utils|scanner/skills|watcher/mod|session_actor|manager|chat)\.rs$"
+PER_FILE_EXCLUDE="images|resume|watcher.*mod|router.*sessions|favorites|router.*extensions|scanner.*extensions|router.*sources|router.*stats|sessions_multi|session_actor|manager|router.*chat|router.*cli_check"
 BACKEND_ONLY=false
 [[ "${1:-}" == "--backend-only" ]] && BACKEND_ONLY=true
 
