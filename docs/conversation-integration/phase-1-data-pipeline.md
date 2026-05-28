@@ -115,6 +115,43 @@ Transport + Actor + Manager 三层，Phase 1 做好后：
 
 ---
 
+## 基于 agent-panel 现有能力
+
+### 复用
+
+| 现有模块 | 文件 | Phase 1 中如何复用 |
+|---------|------|-------------------|
+| Message struct | `scanner/session_loader.rs:23` | 扩展 8 个新字段（thinking_text, usage, cost_usd, duration_ms, stop_reason, cwd, git_branch, message_id），保持向后兼容 |
+| ContentBlock 枚举 | `scanner/session_loader.rs:744` | 新增 Thinking 变体，不改已有变体 |
+| load_messages() | `scanner/session_loader.rs:53` | 增强解析逻辑（thinking 暂存、元数据提取），不改变函数签名 |
+| extract_blocks() | `scanner/session_loader.rs:762` | 匹配 thinking block 类型，不改已有匹配分支 |
+| is_thinking_only() | `scanner/session_loader.rs:732` | 已有函数，修复其"丢弃 thinking 内容"的问题 |
+| router 挂载模式 | `router/mod.rs` | 新增 chat + cli_check 路由，复用 axum Router::merge() 模式 |
+| ts-rs 类型导出 | 已有 `#[derive(TS)]` 用法 | Message 新增字段自动生成 TS 类型 |
+| search_in_messages() | `scanner/session_loader.rs` | Message 新增 thinking_text 字段后搜索自然覆盖 |
+
+### 新建
+
+| 新建模块 | 位置 | 说明 |
+|---------|------|------|
+| conversation/ 模块 | `src-server/src/conversation/` | types、protocol、stdin_writer、transport、session_actor、manager（6 个文件） |
+| ChatEvent 类型 | `src-server/src/conversation/types.rs` | 新增，stream-json 解析的中间表示 |
+| conversation TS 类型 | `web/src/lib/conversation/` | types、chat-protocol、chat-session-store、use-chat-connection、history-adapter |
+| WS 对话路由 | `src-server/src/router/chat.rs` | `/api/ws/chat/resume/{id}` + `/api/ws/chat/new` |
+| CLI 预检端点 | `src-server/src/router/cli_check.rs` | `/api/config/conversation/check` |
+| Session Meta API | `src-server/src/router/sessions.rs` | `/api/sessions/:id/meta`（汇总 cost/token/duration） |
+
+### 修改
+
+| 文件 | 改动 | 风险 |
+|------|------|------|
+| `scanner/session_loader.rs` | Message 新增字段 + ContentBlock 新增变体 + thinking 处理修复 + 元数据解析 | 低——全部 Option 字段向后兼容，已有测试需补充 thinking_text: None |
+| `router/mod.rs` | 合并新路由 | 低——Router::merge() 操作 |
+| `main.rs` | 初始化 SessionManager，传入 build_api_router | 低——新增变量 + 传参 |
+| `Cargo.toml` | 零新增依赖 | 无风险 |
+
+---
+
 ## 0. 基石：Unified Timeline 数据模型
 
 ### 0.1 核心命题
@@ -379,23 +416,33 @@ system.subtype 全量枚举：
 
 Claude CLI 以 `--output-format stream-json` 模式运行时，stdout 输出的每行是一个 JSON 对象。以下是 **ChatEvent** 全集：
 
-#### 已确认事件类型（来自 Claude Code 源码 + OpenCovibe 解析器）
+#### 已确认事件类型（POC 2026-05-28 验证，CLI v2.1.153）
 
-| CLI stdout type | 说明 | ChatEvent 映射 |
-|----------------|------|---------------|
-| `system` (subtype: `init`) | 会话初始化 | `SessionInit` |
-| `content_block_start` (block_type: `tool_use`) | 工具调用开始 | `ToolUseStart` |
-| `content_block_delta` (delta_type: `text_delta`) | 文本增量 | `TextDelta` |
-| `content_block_delta` (delta_type: `thinking_delta`) | 思考增量 | `ThinkingDelta` |
-| `content_block_delta` (delta_type: `input_json_delta`) | 工具 input 增量 | `ToolInputDelta` |
-| `content_block_stop` | content block 结束 | `ToolUseEnd`（仅对 tool 类型有意义） |
-| `assistant` | 完整 assistant 消息（汇总） | `AssistantMessage` |
-| `user` (content: tool_result) | 工具结果 | `ToolResult` |
-| `user` (有 uuid) | 用户消息回显 | `UserMessageEcho` |
-| `result` | turn 结束（含 usage + stop_reason） | `UsageUpdate` + `TurnComplete` |
-| `control_request` (subtype: `can_use_tool`) | 权限请求 | `PermissionRequest` |
-| `control_request` (subtype: `hook_callback`) | Hook 审核 | `HookCallback` |
-| `control_request` (subtype: `elicitation`) | MCP elicitation | `ElicitationRequest` |
+> ⚠️ 以下事件表基于实际 `--output-format stream-json --input-format stream-json --include-partial-messages` 运行验证。
+
+| CLI stdout type | 内层 event.type | 说明 | ChatEvent 映射 |
+|----------------|----------------|------|---------------|
+| `system` (subtype: `init`) | — | 会话初始化（首事件） | `SessionInit` |
+| `system` (subtype: `status`) | — | 状态更新（"requesting"等） | `SystemStatus` |
+| `stream_event` | `message_start` | 新 assistant 消息开始（含 message_id + model） | `MessageStart` |
+| `stream_event` | `content_block_start` | content block 开始（type: "thinking" / "text" / "tool_use"） | `ToolUseStart`（仅 tool 类型需要） |
+| `stream_event` | `content_block_delta` | token 级增量（thinking_delta / text_delta / input_json_delta / signature_delta） | `ThinkingDelta` / `TextDelta` / `ToolInputDelta` |
+| `stream_event` | `content_block_stop` | content block 结束 | `ToolUseEnd` |
+| `stream_event` | `message_delta` | 消息级增量（stop_reason + usage） | `MessageDelta` |
+| `stream_event` | `message_stop` | 消息结束 | 无独立 ChatEvent（内部状态标记） |
+| `assistant` | — | 完整 assistant 消息（汇总，含 thinking/text/tool_use blocks + signature） | `AssistantMessage` |
+| `user` (content: tool_result) | — | 工具结果（含 tool_use_result.stdout/stderr/exitCode） | `ToolResult` |
+| `user` (有 uuid) | — | 用户消息回显 | `UserMessageEcho` |
+| `result` | — | turn 结束（含 usage + modelUsage + cost + stop_reason） | `UsageUpdate` + `TurnComplete` |
+| `control_request` | — | 权限/Hook/Elicitation 请求 | `PermissionRequest` / `HookCallback` / `ElicitationRequest` |
+| `control_response` | — | CLI 对 control_request 的确认 | 无独立 ChatEvent（内部状态标记） |
+
+**关键设计规则**：
+- `stream_event` 是**信封**：解析器需先 `unwrap event` 字段得到内层 event.type
+- `content_block_delta` 用 **index** 标识属于哪个 block（0 = thinking, 1 = text, 2+ = tool_use 等）
+- `assistant` 汇总事件**与 delta 并行出现**：delta 用于流式显示，assistant 用于最终权威内容。两者 message_id 一致
+- `user` event 中 tool_result 的 content 是数组，额外有 `tool_use_result` 字段（stdout/stderr/exitCode/interrupted）
+- `result.modelUsage` 是 per-model 结构：`{"modelName": {inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, costUSD, contextWindow, maxOutputTokens}}`
 
 #### 未来可能新增的事件类型（兜底策略）
 
@@ -905,7 +952,7 @@ cargo test -p agent-panel-server scanner::session_loader
 
 **具体要求**：
 
-1. spawn CLI with 正确参数：`--output-format stream-json --input-format stream-json --verbose --permission-prompt-tool stdio`
+1. spawn CLI with 正确参数：`--output-format stream-json --input-format stream-json --include-partial-messages --verbose --permission-prompt-tool stdio`（⚠️ `--include-partial-messages` 必须加——不加时无 token 级流式 delta，只有完整 assistant 消息。POC 已验证：加此 flag 后输出 62 个 content_block_delta/秒）
 2. stdout 逐行读取 → broadcast channel
 3. stderr 逐行读取 → broadcast channel（标记为 stderr source）
 4. stdin 接管 → 返回 `ChildStdin`
@@ -1014,7 +1061,15 @@ cargo test -p agent-panel-server conversation::manager
 - stream-json 模式支持
 - 中文错误提示
 
-**从 worktree 复用**：`chat.rs` + `cli_check.rs` 基本可直接用。
+**handle_ws_session 的特殊处理**——新建会话的 session_id 迁移：
+
+`/ws/chat/new` 创建的 session 初始 key 是 `conn_{uuid}`（临时 ID）。CLI 的 SessionInit 事件返回真实 session_id 后，需要：
+
+1. 在 `handle_ws_session` 中监听 `Connected` 事件的 `session_id` 字段变化
+2. 检测到 session_id 从 `conn_xxx` 变为 `real-uuid` → 调用 `manager.migrate_session_key(conn_key, real_uuid)`
+3. 确保后续重连（30s 窗口内）可以用真实 session_id 找到 session
+
+**从 worktree 复用**：`chat.rs` + `cli_check.rs` 基本可直接用，需补充上述迁移逻辑。
 
 **验收**：
 ```bash

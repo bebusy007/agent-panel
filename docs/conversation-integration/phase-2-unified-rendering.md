@@ -145,6 +145,213 @@ mergedTimeline（UI 消费的最终数据）
 
 ---
 
+## 基于 agent-panel 现有能力
+
+### 复用
+
+| 现有模块 | 文件 | Phase 2 中如何复用 |
+|---------|------|-------------------|
+| 虚拟列表 | SessionDetail 内 `@tanstack/react-virtual` | MessageTimeline 内部继续用相同方案，只是输入从 Message[] 变为 TimelineEntry[] |
+| ToolCard 分发模式 | `tool-cards/ToolCard.tsx` 的 `canonicalTool()` → `renderPretty()` | Entry 子组件按 `entry.kind` 分发，同模式 |
+| MessageBlock 样式 | `session/MessageBlock.tsx` 的 CSS 类和布局 | Entry 子组件复用其视觉基础（圆角、间距、颜色） |
+| MessageToolbar | `session/MessageToolbar.tsx` | Entry 卡片内复用复制/收藏/raw view 按钮 |
+| SessionContext | `session/SessionContext.tsx` 的 Provider + useSession() 模式 | 扩展加入 chat connection + merged timeline，不改 Provider 签名 |
+| Turn 分组逻辑 | `turn-grouping.ts` | 基于 TimelineEntry[] 重新计算 turns（TimelineEntry 有 parentUuid 链，更准确） |
+| 搜索功能 | SessionContext 内的 `useSessionSearch()` | 在 mergedTimeline 上重新实现搜索（按 text/thinkingText/toolOutput 匹配） |
+| 设计系统 | `index.css` 的 CSS 变量 | 所有新组件颜色/间距/圆角从变量取，不硬编码 |
+| react-markdown | 已有依赖 | AssistantMessage 内复用 |
+| favouriting | SessionContext 已有 `favIds` + `toggleFav()` | Entry 子组件直接使用 |
+
+### 替换
+
+| 被替换 | 替换为 | 说明 |
+|--------|--------|------|
+| `SessionDetail` 中 `messages.map(...)` | `<MessageTimeline entries={...} />` | 单一渲染容器 |
+| `MessageBlock` 作为渲染入口 | `renderEntry()` + Entry 子组件族 | 按 kind 分发 |
+| worktree 分支 `ActiveMessageArea` | 完全不用 | StreamingBlock + 统一 timeline 替代 |
+| worktree 分支 `event-to-message.ts` | 完全不用 | history-adapter（Phase 1）+ ChatSessionStore 替代 |
+
+### 新建
+
+| 新建文件 | 说明 |
+|---------|------|
+| `web/src/components/conversation/MessageTimeline.tsx` | 唯一 timeline 渲染容器 |
+| `web/src/components/conversation/UserMessage.tsx` | 用户消息渲染 |
+| `web/src/components/conversation/AssistantMessage.tsx` | AI 回复渲染（含 thinking 折叠 + model 标签 + usage 标签） |
+| `web/src/components/conversation/StreamingBlock.tsx` | 正在生成的文本实时渲染 |
+| `web/src/components/conversation/ThinkingPanel.tsx` | Thinking 可折叠面板 |
+| `web/src/components/conversation/ConnectBar.tsx` | 连接/断开/输入栏（四态） |
+| `web/src/lib/conversation/timeline-merger.ts` | Live + History 合并去重 |
+| `web/src/lib/conversation/use-auto-scroll.ts` | 自动滚动 hook |
+
+### 修改
+
+| 文件 | 改动 | 风险 |
+|------|------|------|
+| `SessionDetail.tsx` | 消息渲染部分替换为 MessageTimeline | 中——需确保视觉一致 |
+| `SessionContext.tsx` | 新增 chat connection + liveMessages + merge | 中——需确保现有功能不退化 |
+| `SessionDetailView.tsx` | 底部添加 ConnectBar，Header 添加状态指示器 | 低——增量添加 |
+| `MessageBlock.tsx` | 保留为向后兼容引用，或标记 deprecated | 低——先保留 |
+
+---
+
+## Resume / New Session 深度设计（三方案对比 + 问题修复）
+
+> 参考来源：Claude Code CLI 实际行为、OpenCovibe session_actor.rs + api.ts、Codex app-server-protocol thread 模型
+
+### 1. Claude Code CLI 的实际行为
+
+#### 新建会话（无 --resume）
+
+```bash
+claude --output-format stream-json --input-format stream-json \
+       --verbose --permission-prompt-tool stdio
+```
+
+CLI 行为：
+1. 生成新的 session_id（UUID）
+2. stdout 首行输出 `system/init`：`{ type: "system", subtype: "init", session_id: "xxx-xxx", model: "...", slash_commands: [...], tools: [...], ... }`
+3. JSONL 文件**不会立即创建**——在第一轮对话开始时才创建
+4. CLI 等待 stdin 输入
+
+#### 续接会话（--resume）
+
+```bash
+claude --resume <session-id> --output-format stream-json \
+       --input-format stream-json --verbose --permission-prompt-tool stdio
+```
+
+CLI 行为：
+1. 加载已有 JSONL 文件
+2. stdout 首行输出 `system/init`（session_id 不变）
+3. **Replay 最后的 turn** 作为 stream-json 事件（user echo → assistant → tool results），这些事件的 UUID 与 JSONL 中**完全相同**
+4. CLI 等待新的 stdin 输入
+
+#### --continue（继续最近会话）
+
+```bash
+claude -c --output-format stream-json ...
+```
+
+等价于 `--resume` 最近一次在当前目录下的 session_id。
+
+#### --fork-session（分叉）
+
+```bash
+claude --resume <sid> --fork-session -p "(fork checkpoint)" \
+       --output-format json --max-turns 1
+```
+
+创建一个新 session_id，以原会话的上下文为起点。OpenCovibe 用此实现 rewind。
+
+#### 关键推论
+
+1. **Resume 时 CLI 不 replay 历史消息**（POC 验证：CLI v2.1.153 在 stream-json + `--max-turns 1` 下只输出当前 turn 事件）。前端无需 replay 去重。
+2. **新建时没有历史**，session_init 中 session_id 是新 UUID，前端需要从占位 key 迁移。
+3. **session_id 格式是 UUID**（如 `b3c75025-2905-4c0e-b0bf-1a168b763a28`），文件名同此。
+4. **JSONL 文件路径**：`~/.claude/projects/{sanitized-cwd-hash}/{session-id}.jsonl`。新建时文件在第一轮对话开始才创建。
+
+### 2. OpenCovibe 的 Resume/New 方案
+
+#### 启动模式
+
+OpenCovibe 的 `api.startSession()` 通过 `mode` 参数区分：
+
+```typescript
+// 新建
+api.startSession(runId)  // mode=undefined
+
+// Resume
+api.startSession(runId, "resume_session", sessionId)
+
+// Continue
+api.startSession(runId, "continue_session", undefined)
+```
+
+后端 `SessionActor::spawn_actor()` 接收 `is_resume: bool` 参数：
+
+```rust
+// ProtocolState 标记 resume 状态
+protocol: ProtocolState::new(is_resume),
+
+// turn 编号从 resume 基线开始
+initial_turn_index: count_user_messages_in_jsonl(),
+initial_auto_ctx_id: count_user_messages_in_jsonl(),
+```
+
+#### Resume replay 处理（OpenCovibe）
+
+OpenCovibe 的 ProtocolState 标记 `is_resume`，处理 replay 事件。但 **POC 验证 Claude CLI v2.1.153 在 stream-json 模式下不 replay 历史事件**——所以我们不需要这个机制。OpenCovibe 的 replay 逻辑可能用于 pipe 模式（非 stream-json）或更早的 CLI 版本。
+
+#### 新建 session_id 迁移
+
+OpenCovibe 的 `run_id` 在后端启动时已分配（由前端生成），所以**不需要迁移 key**。这是我们和他们最大的不同——他们用前端生成的 run_id，我们用 CLI 生成的 session_id。
+
+### 3. Codex 的 Thread 模型
+
+Codex 用 `ThreadId` 而非 session_id：
+- 客户端发送 `thread/start` request → server 创建 thread → 返回 `ThreadId`
+- 客户端加载历史 → 通过 `thread/items` request 获取 thread history
+- **没有 resume 概念**——每个 thread 自动 persist，重新打开时 server 自动加载历史
+
+**关键差异**：Codex 的 thread 创建和 ID 分配由 server 同步完成，不存在"等 CLI 返回 session_id"的异步问题。
+
+### 4. 当前 Phase 2 设计的问题
+
+#### 问题 1：新建会话的 session_id 迁移不完整
+
+```
+当前流程（有问题）：
+  前端 → WS /ws/chat/new → Manager 分配 conn_xxx
+  → Actor spawn → CLI session_init → session_id = "real-uuid"
+  → Connected(session_id="real-uuid") 发送
+  → 前端收到 real-uuid 但 UI 还在 /sessions/conn_xxx 路由
+  → Manager.migrate_session_key() 未自动调用
+  → 重连时用 conn_xxx 找不到 session
+```
+
+**修复**：
+1. `handle_ws_session()` 在收到 `Connected` 事件后，检测 session_key 变化 → 调用 `manager.migrate_session_key(old_conn_key, real_session_id)`
+2. 前端在收到 `Connected` 且 sessionId 变化时 → `navigate(/sessions/${newSessionId})` 更新 URL
+3. 此流程需要在 Phase 2 Step 2.8（新建会话入口）中明确实现
+
+#### 问题 2：新建会话的 JSONL 文件在第一轮对话前不存在
+
+```
+New session 流程：
+  → CLI spawning → session_init
+  → 用户输入第一条消息前，JSONL 不存在
+  → SessionDetail 尝试加载 /api/sessions/{session_id} → 404 或空数据
+```
+
+**修复**：SessionDetail 在新建模式下不等待历史加载（跳过 loading spinner 直接显示空 timeline + connected 状态）。第一条消息发送后 JSONL 自动创建。
+
+Phase 2 Step 2.8 需要明确处理这种情况。
+
+#### 问题 3：不存在的 session 不会报错
+
+POC 验证：`--resume non-existent-session-id` 时 CLI **不报错**，而是创建新 session（新 session_id），仅在 stderr 输出 warning。
+
+**修复**：前端在收到 SessionInit 后检查 session_id 是否与请求的 session_id 一致。不一致时显示提示 "Session not found, created new session"。
+
+#### 问题 4：`--include-partial-messages` 引入 stream_event 信封
+
+POC 验证：加 `--include-partial-messages` 后，大部分事件包装在 `{"type":"stream_event","event":{...}}` 中，增加了 `message_start`、`message_delta`、`message_stop` 等新事件。
+
+**修复**：Phase 1 Step 1.2 协议解析器需支持 stream_event 信封解包 + 新增事件类型。Phase 1 doc 的事件表已更新。
+
+### 5. 具体修复清单（POC 后更新）
+
+| # | 问题 | 影响 Phase | 修复 |
+|---|------|-----------|------|
+| 1 | Manager.migrate_session_key() 未自动调用 | Phase 1 Step 1.7 | chat.rs 中检测 session_id 变化并调用 migrate |
+| 2 | 新建时 SessionDetail 等待加载 | Phase 2 Step 2.8 | 新建模式跳过历史加载，直接显示空 timeline |
+| 3 | 前端 session_id 变化后不导航 | Phase 2 Step 2.8 | useEffect 检测 sessionId 变化 → navigate |
+| 4 | 不存在的 session 不报错 | Phase 2 | SessionInit 后对比 session_id，提示用户 |
+| 5 | stream_event 信封 + 新事件类型 | Phase 1 Step 1.2 | 事件表已更新，解析器实现时支持 |
+
+---
+
 ## 核心设计约束：数据一致性保证
 
 > Phase 2 必须在整个数据生命周期中保证用户体验的丝滑和无跳变。以下约束贯穿所有 Step。
@@ -611,6 +818,59 @@ function messageToTimelineEntry(msg: Message): TimelineEntry {
 
 ---
 
+### Step 2.8：新建会话入口
+
+**目标**：提供从 GUI 创建全新 Claude Code 会话的能力。Phase 1 的 WebSocket `/api/ws/chat/new?cwd=...` 和后端 SpawnMode::New 已就绪，Phase 2 补上前端入口。
+
+**依赖**：Step 2.7
+
+**改动范围**：
+- 新建 `web/src/pages/NewSessionView.tsx`
+- 修改 `web/src/App.tsx`（添加路由）
+- 修改 `web/src/pages/SessionsView.tsx`（添加入口按钮）
+
+**具体要求**：
+
+1. **路由**：`/sessions/new` → NewSessionView
+2. **入口**：
+   - Sessions 列表页顶部添加"新建对话"按钮（primary button，醒目但不大）
+   - Dashboard 页面可添加快速入口（可选）
+3. **NewSessionView 页面**：
+   - 标题："新建对话"
+   - 输入项：工作目录（cwd）
+     - 文本输入框，带 placeholder "/Users/you/project"
+     - 显示最近使用的项目目录（从浏览器的 sessionStorage/localStorage 读取历史 cwd）
+     - 可选：文件夹选择按钮（使用浏览器 File System Access API 或手动输入）
+   - 可选：模型选择（从 CLI 已知模型列表，非必填）
+   - 可选：权限模式（default/acceptEdits/bypassPermissions，默认 default）
+   - [开始对话] 按钮（cwd 为空时 disabled）
+4. **导航与 session_id 迁移**：
+   - 点击"开始对话" → 调用 `/api/ws/chat/new?cwd=...` 建立 WebSocket
+   - 后端分配临时 key `conn_{uuid}`，spawn CLI
+   - 前端 ChatSessionStore 处于 connecting 状态，显示 spinner
+   - CLI 发送 SessionInit（含真实 session_id）
+   - 后端 chat.rs 检测 session_key 从 `conn_xxx` 变为 `real-uuid` → 自动调用 `manager.migrate_session_key()`
+   - 前端收到第二个 `Connected(session_id=real-uuid)` → ChatSessionStore 更新 sessionId
+   - 前端 `useEffect` 检测 sessionId 变化 → `navigate(/sessions/${realSessionId})` 更新 URL
+   - SessionDetail 处于 connected 状态，timeline 为空，输入框可用
+5. **新建模式下的特殊处理**：
+   - JSONL 文件在第一轮对话开始前不存在 → SessionDetail 不等待 `/api/sessions/{id}` 返回数据
+   - timeline 初始为空数组，显示引导提示 "发送第一条消息开始对话"
+   - 第一条消息发送后 → CLI 创建 JSONL → scanner 可发现新 session
+6. **与 resume 的共存**：
+   - 新建会话时无历史（timeline 为空），MessageTimeline 显示空白 + 中间引导文字
+   - Phase 2 ConnectBar 直接处于 connected 状态（不再显示"连接并继续对话"按钮）
+   - 首次发送消息：后端用 SpawnMode::New 启动 CLI
+
+**验收**：
+- 从 Sessions 列表点击"新建对话" → 进入 NewSessionView
+- 输入 cwd → 点击开始 → WebSocket 连接 → 跳转到 SessionDetail
+- SessionDetail 中 timeline 为空 → 输入框可用 → 发送第一条消息
+- 收到 AI 回复 → 消息出现在空的 timeline 中（Phase 2 完整流程）
+- 断开后 → JSONL 文件已创建 → 刷新页面 → 可正常 resume
+
+---
+
 ## 2. Step 依赖关系
 
 ```
@@ -622,6 +882,7 @@ Phase 1 完成（TimelineEntry + Adapter + Store + WebSocket 全部就绪）
         └─→ Step 2.5（ConnectBar）
               └─→ Step 2.6（合并逻辑）
                     └─→ Step 2.7（集成 & 回归）
+                          └─→ Step 2.8（新建会话入口）
 ```
 
 **建议执行顺序**：
@@ -632,6 +893,7 @@ Phase 1 完成（TimelineEntry + Adapter + Store + WebSocket 全部就绪）
 5. Step 2.5（ConnectBar）— 连接/输入 UI
 6. Step 2.6（Merge）— 合并逻辑
 7. Step 2.7（集成）— 收口
+8. Step 2.8（新建会话）— resume 通了再做 new
 
 ---
 
@@ -670,9 +932,11 @@ Phase 1 完成（TimelineEntry + Adapter + Store + WebSocket 全部就绪）
 
 ## 4. 阶段 2 完成标准
 
-- [ ] 所有 7 个 Step PR 合并到 master
+- [ ] 所有 8 个 Step PR 合并到 master
 - [ ] Session Detail 中历史消息用 TimelineEntry 渲染（视觉与之前一致）
 - [ ] 可在 Session Detail 中连接 CLI 并完成一轮对话
+- [ ] 可从 Sessions 列表新建对话（输入 cwd → 进入空 SessionDetail → 发送第一条消息）
+- [ ] 新建会话时 timeline 为空，第一条消息正常出现，断开后可 resume
 - [ ] Thinking 内容（历史 + 实时）可折叠展示
 - [ ] 工具调用有 running → success/error 状态转换
 - [ ] 流式文本无抖动、无闪烁

@@ -50,6 +50,51 @@ Phase 3 **绝大部分是前端**，仅需一个新后端端点：
 
 ---
 
+## 基于 agent-panel 现有能力
+
+### 复用
+
+| 现有模块 | 文件 | Phase 3 中如何复用 |
+|---------|------|-------------------|
+| CSS 变量体系 | `index.css` 的 design tokens | StatusBar 颜色从 `--muted-foreground`、`--warning`、`--destructive` 取；SlashMenu 浮层复用 `--popover`/`--border` 变量 |
+| ConnectBar | Phase 2 产出的 `ConnectBar.tsx` | 扩展为 ConversationConsole 容器，保留四态状态机 |
+| ChatSessionStore | Phase 1 产出的 `chat-session-store.ts` | 所有子组件从 store 读自己关心的字段（model、usage、slashCommands、permissionMode） |
+| use-chat-connection | Phase 1 产出的 `use-chat-connection.ts` | sendMessage、interrupt、respondPermission 等 API |
+| ToolCard 的 pretty/raw 切换 | `ToolCardHeader.tsx` 的 `ViewMode` | SlashMenu 子视图复用相同切换模式 |
+| 文件选择器 | 无现有组件 | 使用浏览器原生 `<input type="file">`，不引入新依赖 |
+| lucide-react 图标 | 已有依赖 | 状态图标、发送/停止/附件按钮 |
+
+### 新建
+
+| 新建文件 | 说明 |
+|---------|------|
+| `web/src/components/conversation/ConversationConsole.tsx` | 布局容器，替换 Phase 2 ConnectBar |
+| `web/src/components/conversation/StatusBar.tsx` | 输入框下方的状态行（model、tokens、cost、context、permission mode） |
+| `web/src/components/conversation/StatusBarExpanded.tsx` | StatusBar 展开面板（per-turn details） |
+| `web/src/components/conversation/SlashMenu.tsx` | 预取式命令菜单（分组 + 模糊搜索 + 键盘） |
+| `web/src/components/conversation/ModelPicker.tsx` | /model 子视图选择器 |
+| `web/src/components/conversation/PermissionModePicker.tsx` | /permission-mode 子视图选择器 |
+| `web/src/components/conversation/AttachmentManager.tsx` | 拖拽/粘贴/选择 + 模型能力检测 |
+| `web/src/components/conversation/AttachmentChip.tsx` | 单个附件 chip（文件名 + 大小 + 预览 + 删除） |
+| `web/src/components/conversation/GitBranchBadge.tsx` | Git 分支名 + 颜色标识 |
+| `web/src/lib/conversation/model-capabilities.ts` | supportsVision() 函数 + 模型能力映射表等常量 |
+| `web/src/lib/conversation/input-history.ts` | 输入历史持久化（localStorage）+ 方向键导航 |
+
+### 新增后端
+
+| 端点 | 用途 | 归属 Step |
+|------|------|----------|
+| `GET /api/git/branch?cwd=...` | GitBranchBadge 10s 轮询当前分支名 | Step 3.6 |
+
+### 修改
+
+| 文件 | 改动 | 风险 |
+|------|------|------|
+| `SessionDetailView.tsx` | ConnectBar 替换为 ConversationConsole | 低——增量替换 |
+| `SessionContext.tsx` | 无需改动（数据从 ChatSessionStore 取） | 无 |
+
+---
+
 ## 已确认的设计决策
 
 ### 决策 1：StatusBar 位于输入框下方
