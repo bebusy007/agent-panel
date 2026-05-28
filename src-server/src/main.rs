@@ -58,10 +58,14 @@ async fn main() {
     // Start file watcher (background thread)
     let watcher_tx = watcher::start_watching();
 
+    // Initialize conversation session manager
+    let session_manager = conversation::SessionManager::new();
+
     let api = router::build_api_router(
         watcher_tx,
         args.log_dir.clone(),
         Some(log_guards.stdout_reload),
+        session_manager,
     );
 
     let index_path = std::path::PathBuf::from(&args.dist).join("index.html");
