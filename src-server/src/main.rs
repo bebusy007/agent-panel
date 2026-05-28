@@ -1,4 +1,5 @@
 mod constants;
+mod conversation;
 mod logging;
 mod models;
 mod panic_hook;
