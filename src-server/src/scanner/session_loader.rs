@@ -18,13 +18,17 @@ pub struct ImageMeta {
     pub file_path: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
     pub id: String,
     pub role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking_text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -39,6 +43,14 @@ pub struct Message {
     pub timestamp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_usd: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<MessageUsage>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<ImageMeta>>,
     /// Raw JSON entry for the "raw view" toggle in the UI.
@@ -47,6 +59,27 @@ pub struct Message {
     /// Agent hash from toolUseResult.agentId for precise subagent matching.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_tool_use_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub git_branch: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageUsage {
+    #[serde(default)]
+    pub input_tokens: u64,
+    #[serde(default)]
+    pub output_tokens: u64,
+    #[serde(default)]
+    pub cache_creation_input_tokens: u64,
+    #[serde(default)]
+    pub cache_read_input_tokens: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_tier: Option<String>,
 }
 
 /// Load all messages from a session JSONL file.
@@ -55,6 +88,8 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
     let reader = BufReader::new(file);
     let mut messages = Vec::new();
     let mut idx = 0u32;
+    /// Accumulate thinking from thinking-only assistant entries to attach to next text assistant
+    let mut pending_thinking: Option<String> = None;
 
     for line in reader.lines() {
         let line = match line {
@@ -114,7 +149,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 model: None,
                 images: None,
                 raw: Some(entry.clone()),
-                agent_hash: None,
+                ..Default::default()
             });
             continue;
         }
@@ -142,7 +177,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     model: None,
                     images: None,
                     raw: Some(entry.clone()),
-                    agent_hash: None,
+                    ..Default::default()
                 });
                 continue;
             }
@@ -179,7 +214,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 model: None,
                 images: None,
                 raw: Some(entry.clone()),
-                agent_hash: None,
+                ..Default::default()
             });
             continue;
         }
@@ -197,23 +232,25 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         if blocks.is_empty() {
             // Check if this is a thinking-only assistant (content is an
             // array of only thinking blocks with empty text).
+            // Accumulate the thinking text and attach to the next text-assistant.
             if msg_type == "assistant" && is_thinking_only(content) {
-                idx += 1;
-                messages.push(Message {
-                    id: format!("{}-{}", uuid, idx),
-                    role: "assistant".to_string(),
-                    text: Some("(thinking)".to_string()),
-                    tool_name: None,
-                    tool_input: None,
-                    tool_output: None,
-                    tool_use_id: None,
-                    tool_status: None,
-                    timestamp: timestamp.clone(),
-                    model: model.clone(),
-                    images: None,
-                    raw: Some(entry.clone()),
-                    agent_hash: None,
-                });
+                if let Some(arr) = content.and_then(|c| c.as_array()) {
+                    let thinking_text = arr.iter()
+                        .filter_map(|b| {
+                            b.get("thinking").or_else(|| b.get("text"))
+                                .and_then(|v| v.as_str())
+                                .filter(|s| !s.is_empty())
+                                .map(String::from)
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    if !thinking_text.is_empty() {
+                        pending_thinking = Some(match pending_thinking.take() {
+                            Some(existing) => format!("{}\n{}", existing, thinking_text),
+                            None => thinking_text,
+                        });
+                    }
+                }
                 continue;
             }
 
@@ -241,7 +278,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                 model: model.clone(),
                 images: None,
                 raw: Some(entry.clone()),
-                agent_hash: None,
+                ..Default::default()
             });
             continue;
         }
@@ -298,8 +335,36 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
         // Collect [Image: source:] paths from text blocks for cache_path
         let image_source_paths: Vec<String> = all_paths;
 
+        // Extract usage, cost, stop_reason for assistant messages
+        let msg_usage = if msg_type == "assistant" {
+            message_obj.and_then(|m| m.get("usage")).map(parse_message_usage)
+        } else {
+            None
+        };
+        let cost_usd = if msg_type == "assistant" {
+            entry.get("costUsd").and_then(|v| v.as_f64())
+        } else {
+            None
+        };
+        let stop_reason = if msg_type == "assistant" {
+            message_obj.and_then(|m| m.get("stop_reason")).and_then(|v| v.as_str()).map(String::from)
+        } else {
+            None
+        };
+        let cwd = entry.get("cwd").and_then(|v| v.as_str()).map(String::from);
+        let git_branch = entry.get("gitBranch").and_then(|v| v.as_str()).map(String::from);
+
         for block in blocks {
             match block {
+                ContentBlock::Thinking(t) => {
+                    pending_thinking = Some(match pending_thinking.take() {
+                        Some(existing) => format!("{}\n{}", existing, t),
+                        None => t,
+                    });
+                }
+                ContentBlock::Document { .. } => {
+                    // Phase 5 feature — parsed but not yet rendered as separate entry
+                }
                 ContentBlock::Image {
                     media_type,
                     source_type,
@@ -340,20 +405,28 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     } else {
                         Some(cursor_images)
                     };
+                    let thinking_for_text = if role == "assistant" {
+                        pending_thinking.take()
+                    } else {
+                        None
+                    };
                     messages.push(Message {
                         id,
                         role: role.to_string(),
                         text: Some(text),
-                        tool_name: None,
-                        tool_input: None,
-                        tool_output: None,
-                        tool_use_id: None,
-                        tool_status: None,
-                        timestamp: timestamp.clone(),
-                        model: model.clone(),
+                        thinking_text: thinking_for_text,
+                        message_id: message_obj
+                            .and_then(|m| m.get("id"))
+                            .and_then(|v| v.as_str())
+                            .map(String::from),
+                        usage: msg_usage.clone(),
+                        cost_usd,
+                        duration_ms: None,
+                        stop_reason: stop_reason.clone(),
+                        cwd: cwd.clone(),
+                        git_branch: git_branch.clone(),
                         images,
-                        raw: None,
-                        agent_hash: None,
+                        ..Default::default()
                     });
                 }
                 ContentBlock::ToolUse {
@@ -366,17 +439,12 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     messages.push(Message {
                         id,
                         role: "tool_use".to_string(),
-                        text: None,
                         tool_name: Some(name),
                         tool_input: Some(input),
-                        tool_output: None,
                         tool_use_id: Some(tool_use_id),
-                        tool_status: None,
                         timestamp: timestamp.clone(),
                         model: model.clone(),
-                        images: None,
-                        raw: None,
-                        agent_hash: None,
+                        ..Default::default()
                     });
                 }
                 ContentBlock::ToolResult {
@@ -389,9 +457,6 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                     messages.push(Message {
                         id,
                         role: "tool_result".to_string(),
-                        text: None,
-                        tool_name: None,
-                        tool_input: None,
                         tool_output: Some(content),
                         tool_use_id: Some(tool_use_id),
                         tool_status: if is_error {
@@ -400,14 +465,24 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
                             None
                         },
                         timestamp: timestamp.clone(),
-                        model: None,
-                        images: None,
-                        raw: None,
                         agent_hash: agent_hash_from_entry.clone(),
+                        ..Default::default()
                     });
                 }
             }
         }
+    }
+
+    // Flush orphaned pending_thinking (no text block followed it)
+    if let Some(thinking) = pending_thinking.take() {
+        idx += 1;
+        messages.push(Message {
+            id: format!("thinking-orphan-{}", idx),
+            role: "assistant".to_string(),
+            text: Some("(thinking)".to_string()),
+            thinking_text: Some(thinking),
+            ..Default::default()
+        });
     }
 
     tracing::debug!(file = %file_path.display(), message_count = messages.len(), "messages loaded");
@@ -456,7 +531,7 @@ fn parse_codex_entry(
                         model: None,
                         images: None,
                         raw: None,
-                        agent_hash: None,
+                        ..Default::default()
                     });
                 }
             }
@@ -482,7 +557,7 @@ fn parse_codex_entry(
                         model: None,
                         images: None,
                         raw: None,
-                        agent_hash: None,
+                        ..Default::default()
                     });
                 }
             }
@@ -515,7 +590,7 @@ fn parse_codex_entry(
                                 model: None,
                                 images: None,
                                 raw: None,
-                                agent_hash: None,
+                                ..Default::default()
                             });
                         }
                         _ => {}
@@ -566,7 +641,7 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     model: None,
                     images: None,
                     raw: None,
-                    agent_hash: None,
+                    ..Default::default()
                 });
             }
             "tool_use" => {
@@ -602,7 +677,7 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     model: None,
                     images: None,
                     raw: None,
-                    agent_hash: None,
+                    ..Default::default()
                 });
             }
             "tool_result" => {
@@ -659,7 +734,7 @@ fn parse_cursor_entry(entry: &serde_json::Value, role: &str, idx: &mut u32) -> V
                     model: None,
                     images: None,
                     raw: None,
-                    agent_hash: None,
+                    ..Default::default()
                 });
             }
             _ => {}
@@ -743,6 +818,7 @@ fn is_thinking_only(content: Option<&serde_json::Value>) -> bool {
 
 enum ContentBlock {
     Text(String),
+    Thinking(String),
     Image {
         media_type: String,
         source_type: String,
@@ -756,6 +832,9 @@ enum ContentBlock {
         content: String,
         tool_use_id: String,
         is_error: bool,
+    },
+    Document {
+        media_type: String,
     },
 }
 
@@ -824,6 +903,15 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
                     is_error,
                 });
             }
+            "thinking" => {
+                let t = item.get("thinking")
+                    .or_else(|| item.get("text"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                if !t.is_empty() {
+                    blocks.push(ContentBlock::Thinking(t.to_string()));
+                }
+            }
             "image" => {
                 let source = item.get("source");
                 let media_type = source
@@ -841,11 +929,30 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
                     source_type,
                 });
             }
+            "document" => {
+                let source = item.get("source");
+                let media_type = source
+                    .and_then(|s| s.get("media_type"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("application/pdf")
+                    .to_string();
+                blocks.push(ContentBlock::Document { media_type });
+            }
             _ => {}
         }
     }
 
     blocks
+}
+
+fn parse_message_usage(value: &serde_json::Value) -> MessageUsage {
+    MessageUsage {
+        input_tokens: value["input_tokens"].as_u64().unwrap_or(0),
+        output_tokens: value["output_tokens"].as_u64().unwrap_or(0),
+        cache_creation_input_tokens: value["cache_creation_input_tokens"].as_u64().unwrap_or(0),
+        cache_read_input_tokens: value["cache_read_input_tokens"].as_u64().unwrap_or(0),
+        service_tier: value["service_tier"].as_str().map(String::from),
+    }
 }
 
 /// Extract `[Image: source: /path/to/file.png]` references from text.
@@ -1369,7 +1476,7 @@ mod tests {
                 model: None,
                 images: None,
                 raw: None,
-                agent_hash: None,
+                ..Default::default()
             },
             Message {
                 id: "2".into(),
@@ -1384,7 +1491,7 @@ mod tests {
                 model: None,
                 images: None,
                 raw: None,
-                agent_hash: None,
+                ..Default::default()
             },
             Message {
                 id: "3".into(),
@@ -1399,7 +1506,7 @@ mod tests {
                 model: None,
                 images: None,
                 raw: None,
-                agent_hash: None,
+                ..Default::default()
             },
         ];
 
@@ -1424,7 +1531,7 @@ mod tests {
                 model: None,
                 images: None,
                 raw: None,
-                agent_hash: None,
+                ..Default::default()
             })
             .collect();
 
@@ -1559,13 +1666,15 @@ mod tests {
         let file = write_session_file(
             &dir,
             &[
-                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":""}]}}"#,
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Let me think about this"}]}}"#,
             ],
         );
         let msgs = load_messages(&file).unwrap();
+        // Orphaned thinking flushed as standalone message
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
         assert_eq!(msgs[0].text, Some("(thinking)".to_string()));
+        assert_eq!(msgs[0].thinking_text, Some("Let me think about this".to_string()));
     }
 
     #[test]
@@ -1574,13 +1683,48 @@ mod tests {
         let file = write_session_file(
             &dir,
             &[
-                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","text":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"let me think"},{"type":"text","text":"Here is the answer"}]}}"#,
             ],
         );
         let msgs = load_messages(&file).unwrap();
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
         assert_eq!(msgs[0].text, Some("Here is the answer".to_string()));
+        assert_eq!(msgs[0].thinking_text, Some("let me think".to_string()));
+    }
+
+    #[test]
+    fn test_cross_entry_thinking_accumulation() {
+        let dir = TempDir::new().unwrap();
+        // Two separate assistant entries: first with thinking only, second with text
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Step 1: analyze"}]}}"#,
+                r#"{"type":"assistant","uuid":"a2","timestamp":"2026-05-01T10:00:01Z","message":{"role":"assistant","content":[{"type":"text","text":"The answer is 42"}]}}"#,
+            ],
+        );
+        let msgs = load_messages(&file).unwrap();
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].text, Some("The answer is 42".to_string()));
+        assert_eq!(msgs[0].thinking_text, Some("Step 1: analyze".to_string()));
+    }
+
+    #[test]
+    fn test_multiple_consecutive_thinking_entries() {
+        let dir = TempDir::new().unwrap();
+        let file = write_session_file(
+            &dir,
+            &[
+                r#"{"type":"assistant","uuid":"a1","timestamp":"2026-05-01T10:00:00Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Step 1"}]}}"#,
+                r#"{"type":"assistant","uuid":"a2","timestamp":"2026-05-01T10:00:01Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Step 2"}]}}"#,
+                r#"{"type":"assistant","uuid":"a3","timestamp":"2026-05-01T10:00:02Z","message":{"role":"assistant","content":[{"type":"text","text":"Result"}]}}"#,
+            ],
+        );
+        let msgs = load_messages(&file).unwrap();
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].text, Some("Result".to_string()));
+        assert_eq!(msgs[0].thinking_text, Some("Step 1\nStep 2".to_string()));
     }
 
     #[test]
@@ -2048,7 +2192,7 @@ mod tests {
             model: None,
             images: None,
             raw: None,
-            agent_hash: None,
+            ..Default::default()
         }];
         let hits = search_in_messages(&messages, "xyz", 10);
         assert!(hits.is_empty());
@@ -2069,7 +2213,7 @@ mod tests {
             model: None,
             images: None,
             raw: None,
-            agent_hash: None,
+            ..Default::default()
         }];
         let hits = search_in_messages(&messages, "keyword", 10);
         assert_eq!(hits.len(), 1);
