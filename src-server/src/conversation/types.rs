@@ -551,7 +551,12 @@ mod tests {
         let json = r#"{"kind":"session_init","session_id":"abc-123","model":"opus","slash_commands":[],"mcp_servers":[],"tools":["Bash"]}"#;
         let ev: ChatEvent = serde_json::from_str(json).unwrap();
         match ev {
-            ChatEvent::SessionInit { session_id, model, tools, .. } => {
+            ChatEvent::SessionInit {
+                session_id,
+                model,
+                tools,
+                ..
+            } => {
                 assert_eq!(session_id, "abc-123");
                 assert_eq!(model.unwrap(), "opus");
                 assert_eq!(tools, vec!["Bash"]);
@@ -565,7 +570,12 @@ mod tests {
         let json = r#"{"kind":"tool_result","tool_use_id":"tu_1","output":"ok","stdout":"ok","stderr":"","exit_code":0,"is_error":false,"interrupted":false}"#;
         let ev: ChatEvent = serde_json::from_str(json).unwrap();
         match ev {
-            ChatEvent::ToolResult { tool_use_id, output, exit_code, .. } => {
+            ChatEvent::ToolResult {
+                tool_use_id,
+                output,
+                exit_code,
+                ..
+            } => {
                 assert_eq!(tool_use_id, "tu_1");
                 assert_eq!(output.unwrap(), "ok");
                 assert_eq!(exit_code, Some(0));

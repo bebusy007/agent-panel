@@ -113,9 +113,9 @@ impl LocalTransport {
 
         tracing::info!(cli = cli_path, cwd = %config.cwd, args = ?args, "Spawning Claude CLI");
 
-        let mut child = cmd.spawn().map_err(|e| {
-            format!("Failed to spawn '{}': {}", cli_path, e)
-        })?;
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| format!("Failed to spawn '{}': {}", cli_path, e))?;
 
         let pid = child.id();
         let stdin = child.stdin.take();
@@ -168,11 +168,8 @@ impl LocalTransport {
     async fn kill(&mut self) -> Result<(), String> {
         self.stdin.take();
 
-        let graceful = tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            self.child.wait(),
-        )
-        .await;
+        let graceful =
+            tokio::time::timeout(std::time::Duration::from_secs(3), self.child.wait()).await;
 
         if let Ok(Ok(status)) = graceful {
             tracing::debug!(exit_code = ?status.code(), "CLI exited gracefully after stdin close");
@@ -180,17 +177,30 @@ impl LocalTransport {
         }
 
         // Abort reader tasks before force-kill
-        if let Some(h) = self.stdout_handle.take() { h.abort(); }
-        if let Some(h) = self.stderr_handle.take() { h.abort(); }
+        if let Some(h) = self.stdout_handle.take() {
+            h.abort();
+        }
+        if let Some(h) = self.stderr_handle.take() {
+            h.abort();
+        }
 
         tracing::debug!("CLI did not exit gracefully, sending kill");
-        self.child.kill().await.map_err(|e| format!("kill failed: {}", e))?;
-        self.child.wait().await.map_err(|e| format!("wait after kill failed: {}", e))?;
+        self.child
+            .kill()
+            .await
+            .map_err(|e| format!("kill failed: {}", e))?;
+        self.child
+            .wait()
+            .await
+            .map_err(|e| format!("wait after kill failed: {}", e))?;
         Ok(())
     }
 
     async fn wait(&mut self) -> Result<ExitStatus, String> {
-        self.child.wait().await.map_err(|e| format!("wait failed: {}", e))
+        self.child
+            .wait()
+            .await
+            .map_err(|e| format!("wait failed: {}", e))
     }
 }
 
@@ -249,7 +259,9 @@ mod tests {
     #[tokio::test]
     async fn spawn_resume_builds_correct_args() {
         let config = SpawnConfig {
-            mode: SpawnMode::Resume { session_id: "test-sid-123".into() },
+            mode: SpawnMode::Resume {
+                session_id: "test-sid-123".into(),
+            },
             cwd: "/tmp".to_string(),
             model: Some("sonnet".into()),
             permission_mode: Some("default".into()),

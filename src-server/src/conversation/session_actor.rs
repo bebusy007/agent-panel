@@ -1,5 +1,7 @@
 use crate::conversation::protocol::ProtocolParser;
-use crate::conversation::stdin_writer::{build_interrupt_request, build_permission_response, build_user_message};
+use crate::conversation::stdin_writer::{
+    build_interrupt_request, build_permission_response, build_user_message,
+};
 use crate::conversation::transport::Transport;
 use crate::conversation::types::*;
 use std::collections::VecDeque;
@@ -74,7 +76,11 @@ impl SessionActor {
 
         tokio::spawn(actor.run());
 
-        Ok(SessionActorHandle { cmd_tx, event_rx, pid })
+        Ok(SessionActorHandle {
+            cmd_tx,
+            event_rx,
+            pid,
+        })
     }
 
     async fn run(mut self) {
@@ -123,7 +129,11 @@ impl SessionActor {
         }
     }
 
-    async fn handle_send_message(&mut self, text: String, attachments: Vec<AttachmentData>) -> Result<String, String> {
+    async fn handle_send_message(
+        &mut self,
+        text: String,
+        attachments: Vec<AttachmentData>,
+    ) -> Result<String, String> {
         if self.active_turn {
             self.pending_messages.push_back((text, attachments));
             return Ok("queued".to_string());
@@ -131,7 +141,11 @@ impl SessionActor {
         self.dispatch_message(&text, &attachments).await
     }
 
-    async fn dispatch_message(&mut self, text: &str, attachments: &[AttachmentData]) -> Result<String, String> {
+    async fn dispatch_message(
+        &mut self,
+        text: &str,
+        attachments: &[AttachmentData],
+    ) -> Result<String, String> {
         let (line, uuid) = build_user_message(text, attachments);
         self.write_stdin(&line).await?;
         self.active_turn = true;
@@ -191,14 +205,20 @@ impl SessionActor {
 
             // Emit event
             self.seq += 1;
-            let _ = self.event_tx.send(ServerMessage::Event { seq: self.seq, event });
+            let _ = self.event_tx.send(ServerMessage::Event {
+                seq: self.seq,
+                event,
+            });
         }
     }
 
     async fn handle_process_exit(&mut self) {
         self.active_turn = false;
         if !self.pending_messages.is_empty() {
-            tracing::warn!(count = self.pending_messages.len(), "CLI exited with queued messages; discarding");
+            tracing::warn!(
+                count = self.pending_messages.len(),
+                "CLI exited with queued messages; discarding"
+            );
             self.pending_messages.clear();
         }
         let _ = self.event_tx.send(ServerMessage::Disconnected {
@@ -208,8 +228,14 @@ impl SessionActor {
 
     async fn write_stdin(&mut self, data: &str) -> Result<(), String> {
         let stdin = self.stdin.as_mut().ok_or("stdin not available")?;
-        stdin.write_all(data.as_bytes()).await.map_err(|e| format!("stdin write: {}", e))?;
-        stdin.flush().await.map_err(|e| format!("stdin flush: {}", e))?;
+        stdin
+            .write_all(data.as_bytes())
+            .await
+            .map_err(|e| format!("stdin write: {}", e))?;
+        stdin
+            .flush()
+            .await
+            .map_err(|e| format!("stdin flush: {}", e))?;
         Ok(())
     }
 }

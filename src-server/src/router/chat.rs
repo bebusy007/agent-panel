@@ -1,14 +1,14 @@
+use crate::conversation::manager::SessionManager;
+use crate::conversation::types::*;
 use axum::{
+    Router,
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
         Path, Query, State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
     routing::get,
-    Router,
 };
-use crate::conversation::manager::SessionManager;
-use crate::conversation::types::*;
 use tokio::sync::broadcast;
 
 #[derive(serde::Deserialize)]
@@ -36,7 +36,13 @@ async fn ws_resume_handler(
     State(manager): State<SessionManager>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| {
-        handle_ws_session(socket, manager, SpawnMode::Resume { session_id }, params.cwd, params.token)
+        handle_ws_session(
+            socket,
+            manager,
+            SpawnMode::Resume { session_id },
+            params.cwd,
+            params.token,
+        )
     })
 }
 
@@ -87,7 +93,10 @@ async fn handle_ws_session(
     };
 
     // Send initial spawned state
-    let spawned_msg = ServerMessage::StateChange { state: SessionState::Spawned, reason: None };
+    let spawned_msg = ServerMessage::StateChange {
+        state: SessionState::Spawned,
+        reason: None,
+    };
     if let Ok(json) = serde_json::to_string(&spawned_msg) {
         if socket.send(Message::Text(json.into())).await.is_err() {
             return;
@@ -145,7 +154,11 @@ async fn handle_ws_session(
     manager.ws_disconnected(&session_key).await;
 }
 
-async fn handle_client_message(text: &str, manager: &SessionManager, session_key: &str) -> Result<(), bool> {
+async fn handle_client_message(
+    text: &str,
+    manager: &SessionManager,
+    session_key: &str,
+) -> Result<(), bool> {
     let client_msg: ClientMessage = match serde_json::from_str(text) {
         Ok(m) => m,
         Err(e) => {
@@ -160,8 +173,14 @@ async fn handle_client_message(text: &str, manager: &SessionManager, session_key
                 tracing::error!(error = %e, "send_message failed");
             }
         }
-        ClientMessage::PermissionResponse { request_id, decision } => {
-            if let Err(e) = manager.send_permission(session_key, request_id, decision).await {
+        ClientMessage::PermissionResponse {
+            request_id,
+            decision,
+        } => {
+            if let Err(e) = manager
+                .send_permission(session_key, request_id, decision)
+                .await
+            {
                 tracing::error!(error = %e, "send_permission failed");
             }
         }

@@ -235,9 +235,11 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
             // Accumulate the thinking text and attach to the next text-assistant.
             if msg_type == "assistant" && is_thinking_only(content) {
                 if let Some(arr) = content.and_then(|c| c.as_array()) {
-                    let thinking_text = arr.iter()
+                    let thinking_text = arr
+                        .iter()
                         .filter_map(|b| {
-                            b.get("thinking").or_else(|| b.get("text"))
+                            b.get("thinking")
+                                .or_else(|| b.get("text"))
                                 .and_then(|v| v.as_str())
                                 .filter(|s| !s.is_empty())
                                 .map(String::from)
@@ -337,7 +339,9 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
 
         // Extract usage, cost, stop_reason for assistant messages
         let msg_usage = if msg_type == "assistant" {
-            message_obj.and_then(|m| m.get("usage")).map(parse_message_usage)
+            message_obj
+                .and_then(|m| m.get("usage"))
+                .map(parse_message_usage)
         } else {
             None
         };
@@ -347,12 +351,18 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
             None
         };
         let stop_reason = if msg_type == "assistant" {
-            message_obj.and_then(|m| m.get("stop_reason")).and_then(|v| v.as_str()).map(String::from)
+            message_obj
+                .and_then(|m| m.get("stop_reason"))
+                .and_then(|v| v.as_str())
+                .map(String::from)
         } else {
             None
         };
         let cwd = entry.get("cwd").and_then(|v| v.as_str()).map(String::from);
-        let git_branch = entry.get("gitBranch").and_then(|v| v.as_str()).map(String::from);
+        let git_branch = entry
+            .get("gitBranch")
+            .and_then(|v| v.as_str())
+            .map(String::from);
 
         for block in blocks {
             match block {
@@ -904,7 +914,8 @@ fn extract_blocks(content: Option<&serde_json::Value>) -> Vec<ContentBlock> {
                 });
             }
             "thinking" => {
-                let t = item.get("thinking")
+                let t = item
+                    .get("thinking")
                     .or_else(|| item.get("text"))
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
@@ -1674,7 +1685,10 @@ mod tests {
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, "assistant");
         assert_eq!(msgs[0].text, Some("(thinking)".to_string()));
-        assert_eq!(msgs[0].thinking_text, Some("Let me think about this".to_string()));
+        assert_eq!(
+            msgs[0].thinking_text,
+            Some("Let me think about this".to_string())
+        );
     }
 
     #[test]

@@ -45,7 +45,9 @@ pub fn build_user_message(text: &str, attachments: &[AttachmentData]) -> (String
 pub fn build_permission_response(request_id: &str, decision: &PermissionDecision) -> String {
     let response = match decision {
         PermissionDecision::Allow => serde_json::json!({"behavior": "allow", "updatedInput": {}}),
-        PermissionDecision::Deny => serde_json::json!({"behavior": "deny", "message": "User denied permission"}),
+        PermissionDecision::Deny => {
+            serde_json::json!({"behavior": "deny", "message": "User denied permission"})
+        }
     };
     let payload = serde_json::json!({
         "type": "control_response",
@@ -70,7 +72,10 @@ pub fn build_interrupt_request() -> String {
 }
 
 fn is_image_type(media_type: &str) -> bool {
-    matches!(media_type, "image/png" | "image/jpeg" | "image/gif" | "image/webp")
+    matches!(
+        media_type,
+        "image/png" | "image/jpeg" | "image/gif" | "image/webp"
+    )
 }
 
 fn is_document_type(media_type: &str) -> bool {
@@ -128,7 +133,12 @@ mod tests {
         let line = build_interrupt_request();
         let parsed: Value = serde_json::from_str(line.trim()).unwrap();
         assert_eq!(parsed["type"], "control_request");
-        assert!(parsed["request_id"].as_str().unwrap().starts_with("ap_int_"));
+        assert!(
+            parsed["request_id"]
+                .as_str()
+                .unwrap()
+                .starts_with("ap_int_")
+        );
         assert_eq!(parsed["request"]["subtype"], "interrupt");
     }
 }

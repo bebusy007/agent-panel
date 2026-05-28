@@ -311,12 +311,3 @@ export interface AttachmentData {
 // ── Connection state ──
 
 export type ConnectionState = "idle" | "connecting" | "connected" | "disconnecting" | "error";
-
-export type SessionPhase =
-  | "empty"
-  | "connecting"
-  | "connected"
-  | "running"
-  | "idle"
-  | "error"
-  | "disconnected";

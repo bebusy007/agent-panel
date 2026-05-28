@@ -1,8 +1,8 @@
-use crate::conversation::session_actor::{spawn_actor, ActorCommand, SessionActorHandle};
+use crate::conversation::session_actor::{ActorCommand, SessionActorHandle, spawn_actor};
 use crate::conversation::types::*;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
+use tokio::sync::{Mutex, broadcast, mpsc, oneshot};
 
 #[derive(Clone)]
 pub struct SessionManager {
@@ -114,32 +114,71 @@ impl SessionManager {
         }
     }
 
-    pub async fn send_message(&self, session_key: &str, text: String, attachments: Vec<AttachmentData>) -> Result<String, String> {
+    pub async fn send_message(
+        &self,
+        session_key: &str,
+        text: String,
+        attachments: Vec<AttachmentData>,
+    ) -> Result<String, String> {
         let inner = self.inner.lock().await;
         let session = inner.sessions.get(session_key).ok_or("session not found")?;
         let (reply_tx, reply_rx) = oneshot::channel();
-        session.handle.cmd_tx.send(ActorCommand::SendMessage { text, attachments, reply: reply_tx }).await.map_err(|_| "actor dead")?;
+        session
+            .handle
+            .cmd_tx
+            .send(ActorCommand::SendMessage {
+                text,
+                attachments,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "actor dead")?;
         drop(inner);
         reply_rx.await.map_err(|_| "actor dropped reply")?
     }
 
-    pub async fn send_permission(&self, session_key: &str, request_id: String, decision: PermissionDecision) -> Result<(), String> {
+    pub async fn send_permission(
+        &self,
+        session_key: &str,
+        request_id: String,
+        decision: PermissionDecision,
+    ) -> Result<(), String> {
         let inner = self.inner.lock().await;
         let session = inner.sessions.get(session_key).ok_or("session not found")?;
-        session.handle.cmd_tx.send(ActorCommand::SendPermission { request_id, decision }).await.map_err(|_| "actor dead".to_string())
+        session
+            .handle
+            .cmd_tx
+            .send(ActorCommand::SendPermission {
+                request_id,
+                decision,
+            })
+            .await
+            .map_err(|_| "actor dead".to_string())
     }
 
     pub async fn interrupt(&self, session_key: &str) -> Result<(), String> {
         let inner = self.inner.lock().await;
         let session = inner.sessions.get(session_key).ok_or("session not found")?;
-        session.handle.cmd_tx.send(ActorCommand::Interrupt).await.map_err(|_| "actor dead".to_string())
+        session
+            .handle
+            .cmd_tx
+            .send(ActorCommand::Interrupt)
+            .await
+            .map_err(|_| "actor dead".to_string())
     }
 
     pub async fn disconnect(&self, session_key: &str) -> Result<(), String> {
         let mut inner = self.inner.lock().await;
-        let session = inner.sessions.remove(session_key).ok_or("session not found")?;
+        let session = inner
+            .sessions
+            .remove(session_key)
+            .ok_or("session not found")?;
         let (reply_tx, reply_rx) = oneshot::channel();
-        let _ = session.handle.cmd_tx.send(ActorCommand::Stop { reply: reply_tx }).await;
+        let _ = session
+            .handle
+            .cmd_tx
+            .send(ActorCommand::Stop { reply: reply_tx })
+            .await;
         drop(inner);
         reply_rx.await.map_err(|_| "actor dropped reply")?
     }
@@ -150,7 +189,11 @@ impl SessionManager {
         for key in keys {
             if let Some(session) = inner.sessions.remove(&key) {
                 let (reply_tx, _) = oneshot::channel();
-                let _ = session.handle.cmd_tx.send(ActorCommand::Stop { reply: reply_tx }).await;
+                let _ = session
+                    .handle
+                    .cmd_tx
+                    .send(ActorCommand::Stop { reply: reply_tx })
+                    .await;
             }
         }
     }

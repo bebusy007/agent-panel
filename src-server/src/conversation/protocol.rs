@@ -52,7 +52,10 @@ impl ProtocolParser {
                 vec![]
             }
             _ => {
-                tracing::debug!(event_type = outer_type, "Unknown CLI event type, emitting Raw");
+                tracing::debug!(
+                    event_type = outer_type,
+                    "Unknown CLI event type, emitting Raw"
+                );
                 vec![ChatEvent::Raw {
                     raw_type: outer_type.to_string(),
                     data: value,
@@ -64,10 +67,7 @@ impl ProtocolParser {
     // ── system events ──
 
     fn parse_system(&self, value: &Value) -> Vec<ChatEvent> {
-        let subtype = value
-            .get("subtype")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let subtype = value.get("subtype").and_then(|v| v.as_str()).unwrap_or("");
 
         match subtype {
             "init" => {
@@ -77,7 +77,11 @@ impl ProtocolParser {
                 let mcp_servers = parse_mcp_servers(value);
                 let tools = value["tools"]
                     .as_array()
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    })
                     .unwrap_or_default();
                 let cli_version = value["claude_code_version"].as_str().map(String::from);
                 let permission_mode = value["permissionMode"].as_str().map(String::from);
@@ -311,7 +315,8 @@ impl ProtocolParser {
                         });
                     }
                     "thinking" => {
-                        let thinking = block.get("thinking")
+                        let thinking = block
+                            .get("thinking")
                             .or_else(|| block.get("text"))
                             .and_then(|v| v.as_str())
                             .unwrap_or("")
@@ -321,7 +326,11 @@ impl ProtocolParser {
                             message_id: message_id.clone(),
                             model: model.clone(),
                             text: None,
-                            thinking_text: if thinking.is_empty() { None } else { Some(thinking) },
+                            thinking_text: if thinking.is_empty() {
+                                None
+                            } else {
+                                Some(thinking)
+                            },
                             thinking_signature: signature,
                             tool_use_id: None,
                             tool_name: None,
@@ -393,7 +402,9 @@ impl ProtocolParser {
 
                     // Extract structured tool_use_result fields
                     let tur = value.get("tool_use_result");
-                    let interrupted = tur.and_then(|r| r["interrupted"].as_bool()).unwrap_or(false);
+                    let interrupted = tur
+                        .and_then(|r| r["interrupted"].as_bool())
+                        .unwrap_or(false);
                     let exit_code = tur.and_then(|r| r["exitCode"].as_i64()).map(|v| v as i32);
                     let stdout = tur.and_then(|r| r["stdout"].as_str()).map(String::from);
                     let stderr = tur.and_then(|r| r["stderr"].as_str()).map(String::from);
@@ -442,9 +453,10 @@ impl ProtocolParser {
         }
 
         // Turn complete
-        let error_val = value.get("errors").and_then(|e| e.as_array()).and_then(|arr| {
-            arr.first().and_then(|e| e.as_str()).map(String::from)
-        });
+        let error_val = value
+            .get("errors")
+            .and_then(|e| e.as_array())
+            .and_then(|arr| arr.first().and_then(|e| e.as_str()).map(String::from));
         events.push(ChatEvent::TurnComplete {
             stop_reason: value["stop_reason"].as_str().map(String::from),
             error: error_val,
@@ -469,7 +481,10 @@ impl ProtocolParser {
             "can_use_tool" => {
                 let tool_name = request["tool_name"].as_str().unwrap_or("").to_string();
                 let tool_input = request.get("input").cloned();
-                let suggestions = request["suggestions"].as_array().cloned().unwrap_or_default();
+                let suggestions = request["suggestions"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default();
                 vec![ChatEvent::PermissionRequest {
                     request_id,
                     tool_name,
@@ -524,7 +539,11 @@ fn parse_slash_commands(value: &Value) -> Vec<SlashCommandInfo> {
                             description: cmd["description"].as_str().map(String::from),
                             aliases: cmd["aliases"]
                                 .as_array()
-                                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                                .map(|a| {
+                                    a.iter()
+                                        .filter_map(|v| v.as_str().map(String::from))
+                                        .collect()
+                                })
                                 .unwrap_or_default(),
                             is_skill: cmd["is_skill"].as_bool().unwrap_or(false),
                         })
@@ -598,7 +617,13 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::SessionInit { session_id, model, tools, cli_version, .. } => {
+            ChatEvent::SessionInit {
+                session_id,
+                model,
+                tools,
+                cli_version,
+                ..
+            } => {
                 assert_eq!(session_id, "sess_abc");
                 assert_eq!(model.as_deref(), Some("opus"));
                 assert_eq!(tools, &vec!["Bash".to_string()]);
@@ -667,7 +692,12 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::ContentBlockStart { index, block_type, tool_use_id, tool_name } => {
+            ChatEvent::ContentBlockStart {
+                index,
+                block_type,
+                tool_use_id,
+                tool_name,
+            } => {
                 assert_eq!(*index, 2);
                 assert_eq!(*block_type, ContentBlockType::ToolUse);
                 assert_eq!(tool_use_id.as_deref(), Some("tu_abc"));
@@ -686,7 +716,10 @@ mod tests {
         let events = p.parse_line(r#"{"type":"stream_event","event":{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"cmd\":\"ls\"}"}}}"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::ToolInputDelta { tool_use_id, json_delta } => {
+            ChatEvent::ToolInputDelta {
+                tool_use_id,
+                json_delta,
+            } => {
                 assert_eq!(tool_use_id, "tu_abc");
                 assert_eq!(json_delta, r#"{"cmd":"ls"}"#);
             }
@@ -701,7 +734,14 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::ToolResult { tool_use_id, output, is_error, stdout, exit_code, .. } => {
+            ChatEvent::ToolResult {
+                tool_use_id,
+                output,
+                is_error,
+                stdout,
+                exit_code,
+                ..
+            } => {
                 assert_eq!(tool_use_id, "tu_abc");
                 assert_eq!(output.as_deref(), Some("output text"));
                 assert!(!is_error);
@@ -719,7 +759,14 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 2);
         match &events[0] {
-            ChatEvent::UsageUpdate { input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost, .. } => {
+            ChatEvent::UsageUpdate {
+                input_tokens,
+                output_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
+                cost,
+                ..
+            } => {
                 assert_eq!(*input_tokens, 100);
                 assert_eq!(*output_tokens, 50);
                 assert_eq!(*cache_read_tokens, 80);
@@ -729,7 +776,11 @@ mod tests {
             _ => panic!("expected UsageUpdate"),
         }
         match &events[1] {
-            ChatEvent::TurnComplete { stop_reason, duration_ms, .. } => {
+            ChatEvent::TurnComplete {
+                stop_reason,
+                duration_ms,
+                ..
+            } => {
                 assert_eq!(stop_reason.as_deref(), Some("end_turn"));
                 assert_eq!(*duration_ms, 1234);
             }
@@ -744,7 +795,11 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::PermissionRequest { request_id, tool_name, .. } => {
+            ChatEvent::PermissionRequest {
+                request_id,
+                tool_name,
+                ..
+            } => {
                 assert_eq!(request_id, "req_abc");
                 assert_eq!(tool_name, "Bash");
             }
@@ -806,7 +861,12 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::AssistantMessage { tool_use_id, tool_name, tool_input, .. } => {
+            ChatEvent::AssistantMessage {
+                tool_use_id,
+                tool_name,
+                tool_input,
+                ..
+            } => {
                 assert_eq!(tool_use_id.as_deref(), Some("tu_123"));
                 assert_eq!(tool_name.as_deref(), Some("Bash"));
                 assert!(tool_input.is_some());
