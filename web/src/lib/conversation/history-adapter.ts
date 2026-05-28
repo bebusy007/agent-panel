@@ -36,14 +36,19 @@ interface ApiMessageUsage {
 }
 
 export interface AdaptedTimelineEntry {
-  kind: "user" | "assistant" | "tool" | "system" | "raw";
+  kind: 'user' | 'assistant' | 'tool' | 'system' | 'raw';
   id: string;
   role?: string;
   text?: string;
   thinkingText?: string;
   model?: string;
   costUsd?: number;
-  usage?: { inputTokens: number; outputTokens: number; cacheReadInputTokens: number; cacheCreationInputTokens: number };
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadInputTokens: number;
+    cacheCreationInputTokens: number;
+  };
   durationMs?: number;
   stopReason?: string;
   toolName?: string;
@@ -64,25 +69,32 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
     const msg = messages[i];
 
     switch (msg.role) {
-      case "user":
-        result.push({ kind: "user", id: msg.id, text: msg.text ?? "", timestamp: msg.timestamp ?? undefined });
+      case 'user':
+        result.push({
+          kind: 'user',
+          id: msg.id,
+          text: msg.text ?? '',
+          timestamp: msg.timestamp ?? undefined,
+        });
         break;
 
-      case "assistant": {
+      case 'assistant': {
         // Check if next message is a tool_result that pairs with a preceding tool_use
         result.push({
-          kind: "assistant",
+          kind: 'assistant',
           id: msg.messageId || msg.id,
-          text: msg.text ?? "",
+          text: msg.text ?? '',
           thinkingText: msg.thinkingText ?? undefined,
           model: msg.model ?? undefined,
           costUsd: msg.costUsd ?? undefined,
-          usage: msg.usage ? {
-            inputTokens: msg.usage.inputTokens ?? 0,
-            outputTokens: msg.usage.outputTokens ?? 0,
-            cacheReadInputTokens: msg.usage.cacheReadInputTokens ?? 0,
-            cacheCreationInputTokens: msg.usage.cacheCreationInputTokens ?? 0,
-          } : undefined,
+          usage: msg.usage
+            ? {
+                inputTokens: msg.usage.inputTokens ?? 0,
+                outputTokens: msg.usage.outputTokens ?? 0,
+                cacheReadInputTokens: msg.usage.cacheReadInputTokens ?? 0,
+                cacheCreationInputTokens: msg.usage.cacheCreationInputTokens ?? 0,
+              }
+            : undefined,
           durationMs: msg.durationMs ?? undefined,
           stopReason: msg.stopReason ?? undefined,
           timestamp: msg.timestamp ?? undefined,
@@ -90,34 +102,38 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
         break;
       }
 
-      case "tool_use": {
+      case 'tool_use': {
         // Look ahead for matching tool_result to merge
         const next = messages[i + 1];
         let output: string | undefined;
         let status: string | undefined;
-        if (next?.role === "tool_result" && next.toolUseId === msg.toolUseId) {
+        if (next?.role === 'tool_result' && next.toolUseId === msg.toolUseId) {
           output = next.toolOutput ?? undefined;
           status = next.toolStatus ?? undefined;
           i++; // Consume the tool_result
         }
         result.push({
-          kind: "tool",
+          kind: 'tool',
           id: msg.toolUseId || msg.id,
-          toolName: msg.toolName ?? "unknown",
+          toolName: msg.toolName ?? 'unknown',
           toolInput: msg.toolInput ?? undefined,
           toolOutput: output,
           toolUseId: msg.toolUseId ?? undefined,
-          toolStatus: status || (output ? "success" : "running"),
+          toolStatus: status || (output ? 'success' : 'running'),
           timestamp: msg.timestamp ?? undefined,
         });
         break;
       }
 
-      case "tool_result":
+      case 'tool_result':
         // tool_result alone (no preceding tool_use) — create standalone entry
-        if (i === 0 || messages[i - 1]?.role !== "tool_use" || (messages[i - 1] as ApiMessage).toolUseId !== msg.toolUseId) {
+        if (
+          i === 0 ||
+          messages[i - 1]?.role !== 'tool_use' ||
+          (messages[i - 1] as ApiMessage).toolUseId !== msg.toolUseId
+        ) {
           result.push({
-            kind: "tool",
+            kind: 'tool',
             id: msg.toolUseId || msg.id,
             toolOutput: msg.toolOutput ?? undefined,
             toolUseId: msg.toolUseId ?? undefined,
@@ -127,10 +143,10 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
         }
         break;
 
-      case "system":
-      case "meta":
+      case 'system':
+      case 'meta':
         result.push({
-          kind: "system",
+          kind: 'system',
           id: msg.id,
           text: msg.text ?? undefined,
           toolName: msg.toolName ?? undefined,
@@ -140,7 +156,7 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
 
       default:
         result.push({
-          kind: "raw",
+          kind: 'raw',
           id: msg.id,
           role: msg.role,
           text: msg.text ?? undefined,

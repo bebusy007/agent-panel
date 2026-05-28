@@ -8,13 +8,13 @@ export type ServerMessage =
   | ServerDisconnected;
 
 export interface ServerStateChange {
-  type: "state_change";
-  state: "spawned" | "idle";
+  type: 'state_change';
+  state: 'spawned' | 'idle';
   reason?: string;
 }
 
 export interface ServerConnected {
-  type: "connected";
+  type: 'connected';
   epoch: number;
   session_id: string;
   seq: number;
@@ -22,19 +22,19 @@ export interface ServerConnected {
 }
 
 export interface ServerEvent_ {
-  type: "event";
+  type: 'event';
   seq: number;
   event: ChatEvent;
 }
 
 export interface ServerError {
-  type: "error";
+  type: 'error';
   code: string;
   message: string;
 }
 
 export interface ServerDisconnected {
-  type: "disconnected";
+  type: 'disconnected';
   reason: string;
 }
 
@@ -48,27 +48,27 @@ export type ClientMessage =
   | ClientRewind;
 
 export interface ClientUserMessage {
-  type: "user_message";
+  type: 'user_message';
   text: string;
   attachments?: AttachmentData[];
 }
 
 export interface ClientPermissionResponse {
-  type: "permission_response";
+  type: 'permission_response';
   request_id: string;
-  decision: "allow" | "deny";
+  decision: 'allow' | 'deny';
 }
 
 export interface ClientInterrupt {
-  type: "interrupt";
+  type: 'interrupt';
 }
 
 export interface ClientDisconnect {
-  type: "disconnect";
+  type: 'disconnect';
 }
 
 export interface ClientRewind {
-  type: "rewind_files";
+  type: 'rewind_files';
   request_id: string;
   user_message_id: string;
   dry_run?: boolean;
@@ -102,7 +102,7 @@ export type ChatEvent =
   | ChatRaw;
 
 export interface ChatSessionInit {
-  kind: "session_init";
+  kind: 'session_init';
   session_id: string;
   model?: string;
   slash_commands?: SlashCommandInfo[];
@@ -114,18 +114,18 @@ export interface ChatSessionInit {
 }
 
 export interface ChatSystemStatus {
-  kind: "system_status";
+  kind: 'system_status';
   status: string;
 }
 
 export interface ChatMessageStart {
-  kind: "message_start";
+  kind: 'message_start';
   message_id: string;
   model?: string;
 }
 
 export interface ChatMessageDelta {
-  kind: "message_delta";
+  kind: 'message_delta';
   stop_reason?: string;
   input_tokens?: number;
   output_tokens?: number;
@@ -134,7 +134,7 @@ export interface ChatMessageDelta {
 }
 
 export interface ChatContentBlockStart {
-  kind: "content_block_start";
+  kind: 'content_block_start';
   index: number;
   block_type: string;
   tool_use_id?: string;
@@ -142,33 +142,33 @@ export interface ChatContentBlockStart {
 }
 
 export interface ChatTextDelta {
-  kind: "text_delta";
+  kind: 'text_delta';
   text: string;
 }
 
 export interface ChatThinkingDelta {
-  kind: "thinking_delta";
+  kind: 'thinking_delta';
   text: string;
 }
 
 export interface ChatSignatureDelta {
-  kind: "signature_delta";
+  kind: 'signature_delta';
   signature: string;
 }
 
 export interface ChatToolInputDelta {
-  kind: "tool_input_delta";
+  kind: 'tool_input_delta';
   tool_use_id: string;
   json_delta: string;
 }
 
 export interface ChatContentBlockStop {
-  kind: "content_block_stop";
+  kind: 'content_block_stop';
   index: number;
 }
 
 export interface ChatAssistantMessage {
-  kind: "assistant_message";
+  kind: 'assistant_message';
   message_id: string;
   model?: string;
   text?: string;
@@ -182,12 +182,12 @@ export interface ChatAssistantMessage {
 }
 
 export interface ChatUserMessageEcho {
-  kind: "user_message_echo";
+  kind: 'user_message_echo';
   uuid: string;
 }
 
 export interface ChatToolResult {
-  kind: "tool_result";
+  kind: 'tool_result';
   tool_use_id: string;
   output?: string;
   is_error?: boolean;
@@ -198,7 +198,7 @@ export interface ChatToolResult {
 }
 
 export interface ChatPermissionRequest {
-  kind: "permission_request";
+  kind: 'permission_request';
   request_id: string;
   tool_name: string;
   tool_input?: unknown;
@@ -206,7 +206,7 @@ export interface ChatPermissionRequest {
 }
 
 export interface ChatHookCallback {
-  kind: "hook_callback";
+  kind: 'hook_callback';
   request_id: string;
   hook_name: string;
   hook_event: string;
@@ -214,7 +214,7 @@ export interface ChatHookCallback {
 }
 
 export interface ChatElicitationRequest {
-  kind: "elicitation_request";
+  kind: 'elicitation_request';
   request_id: string;
   mcp_server: string;
   message: string;
@@ -222,7 +222,7 @@ export interface ChatElicitationRequest {
 }
 
 export interface ChatUsageUpdate {
-  kind: "usage_update";
+  kind: 'usage_update';
   input_tokens?: number;
   output_tokens?: number;
   cache_read_tokens?: number;
@@ -232,7 +232,7 @@ export interface ChatUsageUpdate {
 }
 
 export interface ChatTurnComplete {
-  kind: "turn_complete";
+  kind: 'turn_complete';
   stop_reason?: string;
   error?: string;
   is_error?: boolean;
@@ -243,12 +243,12 @@ export interface ChatTurnComplete {
 }
 
 export interface ChatCompactBoundary {
-  kind: "compact_boundary";
+  kind: 'compact_boundary';
   compact_kind?: string;
 }
 
 export interface ChatRateLimit {
-  kind: "rate_limit";
+  kind: 'rate_limit';
   status: string;
   utilization?: number;
   resets_at?: number;
@@ -256,7 +256,7 @@ export interface ChatRateLimit {
 }
 
 export interface ChatTaskNotification {
-  kind: "task_notification";
+  kind: 'task_notification';
   task_id: string;
   status: string;
   message: string;
@@ -265,7 +265,7 @@ export interface ChatTaskNotification {
 }
 
 export interface ChatRaw {
-  kind: "raw";
+  kind: 'raw';
   raw_type: string;
   data: unknown;
 }
@@ -310,4 +310,4 @@ export interface AttachmentData {
 
 // ── Connection state ──
 
-export type ConnectionState = "idle" | "connecting" | "connected" | "disconnecting" | "error";
+export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnecting' | 'error';
