@@ -2,7 +2,7 @@
 
 > **状态**：草稿，待逐 step 确认后落地  
 > **前置阅读**：无（本文自包含 Unified Timeline 基石设计）  
-> **原则**：每个 step 一个 PR，粒度小到可以逐行 review；每个 step 有明确验收标准
+> **原则**：全 Phase 在一个 PR 下串行执行，每个 step 一个 commit。每完成一个 commit 后 review 确认，再继续下一个。粒度小到可以逐行 review；每个 step 有明确验收标准
 
 ---
 
@@ -1252,7 +1252,7 @@ Step 1.1（类型定义）── 基础，无依赖
 
 ## 4. 阶段 1 完成标准
 
-- [ ] 所有 9 个 Step PR 合并到 master
+- [ ] 所有 9 个 Step commit 合入 PR，review 通过
 - [ ] `Message.thinking_text` 正确填充（历史消息 thinking 可见）
 - [ ] `Message.usage` / `Message.cost_usd` / `Message.duration_ms` 正确填充
 - [ ] 所有 JSONL 元数据条目（system/turn_duration, away_summary, permission-mode, attachment 全类型）正确解析

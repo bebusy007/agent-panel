@@ -2,7 +2,7 @@
 
 > **状态**：草稿，待逐 step 确认后落地  
 > **前置依赖**：Phase 1 全部完成（TimelineEntry 模型 + ChatSessionStore + WebSocket 通道 + JSONL 全量解析）  
-> **原则**：每个 step 一个 PR；UI 改动必须遵循 `docs/ui-update/design-system.md`
+> **原则**：全 Phase 在一个 PR 下串行执行，每个 step 一个 commit。UI 改动必须遵循 `docs/ui-update/design-system.md`
 
 ---
 
@@ -932,7 +932,7 @@ Phase 1 完成（TimelineEntry + Adapter + Store + WebSocket 全部就绪）
 
 ## 4. 阶段 2 完成标准
 
-- [ ] 所有 8 个 Step PR 合并到 master
+- [ ] 所有 8 个 Step commit 合入 PR，review 通过
 - [ ] Session Detail 中历史消息用 TimelineEntry 渲染（视觉与之前一致）
 - [ ] 可在 Session Detail 中连接 CLI 并完成一轮对话
 - [ ] 可从 Sessions 列表新建对话（输入 cwd → 进入空 SessionDetail → 发送第一条消息）
