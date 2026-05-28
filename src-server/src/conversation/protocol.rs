@@ -894,7 +894,12 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::MessageDelta { stop_reason, input_tokens, output_tokens, .. } => {
+            ChatEvent::MessageDelta {
+                stop_reason,
+                input_tokens,
+                output_tokens,
+                ..
+            } => {
                 assert_eq!(stop_reason.as_deref(), Some("end_turn"));
                 assert_eq!(*input_tokens, 100);
                 assert_eq!(*output_tokens, 50);
@@ -918,7 +923,8 @@ mod tests {
     #[test]
     fn parse_user_message_echo() {
         let mut p = ProtocolParser::new();
-        let line = r#"{"type":"user","uuid":"echo-001","message":{"role":"user","content":"hello"}}"#;
+        let line =
+            r#"{"type":"user","uuid":"echo-001","message":{"role":"user","content":"hello"}}"#;
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
@@ -934,7 +940,11 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::HookCallback { request_id, hook_name, .. } => {
+            ChatEvent::HookCallback {
+                request_id,
+                hook_name,
+                ..
+            } => {
                 assert_eq!(request_id, "hook-001");
                 assert_eq!(hook_name, "PreToolUse");
             }
@@ -949,7 +959,11 @@ mod tests {
         let events = p.parse_line(line);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ChatEvent::ElicitationRequest { request_id, mcp_server, .. } => {
+            ChatEvent::ElicitationRequest {
+                request_id,
+                mcp_server,
+                ..
+            } => {
                 assert_eq!(request_id, "el-001");
                 assert_eq!(mcp_server, "test-srv");
             }
