@@ -224,46 +224,64 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
     case 'tool_input_delta':
       return state;
     case 'assistant_message': {
-      // The CLI sends multiple assistant events per turn (one per content block:
-      // thinking, text, tool_use), all sharing the same message_id. Instead of
-      // dedup discarding, merge new fields into the existing live entry.
+      // CLI sends one assistant event per content block (thinking, text)
+      // with the same message_id. Merge them into a single live entry.
+      // Only create/update when we have actual text — thinking-only events
+      // just buffer their thinking_text via the existing reducer path.
       const existingIdx = state.liveEntries.findIndex(
         (e) => e.kind === 'assistant' && e.id === event.message_id,
       );
+
+      // Collect thinking: either from the event or from accumulated state
+      const newThinking = event.thinking_text || null;
+
       if (existingIdx >= 0) {
+        // Update existing entry
         const updated = [...state.liveEntries];
-        const existing = updated[existingIdx]!;
+        const prev = updated[existingIdx]!;
         updated[existingIdx] = {
-          ...existing,
-          text: event.text || existing.text || '',
-          thinkingText: event.thinking_text ?? existing.thinkingText,
+          ...prev,
+          text: event.text || prev.text || '',
+          thinkingText: newThinking ?? prev.thinkingText,
         };
         return {
           ...state,
           streamingText: event.text ? '' : state.streamingText,
-          thinkingText: '',
-          thinkingStartMs: 0,
-          thinkingEndMs: 0,
+          thinkingText: event.text ? '' : state.thinkingText,
+          thinkingStartMs: event.text ? 0 : state.thinkingStartMs,
+          thinkingEndMs: event.text ? 0 : state.thinkingEndMs,
           liveEntries: updated,
         };
       }
+
+      // No existing entry. Only create one when text is present.
+      // thinking-only events accumulate via the thinkingText state field
+      // and show in the StreamingBlock/ThinkingPanel.
+      if (event.text) {
+        return {
+          ...state,
+          streamingText: '',
+          thinkingText: '',
+          thinkingStartMs: 0,
+          thinkingEndMs: 0,
+          liveEntries: [
+            ...state.liveEntries,
+            {
+              kind: 'assistant' as const,
+              id: event.message_id,
+              text: event.text,
+              thinkingText: newThinking ?? (state.thinkingText || undefined),
+              model: event.model ?? undefined,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+      }
+
+      // thinking-only event: keep streaming, keep thinking text
       return {
         ...state,
-        streamingText: event.text ? '' : state.streamingText,
-        thinkingText: '',
-        thinkingStartMs: 0,
-        thinkingEndMs: 0,
-        liveEntries: [
-          ...state.liveEntries,
-          {
-            kind: 'assistant' as const,
-            id: event.message_id,
-            text: event.text ?? '',
-            thinkingText: event.thinking_text ?? undefined,
-            model: event.model ?? undefined,
-            timestamp: new Date().toISOString(),
-          },
-        ],
+        thinkingText: newThinking || state.thinkingText,
       };
     }
     case 'user_message_echo':
