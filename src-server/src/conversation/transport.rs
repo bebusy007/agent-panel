@@ -342,8 +342,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn transport_pid_returns_none_for_unknown() {
-        // Create a transport with a mock-like check
+    async fn transport_pid_returns_some_for_spawned() {
         let config = SpawnConfig {
             mode: SpawnMode::New,
             cwd: "/tmp".to_string(),
@@ -355,5 +354,89 @@ mod tests {
         let pid = t.pid();
         assert!(pid.is_some());
         assert!(pid.unwrap() > 0);
+    }
+
+    #[tokio::test]
+    async fn transport_stderr_rx_available() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("echo".to_string()),
+        };
+        let t = Transport::spawn(&config).await.unwrap();
+        let _rx = t.stderr_rx();
+        // stderr receiver should be available even if no stderr output
+    }
+
+    #[tokio::test]
+    async fn spawn_with_permission_mode() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: Some("default".into()),
+            cli_path: Some("echo".to_string()),
+        };
+        let t = Transport::spawn(&config).await.unwrap();
+        let mut rx = t.stdout_rx();
+        let mut lines = vec![];
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        loop {
+            match rx.try_recv() {
+                Ok(line) => lines.push(line),
+                Err(tokio::sync::broadcast::error::TryRecvError::Empty) => break,
+                Err(_) => break,
+            }
+        }
+        let output = lines.join(" ");
+        assert!(output.contains("--permission-mode"));
+        assert!(output.contains("default"));
+    }
+
+    #[tokio::test]
+    async fn transport_take_stdin_returns_some() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("cat".to_string()),
+        };
+        let mut t = Transport::spawn(&config).await.unwrap();
+        let stdin = t.take_stdin();
+        assert!(stdin.is_some());
+        // Taking stdin again should return None
+        assert!(t.take_stdin().is_none());
+    }
+
+    #[tokio::test]
+    async fn transport_wait_after_kill() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/tmp".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("sleep".to_string()),
+        };
+        let mut t = Transport::spawn(&config).await.unwrap();
+        t.kill().await.unwrap();
+        let status = t.wait().await.unwrap();
+        assert!(!status.success());
+    }
+
+    #[tokio::test]
+    async fn spawn_in_nonexistent_cwd() {
+        let config = SpawnConfig {
+            mode: SpawnMode::New,
+            cwd: "/nonexistent/path/xyz".to_string(),
+            model: None,
+            permission_mode: None,
+            cli_path: Some("echo".to_string()),
+        };
+        // echo should still work even with nonexistent cwd (it doesn't access files)
+        let result = Transport::spawn(&config).await;
+        assert!(result.is_ok());
     }
 }
