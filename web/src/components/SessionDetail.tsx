@@ -46,11 +46,11 @@ import { canonicalTool } from '@/lib/tool-aliases';
 import { pairToolResults } from '@/lib/tool-result-pairing';
 import { useSession } from './session/SessionContext';
 import { MessageToolbar } from './session/MessageToolbar';
-import { MessageStream } from './session/MessageStream';
 import { MessageTimeline } from './conversation/MessageTimeline';
 import { ConnectBar } from './conversation/ConnectBar';
 import { messagesToTimeline } from '@/lib/conversation/history-adapter';
-import type { SessionPhase } from '@/lib/conversation/chat-session-store';
+import { useChatConnection } from '@/lib/conversation/use-chat-connection';
+import { useMergedTimeline } from '@/lib/conversation/use-merged-timeline';
 
 /**
  * SessionDetail — when used inside a SessionProvider (the normal case in
@@ -102,17 +102,35 @@ function ContextDrivenDetail({
   scrollToMessageId?: string | null;
   onMessagesLoaded?: (messages: Message[]) => void;
 }) {
-  const { messages, loading, error } = useSession();
-  const [chatPhase, setChatPhase] = useState<SessionPhase>('empty');
-  const [chatError, setChatError] = useState<string | null>(null);
+  const { id: sessionId, messages, loading, error } = useSession();
+  const chat = useChatConnection();
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
 
-  const timelineEntries = useMemo(() => messagesToTimeline(messages), [messages]);
+  const historyEntries = useMemo(() => messagesToTimeline(messages), [messages]);
+  const { entries: timelineEntries, streamingEntry } = useMergedTimeline(
+    historyEntries,
+    chat.state,
+  );
 
   useEffect(() => {
     if (messages.length > 0) {
       onMessagesLoaded?.(messages);
     }
   }, [messages, onMessagesLoaded]);
+
+  // Auto-connect when chat sessionId differs from page sessionId
+  // (e.g. after navigating from /sessions/new → real session_id)
+  useEffect(() => {
+    if (
+      chat.state.phase === 'idle' &&
+      chat.state.sessionId &&
+      chat.state.sessionId !== sessionIdRef.current
+    ) {
+      window.history.replaceState(null, '', `/sessions/${chat.state.sessionId}`);
+      sessionIdRef.current = chat.state.sessionId;
+    }
+  }, [chat.state.sessionId, chat.state.phase]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
   if (error) return <div className="p-6 text-sm text-red-300">加载失败：{error.message}</div>;
@@ -121,27 +139,22 @@ function ContextDrivenDetail({
     <div className="flex flex-col h-full">
       <MessageToolbar />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <MessageTimeline entries={timelineEntries} scrollToMessageId={scrollToMessageId} />
+        <MessageTimeline
+          entries={timelineEntries}
+          scrollToMessageId={scrollToMessageId}
+          streamingEntry={streamingEntry}
+        />
       </div>
       <ConnectBar
-        phase={chatPhase}
-        error={chatError}
-        canInput={chatPhase !== 'connecting' && chatPhase !== 'disconnected'}
-        onConnect={() => {
-          setChatPhase('connecting');
-          setChatError(null);
-        }}
-        onDisconnect={() => setChatPhase('empty')}
-        onCancelConnect={() => setChatPhase('empty')}
-        onRetry={() => setChatPhase('connecting')}
-        onSend={(text) => {
-          // TODO(Step 2.7): wire to ChatSessionStore.sendMessage()
-          console.log('Send:', text);
-        }}
-        onStop={() => {
-          // TODO(Step 2.7): wire to ChatSessionStore.interrupt()
-          console.log('Stop');
-        }}
+        phase={chat.state.phase}
+        error={chat.state.error}
+        canInput={chat.state.phase !== 'connecting'}
+        onConnect={() => chat.connect(sessionId)}
+        onDisconnect={() => chat.disconnect()}
+        onCancelConnect={() => chat.disconnect()}
+        onRetry={() => chat.connect(sessionId)}
+        onSend={(text) => chat.sendMessage(text)}
+        onStop={() => chat.interrupt()}
       />
     </div>
   );
