@@ -11,19 +11,25 @@ export function useMergedTimeline(
   entries: AdaptedTimelineEntry[];
   streamingEntry: StreamingState | null;
 } {
-  const streamingEntry: StreamingState | null = useMemo(() => {
-    if (!chatState) return null;
-    const { streamingText, thinkingText, thinkingStartMs, thinkingEndMs, model } = chatState;
-    if (!streamingText && !thinkingText) return null;
-    return { streamingText, thinkingText, thinkingStartMs, thinkingEndMs, model };
-  }, [chatState]);
+  // Streaming updates are high-frequency — don't cache, always recompute
+  const st = chatState;
+  const streamingEntry: StreamingState | null = !st
+    ? null
+    : !st.streamingText && !st.thinkingText
+      ? null
+      : {
+          streamingText: st.streamingText,
+          thinkingText: st.thinkingText,
+          thinkingStartMs: st.thinkingStartMs,
+          thinkingEndMs: st.thinkingEndMs,
+          model: st.model,
+        };
 
+  const live = st?.liveEntries;
   const entries = useMemo(() => {
-    if (!chatState || chatState.liveEntries.length === 0) {
-      return historyEntries;
-    }
-    return mergeTimelines(historyEntries, chatState.liveEntries);
-  }, [historyEntries, chatState?.liveEntries]);
+    if (!live || live.length === 0) return historyEntries;
+    return mergeTimelines(historyEntries, live);
+  }, [historyEntries, live]);
 
   return useMemo(() => ({ entries, streamingEntry }), [entries, streamingEntry]);
 }
