@@ -70,6 +70,13 @@ export function useChatConnection(): UseChatConnection {
           return;
         }
 
+        console.debug(
+          '[WS ←]',
+          data.type,
+          data.type === 'event' ? (data as any).event?.kind : '',
+          data.type === 'connected' ? (data as any).session_id : '',
+        );
+
         switch (data.type) {
           case 'connected':
             dispatch({
@@ -143,10 +150,19 @@ export function useChatConnection(): UseChatConnection {
   }, [closeWs]);
 
   const sendMessage = useCallback((text: string): boolean => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return false;
+    console.debug('[WS →] sendMessage', {
+      text,
+      readyState: wsRef.current?.readyState,
+      OPEN: WebSocket.OPEN,
+    });
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn('[WS →] sendMessage blocked: WS not open', wsRef.current?.readyState);
+      return false;
+    }
     const uuid = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const msg: ClientMessage = { type: 'user_message', text, uuid };
     wsRef.current.send(JSON.stringify(msg));
+    console.debug('[WS →] sent', { uuid, text });
     dispatch({ type: 'SEND_MESSAGE', text, uuid });
     return true;
   }, []);

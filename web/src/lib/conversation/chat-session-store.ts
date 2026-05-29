@@ -129,6 +129,11 @@ export const INITIAL_STATE: ChatSessionState = {
 // ── Reducer ──
 
 export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSessionState {
+  console.debug(
+    '[reducer] action',
+    action.type,
+    action.type === 'SEND_MESSAGE' ? (action as any).text : '',
+  );
   switch (action.type) {
     case 'CONNECT_START':
       return { ...state, phase: 'connecting', error: null };
@@ -218,15 +223,36 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
     case 'signature_delta':
     case 'tool_input_delta':
       return state;
-    case 'assistant_message':
-      if (state._seenMessageIds.has(event.message_id)) return state;
+    case 'assistant_message': {
+      // The CLI sends multiple assistant events per turn (one per content block:
+      // thinking, text, tool_use), all sharing the same message_id. Instead of
+      // dedup discarding, merge new fields into the existing live entry.
+      const existingIdx = state.liveEntries.findIndex(
+        (e) => e.kind === 'assistant' && e.id === event.message_id,
+      );
+      if (existingIdx >= 0) {
+        const updated = [...state.liveEntries];
+        const existing = updated[existingIdx]!;
+        updated[existingIdx] = {
+          ...existing,
+          text: event.text || existing.text || '',
+          thinkingText: event.thinking_text ?? existing.thinkingText,
+        };
+        return {
+          ...state,
+          streamingText: event.text ? '' : state.streamingText,
+          thinkingText: '',
+          thinkingStartMs: 0,
+          thinkingEndMs: 0,
+          liveEntries: updated,
+        };
+      }
       return {
         ...state,
-        streamingText: '',
+        streamingText: event.text ? '' : state.streamingText,
         thinkingText: '',
         thinkingStartMs: 0,
         thinkingEndMs: 0,
-        _seenMessageIds: new Set([...state._seenMessageIds, event.message_id]),
         liveEntries: [
           ...state.liveEntries,
           {
@@ -239,6 +265,7 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
           },
         ],
       };
+    }
     case 'user_message_echo':
       return state;
     case 'tool_result':
