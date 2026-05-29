@@ -84,7 +84,8 @@ pub fn create_test_server() -> (TestServer, TempDir, TestHomeGuard) {
     create_minimal_test_data(dir.path());
     let guard = TestHomeGuard::new(dir.path().to_path_buf());
     let (tx, _) = broadcast::channel(256);
-    let api = router::build_api_router(tx, dir.path().to_string_lossy().to_string(), None);
+    let mgr = crate::conversation::SessionManager::new();
+    let api = router::build_api_router(tx, dir.path().to_string_lossy().to_string(), None, mgr);
     let server = TestServer::new(api.into_make_service());
     (server, dir, guard)
 }

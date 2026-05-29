@@ -1,3 +1,5 @@
+mod chat;
+mod cli_check;
 mod extensions;
 mod favorites;
 mod health;
@@ -16,6 +18,8 @@ mod usage;
 mod version;
 pub mod ws;
 
+use crate::conversation::SessionManager;
+
 #[cfg(test)]
 mod favorites_tests;
 #[cfg(test)]
@@ -33,6 +37,7 @@ pub fn build_api_router(
     watcher_tx: EventSender,
     log_dir: String,
     log_level_handle: Option<reload::Handle<EnvFilter, tracing_subscriber::Registry>>,
+    session_manager: SessionManager,
 ) -> Router {
     let mut router = Router::new()
         .merge(logs::routes(log_dir))
@@ -50,7 +55,9 @@ pub fn build_api_router(
         .merge(resume::routes())
         .merge(sources::routes())
         .merge(version::routes())
-        .merge(ws::routes(watcher_tx));
+        .merge(ws::routes(watcher_tx))
+        .merge(chat::routes(session_manager))
+        .merge(cli_check::routes());
 
     if let Some(handle) = log_level_handle {
         router = router.merge(log_level::routes(handle));
@@ -70,7 +77,8 @@ mod integration_tests {
         // 确保真实 HOME 下有测试 session 数据（OnceLock 保证只初始化一次）
         crate::test_utils::ensure_test_session_data();
         let (tx, _) = broadcast::channel(256);
-        let router = build_api_router(tx, log_dir.to_string(), None);
+        let mgr = crate::conversation::SessionManager::new();
+        let router = build_api_router(tx, log_dir.to_string(), None, mgr);
         TestServer::new(router.into_make_service())
     }
 

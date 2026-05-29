@@ -13,15 +13,21 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
+    frontend-fmt-check:
+      glob: "web/**/*.{ts,tsx,css,json}"
+      run: npx prettier --check "web/src/**/*.{ts,tsx}"
+    backend-fmt-check:
+      glob: "src-server/**/*.rs"
+      run: cargo fmt --check
     typecheck:
       glob: "web/**/*.{ts,tsx}"
-      run: cd web && npx tsc --noEmit
+      run: npx tsc --noEmit
     backend-clippy:
       glob: "src-server/**/*.rs"
-      run: cd src-server && cargo clippy
+      run: cargo clippy -p agent-panel-server
     frontend-test:
       glob: "web/**/*.{ts,tsx}"
-      run: cd web && npx vitest run
+      run: npx vitest run
     backend-test:
       glob: "src-server/**/*.rs"
-      run: cd src-server && cargo test
+      run: cargo test -p agent-panel-server
