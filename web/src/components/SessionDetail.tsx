@@ -47,6 +47,8 @@ import { pairToolResults } from '@/lib/tool-result-pairing';
 import { useSession } from './session/SessionContext';
 import { MessageToolbar } from './session/MessageToolbar';
 import { MessageStream } from './session/MessageStream';
+import { MessageTimeline } from './conversation/MessageTimeline';
+import { messagesToTimeline } from '@/lib/conversation/history-adapter';
 
 /**
  * SessionDetail — when used inside a SessionProvider (the normal case in
@@ -100,6 +102,8 @@ function ContextDrivenDetail({
 }) {
   const { messages, loading, error } = useSession();
 
+  const timelineEntries = useMemo(() => messagesToTimeline(messages), [messages]);
+
   useEffect(() => {
     if (messages.length > 0) {
       onMessagesLoaded?.(messages);
@@ -113,7 +117,7 @@ function ContextDrivenDetail({
     <div className="flex flex-col h-full">
       <MessageToolbar />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <MessageStream scrollToMessageId={scrollToMessageId} />
+        <MessageTimeline entries={timelineEntries} scrollToMessageId={scrollToMessageId} />
       </div>
     </div>
   );
