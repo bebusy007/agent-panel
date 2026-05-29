@@ -47,7 +47,6 @@ struct SessionActor {
     active_turn: bool,
     pending_messages: VecDeque<(String, Vec<AttachmentData>)>,
     session_id: Option<String>,
-    resume_session_id: Option<String>,
     seq: u64,
 }
 
@@ -61,11 +60,6 @@ impl SessionActor {
         let stdin = transport.take_stdin();
         let pid = transport.pid();
 
-        let resume_session_id = match &config.mode {
-            SpawnMode::Resume { session_id } => Some(session_id.clone()),
-            SpawnMode::New => None,
-        };
-
         let (cmd_tx, cmd_rx) = mpsc::channel(64);
         let (event_tx, event_rx) = broadcast::channel(1024);
 
@@ -78,7 +72,6 @@ impl SessionActor {
             active_turn: false,
             pending_messages: VecDeque::new(),
             session_id: None,
-            resume_session_id,
             seq: 0,
         };
 
@@ -92,20 +85,6 @@ impl SessionActor {
     }
 
     async fn run(mut self) {
-        // For resume, emit Connected immediately — the CLI won't output
-        // system/init until it receives a user message on stdin.
-        if let Some(sid) = self.resume_session_id.take() {
-            self.session_id = Some(sid.clone());
-            self.seq += 1;
-            let msg = ServerMessage::Connected {
-                epoch: 0,
-                session_id: sid,
-                seq: self.seq,
-                reconnect_token: Some(format!("tok_{}", uuid::Uuid::new_v4())),
-            };
-            let _ = self.event_tx.send(msg);
-        }
-
         let mut stdout_rx = self.transport.stdout_rx();
 
         loop {
