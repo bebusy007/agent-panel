@@ -3,10 +3,9 @@ use serde_json::Value;
 use uuid::Uuid;
 
 /// Build a user message payload for CLI stdin.
-/// Returns (json_line, uuid) — UUID for dedup/tracking.
-pub fn build_user_message(text: &str, attachments: &[AttachmentData]) -> (String, String) {
-    let uuid = Uuid::new_v4().to_string();
-
+/// Uses the provided uuid (from the frontend) so the optimistic user entry
+/// and the eventual JSONL history entry share the same id for dedup.
+pub fn build_user_message(uuid: &str, text: &str, attachments: &[AttachmentData]) -> String {
     let content = if attachments.is_empty() {
         Value::String(text.to_string())
     } else {
@@ -38,7 +37,7 @@ pub fn build_user_message(text: &str, attachments: &[AttachmentData]) -> (String
 
     let mut line = serde_json::to_string(&payload).unwrap();
     line.push('\n');
-    (line, uuid)
+    line
 }
 
 /// Build a permission response for CLI stdin.
@@ -88,8 +87,8 @@ mod tests {
 
     #[test]
     fn build_user_message_text_only() {
-        let (line, uuid) = build_user_message("hello", &[]);
-        assert!(!uuid.is_empty());
+        let uuid = Uuid::new_v4().to_string();
+        let line = build_user_message(&uuid, "hello", &[]);
         assert!(line.ends_with('\n'));
         let parsed: Value = serde_json::from_str(line.trim()).unwrap();
         assert_eq!(parsed["type"], "user");
@@ -100,12 +99,13 @@ mod tests {
 
     #[test]
     fn build_user_message_with_image() {
+        let uuid = Uuid::new_v4().to_string();
         let att = AttachmentData {
             filename: "photo.png".into(),
             media_type: "image/png".into(),
             content_base64: "iVBOR...".into(),
         };
-        let (line, _) = build_user_message("check this", &[att]);
+        let line = build_user_message(&uuid, "check this", &[att]);
         let parsed: Value = serde_json::from_str(line.trim()).unwrap();
         let content = parsed["message"]["content"].as_array().unwrap();
         assert_eq!(content.len(), 2);

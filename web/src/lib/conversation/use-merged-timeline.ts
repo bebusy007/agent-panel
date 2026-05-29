@@ -2,16 +2,8 @@ import { useMemo } from 'react';
 import type { AdaptedTimelineEntry } from './history-adapter';
 import type { ChatSessionState } from './chat-session-store';
 import type { StreamingState } from './types';
+import { mergeTimelines } from './timeline-merger';
 
-/**
- * Derive the streaming entry from ChatSessionStore for MessageTimeline.
- *
- * mergeTimelines() (timeline-merger.ts) is ready for when the store builds
- * live TimelineEntry[] — that wire-up belongs to Phase 3 when the reducer
- * is extended to build structured entries from raw ChatEvents.
- * For Phase 2, history entries render through MessageTimeline and streaming
- * text renders through StreamingBlock.
- */
 export function useMergedTimeline(
   historyEntries: AdaptedTimelineEntry[],
   chatState: ChatSessionState | null,
@@ -26,8 +18,12 @@ export function useMergedTimeline(
     return { streamingText, thinkingText, thinkingStartMs, thinkingEndMs, model };
   }, [chatState]);
 
-  return useMemo(
-    () => ({ entries: historyEntries, streamingEntry }),
-    [historyEntries, streamingEntry],
-  );
+  const entries = useMemo(() => {
+    if (!chatState || chatState.optimisticEntries.length === 0) {
+      return historyEntries;
+    }
+    return mergeTimelines(historyEntries, chatState.optimisticEntries);
+  }, [historyEntries, chatState?.optimisticEntries]);
+
+  return useMemo(() => ({ entries, streamingEntry }), [entries, streamingEntry]);
 }

@@ -1,4 +1,5 @@
 import type { ChatEvent, ServerMessage, SlashCommandInfo, McpServerInfo } from './types';
+import type { AdaptedTimelineEntry } from './history-adapter';
 
 // ── Session phase ──
 
@@ -59,6 +60,9 @@ export interface ChatSessionState {
   rateLimit: { status: string; utilization?: number; resetsAt?: number } | null;
   compactCount: number;
 
+  // Optimistic user entries (shown immediately, replaced by history on refetch)
+  optimisticEntries: AdaptedTimelineEntry[];
+
   // Dedup guards
   _seenMessageIds: Set<string>;
   _seenToolIds: Set<string>;
@@ -115,6 +119,7 @@ export const INITIAL_STATE: ChatSessionState = {
   cwd: '',
   rateLimit: null,
   compactCount: 0,
+  optimisticEntries: [],
   _seenMessageIds: new Set(),
   _seenToolIds: new Set(),
 };
@@ -140,7 +145,20 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
     case 'ERROR':
       return { ...state, phase: 'error', error: action.message };
     case 'SEND_MESSAGE':
-      return { ...state, phase: 'running', currentTurnStartMs: Date.now() };
+      return {
+        ...state,
+        phase: 'running',
+        currentTurnStartMs: Date.now(),
+        optimisticEntries: [
+          ...state.optimisticEntries,
+          {
+            kind: 'user' as const,
+            id: action.uuid,
+            text: action.text,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      };
     case 'TURN_INTERRUPTED':
       return {
         ...state,
@@ -148,6 +166,7 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
         streamingText: '',
         thinkingText: '',
         thinkingEndMs: state.thinkingStartMs ? Date.now() : 0,
+        optimisticEntries: [],
       };
     case 'RESET':
       return { ...INITIAL_STATE };
@@ -233,6 +252,7 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
         thinkingText: '',
         thinkingStartMs: 0,
         thinkingEndMs: 0,
+        optimisticEntries: [],
       };
     case 'compact_boundary':
       return { ...state, compactCount: state.compactCount + 1 };

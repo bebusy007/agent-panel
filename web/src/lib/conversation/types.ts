@@ -50,6 +50,7 @@ export type ClientMessage =
 export interface ClientUserMessage {
   type: 'user_message';
   text: string;
+  uuid: string;
   attachments?: AttachmentData[];
 }
 

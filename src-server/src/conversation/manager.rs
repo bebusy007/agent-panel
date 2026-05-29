@@ -118,6 +118,7 @@ impl SessionManager {
         &self,
         session_key: &str,
         text: String,
+        uuid: String,
         attachments: Vec<AttachmentData>,
     ) -> Result<String, String> {
         let inner = self.inner.lock().await;
@@ -128,6 +129,7 @@ impl SessionManager {
             .cmd_tx
             .send(ActorCommand::SendMessage {
                 text,
+                uuid,
                 attachments,
                 reply: reply_tx,
             })

@@ -144,9 +144,9 @@ export function useChatConnection(): UseChatConnection {
 
   const sendMessage = useCallback((text: string): boolean => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return false;
-    const msg: ClientMessage = { type: 'user_message', text };
-    wsRef.current.send(JSON.stringify(msg));
     const uuid = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const msg: ClientMessage = { type: 'user_message', text, uuid };
+    wsRef.current.send(JSON.stringify(msg));
     dispatch({ type: 'SEND_MESSAGE', text, uuid });
     return true;
   }, []);

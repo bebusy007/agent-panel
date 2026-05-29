@@ -168,8 +168,15 @@ async fn handle_client_message(
     };
 
     match client_msg {
-        ClientMessage::UserMessage { text, attachments } => {
-            if let Err(e) = manager.send_message(session_key, text, attachments).await {
+        ClientMessage::UserMessage {
+            text,
+            uuid,
+            attachments,
+        } => {
+            if let Err(e) = manager
+                .send_message(session_key, text, uuid, attachments)
+                .await
+            {
                 tracing::error!(error = %e, "send_message failed");
             }
         }

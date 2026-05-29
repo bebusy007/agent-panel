@@ -82,9 +82,16 @@ export function SessionProvider({ id, children }: { id: string; children: React.
   }, [id]);
 
   const refetch = useCallback(() => {
-    setLoading(true);
-    load();
-  }, [load]);
+    if (!id) return;
+    api
+      .sessionDetail(id)
+      .then((d) => setData(d))
+      .catch(() => {});
+    api
+      .favoritesForSession(id)
+      .then((r) => setFavIds(new Set(r.favorites.map((f) => f.messageId))))
+      .catch(() => {});
+  }, [id]);
 
   useEffect(() => {
     if (!id) {
