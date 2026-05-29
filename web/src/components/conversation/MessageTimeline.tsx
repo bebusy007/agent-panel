@@ -6,6 +6,7 @@ import { UserMessage } from '@/components/conversation/UserMessage';
 import { AssistantMessage } from '@/components/conversation/AssistantMessage';
 import { SystemNotice } from '@/components/conversation/SystemNotice';
 import { StreamingBlock } from '@/components/conversation/StreamingBlock';
+import { useAutoScroll } from '@/lib/conversation/use-auto-scroll';
 import { canonicalTool } from '@/lib/tool-aliases';
 import { centerMarkInScroller } from '@/lib/highlight';
 import { turnIndexForMessage } from '@/lib/turn-grouping';
@@ -168,6 +169,19 @@ export function MessageTimeline({
     },
     [visibleEntries],
   );
+
+  const autoScroll = useAutoScroll(parentRef, {
+    isStreaming: !!streamingEntry,
+  });
+
+  // Mark new message on entry count change
+  const prevEntryCount = useRef(entries.length);
+  useEffect(() => {
+    if (entries.length > prevEntryCount.current) {
+      autoScroll.markNewMessage();
+    }
+    prevEntryCount.current = entries.length;
+  }, [entries.length, autoScroll]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleEntries.length,
@@ -445,6 +459,16 @@ export function MessageTimeline({
           );
         })}
       </div>
+      {autoScroll.unseenCount > 0 && (
+        <div className="sticky bottom-2 flex justify-center z-10">
+          <button
+            onClick={() => autoScroll.scrollToBottom()}
+            className="px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-xs shadow-lg hover:bg-accent/90 transition-all"
+          >
+            ↓ {autoScroll.unseenCount} 条新消息
+          </button>
+        </div>
+      )}
       {streamingEntry && (
         <div className="mt-2">
           <StreamingBlock streaming={streamingEntry} />
