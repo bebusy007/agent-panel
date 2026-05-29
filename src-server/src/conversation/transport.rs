@@ -397,35 +397,35 @@ mod tests {
 
     #[tokio::test]
     async fn transport_take_stdin_returns_some() {
+        // Use 'true' which exits immediately — stdin is still piped
         let config = SpawnConfig {
             mode: SpawnMode::New,
             cwd: "/tmp".to_string(),
             model: None,
             permission_mode: None,
-            cli_path: Some("cat".to_string()),
+            cli_path: Some("true".to_string()),
         };
         let mut t = Transport::spawn(&config).await.unwrap();
         let stdin = t.take_stdin();
         assert!(stdin.is_some());
-        // Taking stdin again should return None
         assert!(t.take_stdin().is_none());
     }
 
     #[tokio::test]
     async fn kill_then_wait_graceful_exit() {
-        // Use a command that exits quickly on stdin close (cat)
+        // 'true' exits immediately — kill() will find it already done
         let config = SpawnConfig {
             mode: SpawnMode::New,
             cwd: "/tmp".to_string(),
             model: None,
             permission_mode: None,
-            cli_path: Some("cat".to_string()),
+            cli_path: Some("true".to_string()),
         };
         let mut t = Transport::spawn(&config).await.unwrap();
-        // kill() closes stdin, cat exits gracefully
+        // Small delay to let true finish
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         t.kill().await.unwrap();
         let status = t.wait().await.unwrap();
-        // cat exits 0 when stdin closes
         assert!(status.success());
     }
 

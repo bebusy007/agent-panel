@@ -97,10 +97,10 @@ async fn handle_ws_session(
         state: SessionState::Spawned,
         reason: None,
     };
-    if let Ok(json) = serde_json::to_string(&spawned_msg) {
-        if socket.send(Message::Text(json.into())).await.is_err() {
-            return;
-        }
+    if let Ok(json) = serde_json::to_string(&spawned_msg)
+        && socket.send(Message::Text(json.into())).await.is_err()
+    {
+        return;
     }
 
     // Main loop: forward events and handle client messages
@@ -110,15 +110,15 @@ async fn handle_ws_session(
                 match event {
                     Ok(msg) => {
                         // Detect session_id change for new sessions
-                        if let ServerMessage::Connected { ref session_id, .. } = msg {
-                            if session_key.starts_with("conn_") && *session_id != session_key {
-                                manager.migrate_session_key(&session_key, session_id).await;
-                            }
+                        if let ServerMessage::Connected { ref session_id, .. } = msg
+                            && session_key.starts_with("conn_") && *session_id != session_key
+                        {
+                            manager.migrate_session_key(&session_key, session_id).await;
                         }
-                        if let Ok(json) = serde_json::to_string(&msg) {
-                            if socket.send(Message::Text(json.into())).await.is_err() {
-                                break;
-                            }
+                        if let Ok(json) = serde_json::to_string(&msg)
+                            && socket.send(Message::Text(json.into())).await.is_err()
+                        {
+                            break;
                         }
                     }
                     Err(broadcast::error::RecvError::Closed) => {
@@ -136,11 +136,11 @@ async fn handle_ws_session(
             msg = socket.recv() => {
                 match msg {
                     Some(Ok(Message::Text(text))) => {
-                        if let Err(should_break) = handle_client_message(&text, &manager, &session_key).await {
-                            if should_break { break; }
-                        }
+                        if let Err(should_break) = handle_client_message(&text, &manager, &session_key).await
+                            && should_break { break; }
                     }
                     Some(Ok(Message::Close(_))) | None => break,
+                    #[allow(clippy::collapsible_match)]
                     Some(Ok(Message::Ping(data))) => {
                         if socket.send(Message::Pong(data)).await.is_err() { break; }
                     }

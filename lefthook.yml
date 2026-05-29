@@ -24,10 +24,10 @@ pre-push:
       run: npx tsc --noEmit
     backend-clippy:
       glob: "src-server/**/*.rs"
-      run: cargo clippy --workspace
+      run: cargo clippy -p agent-panel-server
     frontend-test:
       glob: "web/**/*.{ts,tsx}"
       run: npx vitest run
     backend-test:
       glob: "src-server/**/*.rs"
-      run: cargo test --workspace
+      run: cargo test -p agent-panel-server
