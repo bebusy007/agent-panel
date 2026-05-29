@@ -412,18 +412,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn transport_wait_after_kill() {
+    async fn kill_then_wait_graceful_exit() {
+        // Use a command that exits quickly on stdin close (cat)
         let config = SpawnConfig {
             mode: SpawnMode::New,
             cwd: "/tmp".to_string(),
             model: None,
             permission_mode: None,
-            cli_path: Some("sleep".to_string()),
+            cli_path: Some("cat".to_string()),
         };
         let mut t = Transport::spawn(&config).await.unwrap();
+        // kill() closes stdin, cat exits gracefully
         t.kill().await.unwrap();
         let status = t.wait().await.unwrap();
-        assert!(!status.success());
+        // cat exits 0 when stdin closes
+        assert!(status.success());
     }
 
     #[tokio::test]

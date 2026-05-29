@@ -88,7 +88,7 @@ pub fn load_messages(file_path: &Path) -> Result<Vec<Message>, String> {
     let reader = BufReader::new(file);
     let mut messages = Vec::new();
     let mut idx = 0u32;
-    /// Accumulate thinking from thinking-only assistant entries to attach to next text assistant
+    // Accumulate thinking from thinking-only assistant entries to attach to next text assistant
     let mut pending_thinking: Option<String> = None;
 
     for line in reader.lines() {

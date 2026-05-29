@@ -2,7 +2,7 @@ use crate::conversation::session_actor::{ActorCommand, SessionActorHandle, spawn
 use crate::conversation::types::*;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Mutex, broadcast, mpsc, oneshot};
+use tokio::sync::{Mutex, broadcast, oneshot};
 
 #[derive(Clone)]
 pub struct SessionManager {
