@@ -178,6 +178,15 @@ export function MessageTimeline({
     prevEntryCount.current = entries.length;
   }, [entries.length, autoScroll]);
 
+  // Auto-scroll during streaming — content grows via streamingText,
+  // not via entries, so watch the streaming text directly.
+  const streamLen = streamingEntry?.streamingText?.length ?? 0;
+  useEffect(() => {
+    if (streamLen > 0) {
+      autoScroll.scrollToBottom();
+    }
+  }, [streamLen, autoScroll]);
+
   const rowVirtualizer = useVirtualizer({
     count: visibleEntries.length,
     getScrollElement: () => parentRef.current,
