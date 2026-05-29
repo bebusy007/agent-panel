@@ -14,6 +14,7 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 pub enum ActorCommand {
     SendMessage {
         text: String,
+        uuid: String,
         attachments: Vec<AttachmentData>,
         reply: oneshot::Sender<Result<String, String>>,
     },
@@ -44,7 +45,7 @@ struct SessionActor {
     stdin: Option<ChildStdin>,
     parser: ProtocolParser,
     active_turn: bool,
-    pending_messages: VecDeque<(String, Vec<AttachmentData>)>,
+    pending_messages: VecDeque<(String, String, Vec<AttachmentData>)>,
     session_id: Option<String>,
     seq: u64,
 }
@@ -90,8 +91,8 @@ impl SessionActor {
             tokio::select! {
                 cmd = self.cmd_rx.recv() => {
                     match cmd {
-                        Some(ActorCommand::SendMessage { text, attachments, reply }) => {
-                            let result = self.handle_send_message(text, attachments).await;
+                        Some(ActorCommand::SendMessage { text, uuid, attachments, reply }) => {
+                            let result = self.handle_send_message(text, uuid, attachments).await;
                             let _ = reply.send(result);
                         }
                         Some(ActorCommand::SendPermission { request_id, decision }) => {
@@ -132,24 +133,26 @@ impl SessionActor {
     async fn handle_send_message(
         &mut self,
         text: String,
+        uuid: String,
         attachments: Vec<AttachmentData>,
     ) -> Result<String, String> {
         if self.active_turn {
-            self.pending_messages.push_back((text, attachments));
+            self.pending_messages.push_back((text, uuid, attachments));
             return Ok("queued".to_string());
         }
-        self.dispatch_message(&text, &attachments).await
+        self.dispatch_message(&text, &uuid, &attachments).await
     }
 
     async fn dispatch_message(
         &mut self,
         text: &str,
+        uuid: &str,
         attachments: &[AttachmentData],
     ) -> Result<String, String> {
-        let (line, uuid) = build_user_message(text, attachments);
+        let line = build_user_message(uuid, text, attachments);
         self.write_stdin(&line).await?;
         self.active_turn = true;
-        Ok(uuid)
+        Ok(uuid.to_string())
     }
 
     async fn handle_send_permission(&mut self, request_id: &str, decision: &PermissionDecision) {
@@ -191,8 +194,8 @@ impl SessionActor {
             // Detect turn_complete → chain next queued message
             if matches!(&event, ChatEvent::TurnComplete { .. }) {
                 self.active_turn = false;
-                if let Some((text, attachments)) = self.pending_messages.pop_front() {
-                    if let Err(e) = self.dispatch_message(&text, &attachments).await {
+                if let Some((text, uuid, attachments)) = self.pending_messages.pop_front() {
+                    if let Err(e) = self.dispatch_message(&text, &uuid, &attachments).await {
                         tracing::error!(error = %e, "Failed to dispatch queued message");
                     }
                 } else {

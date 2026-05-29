@@ -46,7 +46,11 @@ import { canonicalTool } from '@/lib/tool-aliases';
 import { pairToolResults } from '@/lib/tool-result-pairing';
 import { useSession } from './session/SessionContext';
 import { MessageToolbar } from './session/MessageToolbar';
-import { MessageStream } from './session/MessageStream';
+import { MessageTimeline } from './conversation/MessageTimeline';
+import { ConnectBar } from './conversation/ConnectBar';
+import { messagesToTimeline } from '@/lib/conversation/history-adapter';
+import { useChatConnection } from '@/lib/conversation/use-chat-connection';
+import { useMergedTimeline } from '@/lib/conversation/use-merged-timeline';
 
 /**
  * SessionDetail — when used inside a SessionProvider (the normal case in
@@ -98,13 +102,35 @@ function ContextDrivenDetail({
   scrollToMessageId?: string | null;
   onMessagesLoaded?: (messages: Message[]) => void;
 }) {
-  const { messages, loading, error } = useSession();
+  const { id: sessionId, messages, loading, error, summary } = useSession();
+  const chat = useChatConnection();
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
+
+  const historyEntries = useMemo(() => messagesToTimeline(messages), [messages]);
+  const { entries: timelineEntries, streamingEntry } = useMergedTimeline(
+    historyEntries,
+    chat.state,
+  );
 
   useEffect(() => {
     if (messages.length > 0) {
       onMessagesLoaded?.(messages);
     }
   }, [messages, onMessagesLoaded]);
+
+  // Auto-connect when chat sessionId differs from page sessionId
+  // (e.g. after navigating from /sessions/new → real session_id)
+  useEffect(() => {
+    if (
+      chat.state.phase === 'idle' &&
+      chat.state.sessionId &&
+      chat.state.sessionId !== sessionIdRef.current
+    ) {
+      window.history.replaceState(null, '', `/sessions/${chat.state.sessionId}`);
+      sessionIdRef.current = chat.state.sessionId;
+    }
+  }, [chat.state.sessionId, chat.state.phase]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
   if (error) return <div className="p-6 text-sm text-red-300">加载失败：{error.message}</div>;
@@ -113,8 +139,23 @@ function ContextDrivenDetail({
     <div className="flex flex-col h-full">
       <MessageToolbar />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <MessageStream scrollToMessageId={scrollToMessageId} />
+        <MessageTimeline
+          entries={timelineEntries}
+          scrollToMessageId={scrollToMessageId}
+          streamingEntry={streamingEntry}
+        />
       </div>
+      <ConnectBar
+        phase={chat.state.phase}
+        error={chat.state.error}
+        canInput={chat.state.phase !== 'connecting'}
+        onConnect={() => chat.connect(sessionId, summary?.cwd)}
+        onDisconnect={() => chat.disconnect()}
+        onCancelConnect={() => chat.disconnect()}
+        onRetry={() => chat.connect(sessionId)}
+        onSend={(text) => chat.sendMessage(text)}
+        onStop={() => chat.interrupt()}
+      />
     </div>
   );
 }

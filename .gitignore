@@ -38,3 +38,4 @@ web/coverage/
 .claude/worktrees/
 logs/
 .claude/settings.local.json
+data/

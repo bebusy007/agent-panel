@@ -77,7 +77,7 @@ async fn handle_ws_session(
 
     let connect_result = manager.connect(config, reconnect_token).await;
 
-    let (mut event_rx, session_key, _token, _epoch) = match connect_result {
+    let (mut event_rx, session_key, token, epoch) = match connect_result {
         Ok(result) => result,
         Err(e) => {
             let error_msg = ServerMessage::Error {
@@ -91,6 +91,23 @@ async fn handle_ws_session(
             return;
         }
     };
+
+    // For resume: emit Connected immediately. We already know the
+    // session_id — don't wait for system/init (which the CLI won't
+    // output until it receives a user message on stdin).
+    if let SpawnMode::Resume { ref session_id } = mode {
+        let msg = ServerMessage::Connected {
+            epoch,
+            session_id: session_id.clone(),
+            seq: 0,
+            reconnect_token: Some(token.clone()),
+        };
+        if let Ok(json) = serde_json::to_string(&msg)
+            && socket.send(Message::Text(json.into())).await.is_err()
+        {
+            return;
+        }
+    }
 
     // Send initial spawned state
     let spawned_msg = ServerMessage::StateChange {
@@ -168,8 +185,15 @@ async fn handle_client_message(
     };
 
     match client_msg {
-        ClientMessage::UserMessage { text, attachments } => {
-            if let Err(e) = manager.send_message(session_key, text, attachments).await {
+        ClientMessage::UserMessage {
+            text,
+            uuid,
+            attachments,
+        } => {
+            if let Err(e) = manager
+                .send_message(session_key, text, uuid, attachments)
+                .await
+            {
                 tracing::error!(error = %e, "send_message failed");
             }
         }

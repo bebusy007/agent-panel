@@ -48,6 +48,7 @@ pub enum SessionState {
 pub enum ClientMessage {
     UserMessage {
         text: String,
+        uuid: String,
         #[serde(default)]
         attachments: Vec<AttachmentData>,
     },
@@ -399,11 +400,17 @@ mod tests {
 
     #[test]
     fn client_message_user_message() {
-        let json = r#"{"type":"user_message","text":"hello","attachments":[]}"#;
+        let json =
+            r#"{"type":"user_message","text":"hello","uuid":"test-uuid-123","attachments":[]}"#;
         let msg: ClientMessage = serde_json::from_str(json).unwrap();
         match msg {
-            ClientMessage::UserMessage { text, attachments } => {
+            ClientMessage::UserMessage {
+                text,
+                uuid,
+                attachments,
+            } => {
                 assert_eq!(text, "hello");
+                assert_eq!(uuid, "test-uuid-123");
                 assert!(attachments.is_empty());
             }
             _ => panic!("wrong variant"),

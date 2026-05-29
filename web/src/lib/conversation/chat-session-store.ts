@@ -1,4 +1,5 @@
 import type { ChatEvent, ServerMessage, SlashCommandInfo, McpServerInfo } from './types';
+import type { AdaptedTimelineEntry } from './history-adapter';
 
 // ── Session phase ──
 
@@ -59,6 +60,11 @@ export interface ChatSessionState {
   rateLimit: { status: string; utilization?: number; resetsAt?: number } | null;
   compactCount: number;
 
+  // Live-built entries for the current turn (user + assistant).
+  // Accumulated from SEND_MESSAGE and assistant_message events.
+  // Persist through turn_complete so the timeline doesn't flash on turn end.
+  liveEntries: AdaptedTimelineEntry[];
+
   // Dedup guards
   _seenMessageIds: Set<string>;
   _seenToolIds: Set<string>;
@@ -115,6 +121,7 @@ export const INITIAL_STATE: ChatSessionState = {
   cwd: '',
   rateLimit: null,
   compactCount: 0,
+  liveEntries: [],
   _seenMessageIds: new Set(),
   _seenToolIds: new Set(),
 };
@@ -122,6 +129,11 @@ export const INITIAL_STATE: ChatSessionState = {
 // ── Reducer ──
 
 export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSessionState {
+  console.debug(
+    '[reducer] action',
+    action.type,
+    action.type === 'SEND_MESSAGE' ? (action as any).text : '',
+  );
   switch (action.type) {
     case 'CONNECT_START':
       return { ...state, phase: 'connecting', error: null };
@@ -136,11 +148,30 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
         error: null,
       };
     case 'DISCONNECT':
-      return { ...state, phase: 'disconnected', streamingText: '', thinkingText: '' };
+      return {
+        ...state,
+        phase: 'disconnected',
+        streamingText: '',
+        thinkingText: '',
+      };
     case 'ERROR':
       return { ...state, phase: 'error', error: action.message };
     case 'SEND_MESSAGE':
-      return { ...state, phase: 'running', currentTurnStartMs: Date.now() };
+      return {
+        ...state,
+        phase: 'running',
+        currentTurnStartMs: Date.now(),
+        liveEntries: [
+          ...state.liveEntries,
+          {
+            kind: 'user' as const,
+            id: action.uuid,
+            text: action.text,
+            timestamp: new Date().toISOString(),
+            isLive: true,
+          },
+        ],
+      };
     case 'TURN_INTERRUPTED':
       return {
         ...state,
@@ -192,16 +223,68 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
     case 'signature_delta':
     case 'tool_input_delta':
       return state;
-    case 'assistant_message':
-      if (state._seenMessageIds.has(event.message_id)) return state;
-      state._seenMessageIds.add(event.message_id);
+    case 'assistant_message': {
+      // CLI sends one assistant event per content block (thinking, text)
+      // with the same message_id. Merge them into a single live entry.
+      // Only create/update when we have actual text — thinking-only events
+      // just buffer their thinking_text via the existing reducer path.
+      const existingIdx = state.liveEntries.findIndex(
+        (e) => e.kind === 'assistant' && e.id === event.message_id,
+      );
+
+      // Collect thinking: either from the event or from accumulated state
+      const newThinking = event.thinking_text || null;
+
+      if (existingIdx >= 0) {
+        // Update existing entry
+        const updated = [...state.liveEntries];
+        const prev = updated[existingIdx]!;
+        updated[existingIdx] = {
+          ...prev,
+          text: event.text || prev.text || '',
+          thinkingText: newThinking ?? prev.thinkingText,
+        };
+        return {
+          ...state,
+          streamingText: event.text ? '' : state.streamingText,
+          thinkingText: event.text ? '' : state.thinkingText,
+          thinkingStartMs: event.text ? 0 : state.thinkingStartMs,
+          thinkingEndMs: event.text ? 0 : state.thinkingEndMs,
+          liveEntries: updated,
+        };
+      }
+
+      // No existing entry. Only create one when text is present.
+      // thinking-only events accumulate via the thinkingText state field
+      // and show in the StreamingBlock/ThinkingPanel.
+      if (event.text) {
+        return {
+          ...state,
+          streamingText: '',
+          thinkingText: '',
+          thinkingStartMs: 0,
+          thinkingEndMs: 0,
+          liveEntries: [
+            ...state.liveEntries,
+            {
+              kind: 'assistant' as const,
+              id: event.message_id,
+              text: event.text,
+              thinkingText: newThinking ?? (state.thinkingText || undefined),
+              model: event.model ?? undefined,
+              timestamp: new Date().toISOString(),
+              isLive: true,
+            },
+          ],
+        };
+      }
+
+      // thinking-only event: keep streaming, keep thinking text
       return {
         ...state,
-        streamingText: '',
-        thinkingText: '',
-        thinkingStartMs: 0,
-        thinkingEndMs: 0,
+        thinkingText: newThinking || state.thinkingText,
       };
+    }
     case 'user_message_echo':
       return state;
     case 'tool_result':
@@ -231,6 +314,8 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
         pendingPermissions: [],
         streamingText: '',
         thinkingText: '',
+        thinkingStartMs: 0,
+        thinkingEndMs: 0,
       };
     case 'compact_boundary':
       return { ...state, compactCount: state.compactCount + 1 };

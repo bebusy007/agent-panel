@@ -50,6 +50,7 @@ export type ClientMessage =
 export interface ClientUserMessage {
   type: 'user_message';
   text: string;
+  uuid: string;
   attachments?: AttachmentData[];
 }
 
@@ -311,3 +312,13 @@ export interface AttachmentData {
 // ── Connection state ──
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnecting' | 'error';
+
+// ── Streaming state (shared between hooks and components) ──
+
+export interface StreamingState {
+  streamingText: string;
+  thinkingText: string;
+  thinkingStartMs: number;
+  thinkingEndMs: number;
+  model?: string | null;
+}
