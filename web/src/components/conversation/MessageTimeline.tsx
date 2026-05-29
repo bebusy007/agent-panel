@@ -179,13 +179,18 @@ export function MessageTimeline({
   }, [entries.length, autoScroll]);
 
   // Auto-scroll during streaming — content grows via streamingText,
-  // not via entries, so watch the streaming text directly.
+  // not via entries, so watch the streaming text directly.  Use rAF
+  // to wait for React to flush the DOM update before scrolling.
   const streamLen = streamingEntry?.streamingText?.length ?? 0;
   useEffect(() => {
     if (streamLen > 0) {
-      autoScroll.scrollToBottom();
+      requestAnimationFrame(() => {
+        const el = parentRef.current;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+      });
     }
-  }, [streamLen, autoScroll]);
+  }, [streamLen]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleEntries.length,

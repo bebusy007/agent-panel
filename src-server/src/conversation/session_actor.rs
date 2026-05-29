@@ -45,7 +45,7 @@ struct SessionActor {
     stdin: Option<ChildStdin>,
     parser: ProtocolParser,
     active_turn: bool,
-    pending_messages: VecDeque<(String, Vec<AttachmentData>)>,
+    pending_messages: VecDeque<(String, String, Vec<AttachmentData>)>,
     session_id: Option<String>,
     seq: u64,
 }
@@ -137,7 +137,7 @@ impl SessionActor {
         attachments: Vec<AttachmentData>,
     ) -> Result<String, String> {
         if self.active_turn {
-            self.pending_messages.push_back((text, attachments));
+            self.pending_messages.push_back((text, uuid, attachments));
             return Ok("queued".to_string());
         }
         self.dispatch_message(&text, &uuid, &attachments).await
@@ -194,8 +194,7 @@ impl SessionActor {
             // Detect turn_complete → chain next queued message
             if matches!(&event, ChatEvent::TurnComplete { .. }) {
                 self.active_turn = false;
-                if let Some((text, attachments)) = self.pending_messages.pop_front() {
-                    let uuid = uuid::Uuid::new_v4().to_string();
+                if let Some((text, uuid, attachments)) = self.pending_messages.pop_front() {
                     if let Err(e) = self.dispatch_message(&text, &uuid, &attachments).await {
                         tracing::error!(error = %e, "Failed to dispatch queued message");
                     }
