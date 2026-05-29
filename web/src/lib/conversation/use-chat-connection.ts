@@ -19,7 +19,7 @@ interface UseChatConnection {
   /** Current chat session state (phase, streamingText, thinkingText, etc.) */
   state: ChatSessionState;
   /** Connect to an existing session via resume */
-  connect: (sessionId: string) => void;
+  connect: (sessionId: string, cwd?: string) => void;
   /** Start a new session in the given working directory */
   connectNew: (cwd: string) => void;
   /** Disconnect from the current session */
@@ -118,8 +118,10 @@ export function useChatConnection(): UseChatConnection {
   );
 
   const connect = useCallback(
-    (sessionId: string) => {
-      startWs(`/api/ws/chat/resume/${encodeURIComponent(sessionId)}`);
+    (sessionId: string, cwd?: string) => {
+      let url = `/api/ws/chat/resume/${encodeURIComponent(sessionId)}`;
+      if (cwd) url += `?cwd=${encodeURIComponent(cwd)}`;
+      startWs(url);
     },
     [startWs],
   );

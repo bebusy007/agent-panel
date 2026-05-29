@@ -102,7 +102,7 @@ function ContextDrivenDetail({
   scrollToMessageId?: string | null;
   onMessagesLoaded?: (messages: Message[]) => void;
 }) {
-  const { id: sessionId, messages, loading, error, refetch } = useSession();
+  const { id: sessionId, messages, loading, error, refetch, summary } = useSession();
   const chat = useChatConnection();
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
@@ -160,7 +160,7 @@ function ContextDrivenDetail({
         phase={chat.state.phase}
         error={chat.state.error}
         canInput={chat.state.phase !== 'connecting'}
-        onConnect={() => chat.connect(sessionId)}
+        onConnect={() => chat.connect(sessionId, summary?.cwd)}
         onDisconnect={() => chat.disconnect()}
         onCancelConnect={() => chat.disconnect()}
         onRetry={() => chat.connect(sessionId)}
