@@ -20,6 +20,7 @@ interface SessionContextValue {
   id: string;
   loading: boolean;
   error: Error | null;
+  refetch: () => void;
   summary: SessionSummary | undefined;
   resumeHints: ResumeHints | undefined;
   subagents: SubagentMeta[];
@@ -67,38 +68,37 @@ export function SessionProvider({ id, children }: { id: string; children: React.
   const [error, setError] = useState<Error | null>(null);
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
 
+  const load = useCallback(() => {
+    if (!id) return;
+    api
+      .sessionDetail(id)
+      .then((d) => setData(d))
+      .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
+      .finally(() => setLoading(false));
+    api
+      .favoritesForSession(id)
+      .then((r) => setFavIds(new Set(r.favorites.map((f) => f.messageId))))
+      .catch(() => {});
+  }, [id]);
+
+  const refetch = useCallback(() => {
+    setLoading(true);
+    load();
+  }, [load]);
+
   useEffect(() => {
     if (!id) {
       setLoading(false);
       setError(new Error('session id is empty'));
       return;
     }
-    let cancelled = false;
     setLoading(true);
     setError(null);
     setData(null);
     setFavIds(new Set());
-    api
-      .sessionDetail(id)
-      .then((d) => {
-        if (!cancelled) {
-          setData(d);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e : new Error(String(e)));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    api
-      .favoritesForSession(id)
-      .then((r) => {
-        if (!cancelled) setFavIds(new Set(r.favorites.map((f) => f.messageId)));
-      })
-      .catch(() => {});
+    load();
     return () => {
-      cancelled = true;
+      // cleanup handled by the api dedup in api.ts
     };
   }, [id]);
 
@@ -183,6 +183,7 @@ export function SessionProvider({ id, children }: { id: string; children: React.
     id,
     loading,
     error,
+    refetch,
     summary,
     resumeHints,
     subagents,
