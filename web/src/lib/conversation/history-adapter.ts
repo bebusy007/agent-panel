@@ -79,10 +79,9 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
         break;
 
       case 'assistant': {
-        // Check if next message is a tool_result that pairs with a preceding tool_use
         result.push({
           kind: 'assistant',
-          id: msg.messageId || msg.id,
+          id: msg.id,
           text: msg.text ?? '',
           thinkingText: msg.thinkingText ?? undefined,
           model: msg.model ?? undefined,
@@ -114,7 +113,7 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
         }
         result.push({
           kind: 'tool',
-          id: msg.toolUseId || msg.id,
+          id: msg.id,
           toolName: msg.toolName ?? 'unknown',
           toolInput: msg.toolInput ?? undefined,
           toolOutput: output,

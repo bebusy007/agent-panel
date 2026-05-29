@@ -65,12 +65,8 @@ function entryToMessage(entry: AdaptedTimelineEntry): MessageLike {
 
 // ── Tool result pairing on timeline entries ──
 
-function pairTimelineToolResults(entries: AdaptedTimelineEntry[]): {
-  resultByToolUseId: Map<string, MessageLike>;
-  hiddenIds: Set<string>;
-} {
+function pairTimelineToolResults(entries: AdaptedTimelineEntry[]): Map<string, MessageLike> {
   const resultByToolUseId = new Map<string, MessageLike>();
-  const hiddenIds = new Set<string>();
 
   for (const entry of entries) {
     if (
@@ -79,19 +75,17 @@ function pairTimelineToolResults(entries: AdaptedTimelineEntry[]): {
       entry.toolOutput != null &&
       entry.toolInput != null
     ) {
-      const resultId = `${entry.id}-result`;
       resultByToolUseId.set(entry.toolUseId, {
-        id: resultId,
+        id: `${entry.id}-result`,
         role: 'tool_result',
         toolOutput: entry.toolOutput,
         toolUseId: entry.toolUseId,
         toolStatus: entry.toolStatus ?? 'success',
       });
-      hiddenIds.add(resultId);
     }
   }
 
-  return { resultByToolUseId, hiddenIds };
+  return resultByToolUseId;
 }
 
 // ── Component ──
@@ -117,26 +111,14 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
   // Convert all timeline entries → Message-like for legacy rendering
   const entryMessages = useMemo(() => entries.map(entryToMessage), [entries]);
 
-  // Pair tool results on the full entry set
-  const { resultByToolUseId, hiddenIds } = useMemo(
-    () => pairTimelineToolResults(entries),
-    [entries],
-  );
+  const resultByToolUseId = useMemo(() => pairTimelineToolResults(entries), [entries]);
 
-  // Filter entry messages by role/search selection + hide paired tool_results
   const visibleMessages = useMemo(() => {
     let msgs = entryMessages;
-    if (hiddenIds.size > 0) msgs = msgs.filter((m) => !hiddenIds.has(m.id));
     if (filteredIdSet.size < entryMessages.length)
       msgs = msgs.filter((m) => filteredIdSet.has(m.id));
     return msgs;
-  }, [entryMessages, hiddenIds, filteredIdSet]);
-
-  // All non-hidden entry messages (for findVisibleIndex resolution)
-  const allEntryMessages = useMemo(() => {
-    const msgs = entryMessages.filter((m) => filteredIdSet.has(m.id));
-    return hiddenIds.size > 0 ? msgs.filter((m) => !hiddenIds.has(m.id)) : msgs;
-  }, [entryMessages, filteredIdSet, hiddenIds]);
+  }, [entryMessages, filteredIdSet]);
 
   const subagentLookup = useMemo(() => {
     if (!subagents?.length) return new Map<string, SubagentMeta>();
@@ -208,37 +190,26 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
         idx = visibleMessages.findIndex((m) => m.id.startsWith(msgId));
         if (idx >= 0) return idx;
       }
-      if (hiddenIds.has(msgId)) {
-        const result = allEntryMessages.find((m) => m.id === msgId);
-        if (result?.toolUseId) {
-          const parent = allEntryMessages.find(
-            (m) => m.role === 'tool_use' && m.toolUseId === result.toolUseId,
-          );
-          if (parent) {
-            idx = visibleMessages.findIndex((m) => m.id === parent.id);
-            if (idx >= 0) return idx;
-          }
-        }
-      }
-      let origIdx = allEntryMessages.findIndex((m) => m.id === msgId);
+      // Search in all entry messages for the target, then find nearest visible
+      let origIdx = entryMessages.findIndex((m) => m.id === msgId);
       if (origIdx < 0 && msgId.length >= 36) {
-        origIdx = allEntryMessages.findIndex((m) => m.id.startsWith(msgId));
+        origIdx = entryMessages.findIndex((m) => m.id.startsWith(msgId));
       }
       if (origIdx >= 0) {
-        for (let delta = 1; delta < allEntryMessages.length; delta++) {
+        for (let delta = 1; delta < entryMessages.length; delta++) {
           const fwd = origIdx + delta;
-          if (fwd < allEntryMessages.length && visibleIdSet.has(allEntryMessages[fwd]!.id)) {
-            return visibleMessages.findIndex((m) => m.id === allEntryMessages[fwd]!.id);
+          if (fwd < entryMessages.length && visibleIdSet.has(entryMessages[fwd]!.id)) {
+            return visibleMessages.findIndex((m) => m.id === entryMessages[fwd]!.id);
           }
           const bwd = origIdx - delta;
-          if (bwd >= 0 && visibleIdSet.has(allEntryMessages[bwd]!.id)) {
-            return visibleMessages.findIndex((m) => m.id === allEntryMessages[bwd]!.id);
+          if (bwd >= 0 && visibleIdSet.has(entryMessages[bwd]!.id)) {
+            return visibleMessages.findIndex((m) => m.id === entryMessages[bwd]!.id);
           }
         }
       }
       return -1;
     },
-    [visibleMessages, allEntryMessages, hiddenIds, visibleIdSet],
+    [visibleMessages, entryMessages, visibleIdSet],
   );
 
   // ── Scroll-driven turn tracking ──
@@ -309,7 +280,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
   const scrolledRef = useRef(false);
   useEffect(() => {
     scrolledRef.current = false;
-  }, [sessionId]);
+  }, [sessionId, scrollToMessageId]);
 
   useEffect(() => {
     if (!scrollToMessageId || scrolledRef.current) return;
