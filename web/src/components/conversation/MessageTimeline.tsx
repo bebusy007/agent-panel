@@ -6,6 +6,7 @@ import { UserMessage } from '@/components/conversation/UserMessage';
 import { AssistantMessage } from '@/components/conversation/AssistantMessage';
 import { SystemNotice } from '@/components/conversation/SystemNotice';
 import { StreamingBlock } from '@/components/conversation/StreamingBlock';
+import type { StreamingState } from '@/lib/conversation/types';
 import { useAutoScroll } from '@/lib/conversation/use-auto-scroll';
 import { canonicalTool } from '@/lib/tool-aliases';
 import { centerMarkInScroller } from '@/lib/highlight';
@@ -27,14 +28,6 @@ import {
   MAX_RETRY_FRAMES,
   SCROLL_ANCHOR_OFFSET,
 } from '@/lib/constants';
-
-interface StreamingState {
-  streamingText: string;
-  thinkingText: string;
-  thinkingStartMs: number;
-  thinkingEndMs: number;
-  model?: string | null;
-}
 
 interface MessageTimelineProps {
   entries: AdaptedTimelineEntry[];

@@ -4,14 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { cn, roleColor } from '@/lib/utils';
 import { ThinkingPanel } from '@/components/conversation/ThinkingPanel';
-
-interface StreamingState {
-  streamingText: string;
-  thinkingText: string;
-  thinkingStartMs: number;
-  thinkingEndMs: number;
-  model?: string | null;
-}
+import type { StreamingState } from '@/lib/conversation/types';
 
 interface StreamingBlockProps {
   streaming: StreamingState;
@@ -43,13 +36,15 @@ export function StreamingBlock({ streaming }: StreamingBlockProps) {
     return () => clearInterval(id);
   }, []);
 
-  // Split text into completed paragraphs + last paragraph
   const { completed, trailing } = useMemo(() => {
     if (text.length < 500) return { completed: '', trailing: text };
     const parts = text.split('\n\n');
     if (parts.length <= 1) return { completed: '', trailing: text };
     const last = parts.pop()!;
-    return { completed: parts.join('\n\n') + '\n\n', trailing: last };
+    const candidate = parts.join('\n\n') + '\n\n';
+    // Don't split inside an unclosed code fence (```````)
+    if ((candidate.match(/```/g) || []).length % 2 !== 0) return { completed: '', trailing: text };
+    return { completed: candidate, trailing: last };
   }, [text]);
 
   if (!text && !streaming.thinkingText) return null;

@@ -194,13 +194,13 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
       return state;
     case 'assistant_message':
       if (state._seenMessageIds.has(event.message_id)) return state;
-      state._seenMessageIds.add(event.message_id);
       return {
         ...state,
         streamingText: '',
         thinkingText: '',
         thinkingStartMs: 0,
         thinkingEndMs: 0,
+        _seenMessageIds: new Set([...state._seenMessageIds, event.message_id]),
       };
     case 'user_message_echo':
       return state;
@@ -231,6 +231,8 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
         pendingPermissions: [],
         streamingText: '',
         thinkingText: '',
+        thinkingStartMs: 0,
+        thinkingEndMs: 0,
       };
     case 'compact_boundary':
       return { ...state, compactCount: state.compactCount + 1 };

@@ -12,7 +12,7 @@ interface ConnectBarProps {
   onDisconnect: () => void;
   onCancelConnect: () => void;
   onRetry: () => void;
-  onSend: (text: string) => void;
+  onSend: (text: string) => boolean;
   onStop: () => void;
 }
 
@@ -55,14 +55,14 @@ export function ConnectBar({
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    onSend(trimmed);
-    setText('');
-    // Reset height after clearing
-    requestAnimationFrame(() => {
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
-    });
+    if (onSend(trimmed)) {
+      setText('');
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+        }
+      });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -112,7 +112,7 @@ export function ConnectBar({
   if (phase === 'error') {
     return (
       <div className="flex flex-col items-center gap-2 px-4 py-4 border-t border-border">
-        <div className="flex items-center gap-2 text-sm text-red-400">
+        <div className="flex items-center gap-2 text-sm text-destructive">
           <X className="size-4" />
           连接失败{error ? `：${error}` : ''}
         </div>
@@ -149,7 +149,7 @@ export function ConnectBar({
         {isRunning && (
           <button
             onClick={onStop}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 text-sm font-medium transition-colors"
             title="停止生成 (Esc)"
           >
             <Square className="size-3.5 fill-current" />

@@ -24,8 +24,8 @@ interface UseChatConnection {
   connectNew: (cwd: string) => void;
   /** Disconnect from the current session */
   disconnect: () => void;
-  /** Send a user message */
-  sendMessage: (text: string) => void;
+  /** Send a user message. Returns false if WS is not connected. */
+  sendMessage: (text: string) => boolean;
   /** Interrupt the current AI response */
   interrupt: () => void;
 }
@@ -140,12 +140,13 @@ export function useChatConnection(): UseChatConnection {
     dispatch({ type: 'DISCONNECT' });
   }, [closeWs]);
 
-  const sendMessage = useCallback((text: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+  const sendMessage = useCallback((text: string): boolean => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return false;
     const msg: ClientMessage = { type: 'user_message', text };
     wsRef.current.send(JSON.stringify(msg));
     const uuid = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     dispatch({ type: 'SEND_MESSAGE', text, uuid });
+    return true;
   }, []);
 
   const interrupt = useCallback(() => {

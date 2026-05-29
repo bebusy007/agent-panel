@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { AdaptedTimelineEntry } from './history-adapter';
 import type { ChatSessionState } from './chat-session-store';
+import type { StreamingState } from './types';
 
 /**
  * Derive the streaming entry from ChatSessionStore for MessageTimeline.
@@ -16,20 +17,17 @@ export function useMergedTimeline(
   chatState: ChatSessionState | null,
 ): {
   entries: AdaptedTimelineEntry[];
-  streamingEntry: {
-    streamingText: string;
-    thinkingText: string;
-    thinkingStartMs: number;
-    thinkingEndMs: number;
-    model?: string | null;
-  } | null;
+  streamingEntry: StreamingState | null;
 } {
-  const streamingEntry = useMemo(() => {
+  const streamingEntry: StreamingState | null = useMemo(() => {
     if (!chatState) return null;
     const { streamingText, thinkingText, thinkingStartMs, thinkingEndMs, model } = chatState;
     if (!streamingText && !thinkingText) return null;
     return { streamingText, thinkingText, thinkingStartMs, thinkingEndMs, model };
   }, [chatState]);
 
-  return { entries: historyEntries, streamingEntry };
+  return useMemo(
+    () => ({ entries: historyEntries, streamingEntry }),
+    [historyEntries, streamingEntry],
+  );
 }
