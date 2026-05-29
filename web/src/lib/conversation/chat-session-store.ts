@@ -169,6 +169,7 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
             id: action.uuid,
             text: action.text,
             timestamp: new Date().toISOString(),
+            isLive: true,
           },
         ],
       };
@@ -273,6 +274,7 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
               thinkingText: newThinking ?? (state.thinkingText || undefined),
               model: event.model ?? undefined,
               timestamp: new Date().toISOString(),
+              isLive: true,
             },
           ],
         };

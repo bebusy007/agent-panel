@@ -110,14 +110,16 @@ export function MessageTimeline({
     toggleFav,
   } = useSession();
 
-  // Map filtered messages (from search/role filter) → entry ID set
   const filteredIdSet = useMemo(() => new Set(filtered.map((m) => m.id)), [filtered]);
 
-  // Filter entries by search/role selection
+  // When a role/search filter is active (filtered != all messages), apply it
+  // only to history entries. Live entries are never filtered — they're from the
+  // current turn and always belong in the timeline.
+  const filterActive = filtered.length < allMessages.length;
   const visibleEntries = useMemo(() => {
-    if (filteredIdSet.size >= entries.length) return entries;
-    return entries.filter((e) => filteredIdSet.has(e.id));
-  }, [entries, filteredIdSet]);
+    if (!filterActive) return entries;
+    return entries.filter((e) => filteredIdSet.has(e.id) || e.isLive);
+  }, [entries, filteredIdSet, filterActive]);
 
   const resultByToolUseId = useMemo(() => pairTimelineToolResults(entries), [entries]);
 
