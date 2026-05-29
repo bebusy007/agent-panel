@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import type { ChatEvent, ServerMessage, ClientMessage } from './types';
 import {
   chatReducer,
@@ -87,9 +88,17 @@ export function useChatConnection(): UseChatConnection {
               seq: data.seq,
             });
             break;
-          case 'event':
-            dispatch({ type: 'SERVER_EVENT', event: data.event });
+          case 'event': {
+            const ev = data.event;
+            // Force synchronous render for streaming deltas so text
+            // appears token-by-token instead of jumping to completion.
+            if (ev.kind === 'text_delta' || ev.kind === 'thinking_delta') {
+              flushSync(() => dispatch({ type: 'SERVER_EVENT', event: ev }));
+            } else {
+              dispatch({ type: 'SERVER_EVENT', event: ev });
+            }
             break;
+          }
           case 'state_change':
             if (data.state === 'idle') {
               dispatch({ type: 'TURN_INTERRUPTED' });
