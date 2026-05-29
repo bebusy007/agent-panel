@@ -44,13 +44,13 @@ export function UserMessage({
   };
 
   return (
-    <div className={cn('group relative rounded-lg border px-3.5 py-2.5', roleColor('user'))}>
-      <div className="flex items-center gap-2 mb-1.5">
+    <div className={cn('group relative rounded-lg border p-3', roleColor('user'))}>
+      <div className="flex items-center gap-2 mb-2">
         <button
           onClick={onToggle}
           disabled={!longMode}
           className={cn(
-            'text-[11px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded inline-flex items-center gap-1',
+            'text-[11px] uppercase tracking-wider font-medium px-2 py-1 rounded inline-flex items-center gap-2',
             longMode
               ? 'hover:bg-secondary cursor-pointer text-muted-foreground'
               : 'cursor-default text-muted-foreground',
@@ -70,19 +70,25 @@ export function UserMessage({
           className={cn(
             'transition-all',
             favorited
-              ? 'text-amber-400 hover:text-amber-300'
-              : 'opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-amber-400',
+              ? 'text-[var(--warning)] hover:text-[var(--warning)]'
+              : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground hover:text-[var(--warning)]',
           )}
           title={favorited ? '取消收藏' : '收藏'}
+          aria-label={favorited ? '取消收藏' : '收藏'}
         >
           <Star className={cn('size-3.5', favorited && 'fill-current')} />
         </button>
         <button
           onClick={handleCopy}
-          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-muted-foreground transition-opacity"
+          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground hover:text-muted-foreground transition-opacity"
           title="复制全文"
+          aria-label="复制全文"
         >
-          {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+          {copied ? (
+            <Check className="size-3 text-[var(--primary)]" />
+          ) : (
+            <Copy className="size-3" />
+          )}
         </button>
       </div>
       <CollapsibleBody longMode={longMode} expanded={expanded} onExpand={onToggle}>

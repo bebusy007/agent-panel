@@ -148,7 +148,7 @@ export function messagesToTimeline(messages: ApiMessage[]): AdaptedTimelineEntry
           kind: 'system',
           id: msg.id,
           text: msg.text ?? undefined,
-          toolName: msg.toolName ?? undefined,
+          role: msg.role,
           timestamp: msg.timestamp ?? undefined,
         });
         break;

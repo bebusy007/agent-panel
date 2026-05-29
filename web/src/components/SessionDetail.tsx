@@ -48,7 +48,9 @@ import { useSession } from './session/SessionContext';
 import { MessageToolbar } from './session/MessageToolbar';
 import { MessageStream } from './session/MessageStream';
 import { MessageTimeline } from './conversation/MessageTimeline';
+import { ConnectBar } from './conversation/ConnectBar';
 import { messagesToTimeline } from '@/lib/conversation/history-adapter';
+import type { SessionPhase } from '@/lib/conversation/chat-session-store';
 
 /**
  * SessionDetail — when used inside a SessionProvider (the normal case in
@@ -101,6 +103,8 @@ function ContextDrivenDetail({
   onMessagesLoaded?: (messages: Message[]) => void;
 }) {
   const { messages, loading, error } = useSession();
+  const [chatPhase, setChatPhase] = useState<SessionPhase>('empty');
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const timelineEntries = useMemo(() => messagesToTimeline(messages), [messages]);
 
@@ -119,6 +123,26 @@ function ContextDrivenDetail({
       <div className="flex-1 min-h-0 overflow-hidden">
         <MessageTimeline entries={timelineEntries} scrollToMessageId={scrollToMessageId} />
       </div>
+      <ConnectBar
+        phase={chatPhase}
+        error={chatError}
+        canInput={chatPhase !== 'connecting' && chatPhase !== 'disconnected'}
+        onConnect={() => {
+          setChatPhase('connecting');
+          setChatError(null);
+        }}
+        onDisconnect={() => setChatPhase('empty')}
+        onCancelConnect={() => setChatPhase('empty')}
+        onRetry={() => setChatPhase('connecting')}
+        onSend={(text) => {
+          // TODO(Step 2.7): wire to ChatSessionStore.sendMessage()
+          console.log('Send:', text);
+        }}
+        onStop={() => {
+          // TODO(Step 2.7): wire to ChatSessionStore.interrupt()
+          console.log('Stop');
+        }}
+      />
     </div>
   );
 }
