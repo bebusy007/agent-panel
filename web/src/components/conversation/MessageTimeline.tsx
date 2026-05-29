@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useSession } from '@/components/session/SessionContext';
-import { MessageBlock } from '@/components/session/MessageBlock';
-import { MetaBlock, ThinkingBlock } from '@/components/session/MetaBlock';
 import { ToolCard } from '@/components/tool-cards/ToolCard';
+import { UserMessage } from '@/components/conversation/UserMessage';
+import { AssistantMessage } from '@/components/conversation/AssistantMessage';
+import { SystemNotice } from '@/components/conversation/SystemNotice';
 import { canonicalTool } from '@/lib/tool-aliases';
 import { centerMarkInScroller } from '@/lib/highlight';
 import { turnIndexForMessage } from '@/lib/turn-grouping';
@@ -31,12 +32,9 @@ interface MessageTimelineProps {
   scrollToMessageId?: string | null;
 }
 
-// ── Adapter: convert AdaptedTimelineEntry → Message for legacy components ──
+// ── Minimal adapter for ToolCard / toggleFav backward compat ──
 
-/** Minimal Message shape accepted by MessageBlock / ToolCard. */
-type MessageLike = Message;
-
-function entryToMessage(entry: AdaptedTimelineEntry): MessageLike {
+function toMsg(entry: AdaptedTimelineEntry): Message {
   return {
     id: entry.id,
     role:
@@ -63,10 +61,10 @@ function entryToMessage(entry: AdaptedTimelineEntry): MessageLike {
   };
 }
 
-// ── Tool result pairing on timeline entries ──
+// ── Tool result pairing on timeline entries (for ToolCard backward compat) ──
 
-function pairTimelineToolResults(entries: AdaptedTimelineEntry[]): Map<string, MessageLike> {
-  const resultByToolUseId = new Map<string, MessageLike>();
+function pairTimelineToolResults(entries: AdaptedTimelineEntry[]) {
+  const resultByToolUseId = new Map<string, Message>();
 
   for (const entry of entries) {
     if (
@@ -97,7 +95,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
     subagents,
     turns,
     setActiveTurnIndex,
-    search: { filtered, search, searchActive, navTarget },
+    search: { filtered, search, navTarget },
     scrollSignal,
     expanded,
     toggleExpanded,
@@ -108,17 +106,13 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
   // Map filtered messages (from search/role filter) → entry ID set
   const filteredIdSet = useMemo(() => new Set(filtered.map((m) => m.id)), [filtered]);
 
-  // Convert all timeline entries → Message-like for legacy rendering
-  const entryMessages = useMemo(() => entries.map(entryToMessage), [entries]);
+  // Filter entries by search/role selection
+  const visibleEntries = useMemo(() => {
+    if (filteredIdSet.size >= entries.length) return entries;
+    return entries.filter((e) => filteredIdSet.has(e.id));
+  }, [entries, filteredIdSet]);
 
   const resultByToolUseId = useMemo(() => pairTimelineToolResults(entries), [entries]);
-
-  const visibleMessages = useMemo(() => {
-    let msgs = entryMessages;
-    if (filteredIdSet.size < entryMessages.length)
-      msgs = msgs.filter((m) => filteredIdSet.has(m.id));
-    return msgs;
-  }, [entryMessages, filteredIdSet]);
 
   const subagentLookup = useMemo(() => {
     if (!subagents?.length) return new Map<string, SubagentMeta>();
@@ -134,44 +128,36 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
   const parentRef = useRef<HTMLDivElement>(null);
 
   const getItemKey = useCallback(
-    (index: number) => visibleMessages[index]?.id ?? index,
-    [visibleMessages],
+    (index: number) => visibleEntries[index]?.id ?? index,
+    [visibleEntries],
   );
 
   const estimateSize = useCallback(
     (index: number) => {
-      const m = visibleMessages[index];
-      if (!m) return ESTIMATE_DEFAULT_HEIGHT;
-      const imageExtra = (m.images?.length ?? 0) > 0 ? IMAGE_STRIP_EXTRA_HEIGHT : 0;
-      switch (m.role) {
-        case 'meta':
+      const e = visibleEntries[index];
+      if (!e) return ESTIMATE_DEFAULT_HEIGHT;
+      switch (e.kind) {
+        case 'system':
           return ESTIMATE_META_HEIGHT;
-        case 'tool_use':
-          return ESTIMATE_TOOL_HEIGHT;
-        case 'tool_result':
+        case 'tool':
           return ESTIMATE_TOOL_HEIGHT;
         case 'user': {
-          const len = m.text?.length ?? 0;
-          return (
-            (len < SHORT_TEXT_THRESHOLD ? 72 : len < MEDIUM_TEXT_THRESHOLD ? 100 : 160) + imageExtra
-          );
+          const len = e.text?.length ?? 0;
+          return len < SHORT_TEXT_THRESHOLD ? 72 : len < MEDIUM_TEXT_THRESHOLD ? 100 : 160;
         }
         case 'assistant': {
-          if (m.text === '(thinking)') return ESTIMATE_META_HEIGHT;
-          const len = m.text?.length ?? 0;
-          return (
-            (len < SHORT_TEXT_THRESHOLD ? 72 : len < MEDIUM_TEXT_THRESHOLD ? 120 : 200) + imageExtra
-          );
+          const len = e.text?.length ?? 0;
+          return len < SHORT_TEXT_THRESHOLD ? 72 : len < MEDIUM_TEXT_THRESHOLD ? 120 : 200;
         }
         default:
-          return ESTIMATE_DEFAULT_HEIGHT + imageExtra;
+          return ESTIMATE_DEFAULT_HEIGHT;
       }
     },
-    [visibleMessages],
+    [visibleEntries],
   );
 
   const rowVirtualizer = useVirtualizer({
-    count: visibleMessages.length,
+    count: visibleEntries.length,
     getScrollElement: () => parentRef.current,
     estimateSize,
     overscan: 4,
@@ -180,36 +166,36 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
 
   // ── findVisibleIndex ──
 
-  const visibleIdSet = useMemo(() => new Set(visibleMessages.map((m) => m.id)), [visibleMessages]);
+  const visibleIdSet = useMemo(() => new Set(visibleEntries.map((e) => e.id)), [visibleEntries]);
 
   const findVisibleIndex = useCallback(
     (msgId: string): number => {
-      let idx = visibleMessages.findIndex((m) => m.id === msgId);
+      let idx = visibleEntries.findIndex((e) => e.id === msgId);
       if (idx >= 0) return idx;
       if (msgId.length >= 36) {
-        idx = visibleMessages.findIndex((m) => m.id.startsWith(msgId));
+        idx = visibleEntries.findIndex((e) => e.id.startsWith(msgId));
         if (idx >= 0) return idx;
       }
-      // Search in all entry messages for the target, then find nearest visible
-      let origIdx = entryMessages.findIndex((m) => m.id === msgId);
+      // Search in all entries for the target, then find nearest visible
+      let origIdx = entries.findIndex((e) => e.id === msgId);
       if (origIdx < 0 && msgId.length >= 36) {
-        origIdx = entryMessages.findIndex((m) => m.id.startsWith(msgId));
+        origIdx = entries.findIndex((e) => e.id.startsWith(msgId));
       }
       if (origIdx >= 0) {
-        for (let delta = 1; delta < entryMessages.length; delta++) {
+        for (let delta = 1; delta < entries.length; delta++) {
           const fwd = origIdx + delta;
-          if (fwd < entryMessages.length && visibleIdSet.has(entryMessages[fwd]!.id)) {
-            return visibleMessages.findIndex((m) => m.id === entryMessages[fwd]!.id);
+          if (fwd < entries.length && visibleIdSet.has(entries[fwd]!.id)) {
+            return visibleEntries.findIndex((e) => e.id === entries[fwd]!.id);
           }
           const bwd = origIdx - delta;
-          if (bwd >= 0 && visibleIdSet.has(entryMessages[bwd]!.id)) {
-            return visibleMessages.findIndex((m) => m.id === entryMessages[bwd]!.id);
+          if (bwd >= 0 && visibleIdSet.has(entries[bwd]!.id)) {
+            return visibleEntries.findIndex((e) => e.id === entries[bwd]!.id);
           }
         }
       }
       return -1;
     },
-    [visibleMessages, entryMessages, visibleIdSet],
+    [visibleEntries, entries, visibleIdSet],
   );
 
   // ── Scroll-driven turn tracking ──
@@ -219,8 +205,8 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
     for (let i = 0; i < allMessages.length; i++) {
       idToOriginal.set(allMessages[i]!.id, i);
     }
-    return visibleMessages.map((m) => idToOriginal.get(m.id) ?? 0);
-  }, [allMessages, visibleMessages]);
+    return visibleEntries.map((e) => idToOriginal.get(e.id) ?? 0);
+  }, [allMessages, visibleEntries]);
 
   const scrollTrackRef = useRef<number>(0);
   const isScrollSignalRef = useRef(false);
@@ -242,7 +228,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
     const computeTurn = () => {
       rafId = null;
       if (isScrollSignalRef.current) return;
-      if (turns.length === 0 || visibleMessages.length === 0) return;
+      if (turns.length === 0 || visibleEntries.length === 0) return;
       const scrollTop = el.scrollTop;
       const items = rowVirtualizer.getVirtualItems();
       if (items.length === 0) return;
@@ -273,7 +259,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
       if (rafId !== null) cancelAnimationFrame(rafId);
       if (flushTimerRef.current !== null) clearTimeout(flushTimerRef.current);
     };
-  }, [turns, visibleMessages, visibleToOriginalIndex, rowVirtualizer, setActiveTurnIndex]);
+  }, [turns, visibleEntries, visibleToOriginalIndex, rowVirtualizer, setActiveTurnIndex]);
 
   // ── Scroll-to-message (one-shot) ──
 
@@ -292,7 +278,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
     }, SCROLL_TO_MSG_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrollToMessageId, visibleMessages]);
+  }, [scrollToMessageId, visibleEntries]);
 
   // ── Scroll signal (continuous) ──
 
@@ -312,7 +298,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
   useEffect(() => {
     if (!navTarget || !parentRef.current) return;
     const { msgIdx, localIdx } = navTarget;
-    const total = visibleMessages.length;
+    const total = visibleEntries.length;
     const isNearEnd = msgIdx >= total - 3;
     const align: 'start' | 'center' | 'end' = msgIdx <= 2 ? 'start' : isNearEnd ? 'end' : 'center';
     rowVirtualizer.scrollToIndex(msgIdx, { align, behavior: 'smooth' });
@@ -366,7 +352,7 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
 
   // ── Render ──
 
-  if (visibleMessages.length === 0) {
+  if (visibleEntries.length === 0) {
     return <div className="p-6 text-sm text-muted-foreground text-center">没有匹配的消息</div>;
   }
 
@@ -380,12 +366,12 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
         }}
       >
         {rowVirtualizer.getVirtualItems().map((vi) => {
-          const m = visibleMessages[vi.index]!;
-          const pairedResult =
-            m.role === 'tool_use' && m.toolUseId ? resultByToolUseId.get(m.toolUseId) : undefined;
+          const entry = visibleEntries[vi.index]!;
+          const favMsg = toMsg(entry);
+
           return (
             <div
-              key={m.id}
+              key={entry.id}
               data-index={vi.index}
               ref={rowVirtualizer.measureElement}
               style={{
@@ -397,26 +383,37 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
               }}
               className="pb-3"
             >
-              {m.role === 'meta' ? (
-                <MetaBlock m={m} />
-              ) : m.role === 'assistant' && m.text === '(thinking)' ? (
-                <ThinkingBlock m={m} />
-              ) : m.role === 'tool_use' ? (
+              {entry.kind === 'user' ? (
+                <UserMessage
+                  entry={entry}
+                  expanded={expanded.has(entry.id)}
+                  onToggle={() => toggleExpanded(entry.id)}
+                  highlight={search}
+                  favorited={favIds.has(entry.id)}
+                  onToggleFav={() => toggleFav(favMsg)}
+                />
+              ) : entry.kind === 'assistant' ? (
+                <AssistantMessage
+                  entry={entry}
+                  expanded={expanded.has(entry.id)}
+                  onToggle={() => toggleExpanded(entry.id)}
+                  highlight={search}
+                  favorited={favIds.has(entry.id)}
+                  onToggleFav={() => toggleFav(favMsg)}
+                />
+              ) : entry.kind === 'tool' ? (
                 <ToolCard
-                  tool={m}
-                  result={pairedResult}
-                  favorited={favIds.has(m.id)}
-                  onToggleFav={() => toggleFav(m)}
+                  tool={favMsg}
+                  result={entry.toolUseId ? resultByToolUseId.get(entry.toolUseId) : undefined}
+                  favorited={favIds.has(entry.id)}
+                  onToggleFav={() => toggleFav(favMsg)}
                   subagentMeta={
-                    canonicalTool(m.toolName) === 'Task'
-                      ? ((pairedResult?.agentHash
-                          ? subagentLookup.get(`hash::${pairedResult.agentHash}`)
-                          : undefined) ??
-                        subagentLookup.get(
-                          `${(m.toolInput as Record<string, unknown>)?.subagent_type ?? (m.toolInput as Record<string, unknown>)?.subagentType ?? ''}::${(m.toolInput as Record<string, unknown>)?.description ?? ''}`,
+                    entry.toolName && canonicalTool(entry.toolName) === 'Task'
+                      ? (subagentLookup.get(
+                          `${(entry.toolInput as Record<string, unknown>)?.subagent_type ?? (entry.toolInput as Record<string, unknown>)?.subagentType ?? ''}::${(entry.toolInput as Record<string, unknown>)?.description ?? ''}`,
                         ) ??
                         (() => {
-                          const out = pairedResult?.toolOutput ?? '';
+                          const out = entry.toolOutput ?? '';
                           const nm = out.match(/^name:\s*(.+)/m);
                           return nm ? subagentLookup.get(`type::${nm[1].trim()}`) : undefined;
                         })())
@@ -424,17 +421,12 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
                   }
                   sessionId={sessionId}
                 />
+              ) : entry.kind === 'system' ? (
+                <SystemNotice entry={entry} />
               ) : (
-                <MessageBlock
-                  m={m}
-                  sessionId={sessionId}
-                  expanded={expanded.has(m.id)}
-                  searchActive={searchActive}
-                  onToggle={() => toggleExpanded(m.id)}
-                  highlight={search}
-                  favorited={favIds.has(m.id)}
-                  onToggleFav={() => toggleFav(m)}
-                />
+                <div className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap bg-background rounded p-2 border border-border">
+                  {JSON.stringify(entry.raw ?? entry, null, 2)}
+                </div>
               )}
             </div>
           );
