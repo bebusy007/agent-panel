@@ -15,6 +15,7 @@ const ExtensionsView = lazy(() => import('./pages/ExtensionsView'));
 const AgentDetailView = lazy(() => import('./pages/AgentDetailView'));
 const UsageView = lazy(() => import('./pages/UsageView'));
 const SessionsView = lazy(() => import('./pages/SessionsView'));
+const NewSessionView = lazy(() => import('./pages/NewSessionView'));
 const SessionsTrashView = lazy(() => import('./pages/SessionsTrashView'));
 const SessionDetailView = lazy(() => import('./pages/SessionDetailView'));
 const FavoritesView = lazy(() => import('./pages/FavoritesView'));
@@ -90,6 +91,7 @@ function AppRoutes() {
             fallback={<div className="p-12 text-center text-muted-foreground text-sm">加载中…</div>}
           >
             <Routes>
+              <Route path="/sessions/new" element={<NewSessionView />} />
               <Route path="/sessions/:id" element={<SessionDetailView />} />
               <Route path="/skills/:id" element={<SkillDetailView />} />
               <Route path="/mcps/:id" element={<MCPDetailView />} />
@@ -114,6 +116,7 @@ function AppRoutes() {
           <Route path="/agents/:id" element={<AgentDetailView />} />
           <Route path="/usage" element={<UsageView />} />
           <Route path="/sessions" element={<SessionsView />} />
+          <Route path="/sessions/new" element={<NewSessionView />} />
           <Route path="/sessions/trash" element={<SessionsTrashView />} />
           <Route path="/sessions/:id" element={<SessionDetailView />} />
           <Route path="/favorites" element={<FavoritesView />} />
