@@ -19,11 +19,11 @@ export function useMergedTimeline(
   }, [chatState]);
 
   const entries = useMemo(() => {
-    if (!chatState || chatState.optimisticEntries.length === 0) {
+    if (!chatState || chatState.liveEntries.length === 0) {
       return historyEntries;
     }
-    return mergeTimelines(historyEntries, chatState.optimisticEntries);
-  }, [historyEntries, chatState?.optimisticEntries]);
+    return mergeTimelines(historyEntries, chatState.liveEntries);
+  }, [historyEntries, chatState?.liveEntries]);
 
   return useMemo(() => ({ entries, streamingEntry }), [entries, streamingEntry]);
 }

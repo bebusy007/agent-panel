@@ -60,8 +60,10 @@ export interface ChatSessionState {
   rateLimit: { status: string; utilization?: number; resetsAt?: number } | null;
   compactCount: number;
 
-  // Optimistic user entries (shown immediately, replaced by history on refetch)
-  optimisticEntries: AdaptedTimelineEntry[];
+  // Live-built entries for the current turn (user + assistant).
+  // Accumulated from SEND_MESSAGE and assistant_message events.
+  // Persist through turn_complete so the timeline doesn't flash on turn end.
+  liveEntries: AdaptedTimelineEntry[];
 
   // Dedup guards
   _seenMessageIds: Set<string>;
@@ -119,7 +121,7 @@ export const INITIAL_STATE: ChatSessionState = {
   cwd: '',
   rateLimit: null,
   compactCount: 0,
-  optimisticEntries: [],
+  liveEntries: [],
   _seenMessageIds: new Set(),
   _seenToolIds: new Set(),
 };
@@ -141,7 +143,13 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
         error: null,
       };
     case 'DISCONNECT':
-      return { ...state, phase: 'disconnected', streamingText: '', thinkingText: '' };
+      return {
+        ...state,
+        phase: 'disconnected',
+        streamingText: '',
+        thinkingText: '',
+        liveEntries: [],
+      };
     case 'ERROR':
       return { ...state, phase: 'error', error: action.message };
     case 'SEND_MESSAGE':
@@ -149,8 +157,8 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
         ...state,
         phase: 'running',
         currentTurnStartMs: Date.now(),
-        optimisticEntries: [
-          ...state.optimisticEntries,
+        liveEntries: [
+          ...state.liveEntries,
           {
             kind: 'user' as const,
             id: action.uuid,
@@ -166,7 +174,6 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
         streamingText: '',
         thinkingText: '',
         thinkingEndMs: state.thinkingStartMs ? Date.now() : 0,
-        optimisticEntries: [],
       };
     case 'RESET':
       return { ...INITIAL_STATE };
@@ -220,6 +227,17 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
         thinkingStartMs: 0,
         thinkingEndMs: 0,
         _seenMessageIds: new Set([...state._seenMessageIds, event.message_id]),
+        liveEntries: [
+          ...state.liveEntries,
+          {
+            kind: 'assistant' as const,
+            id: event.message_id,
+            text: event.text ?? '',
+            thinkingText: event.thinking_text ?? undefined,
+            model: event.model ?? undefined,
+            timestamp: new Date().toISOString(),
+          },
+        ],
       };
     case 'user_message_echo':
       return state;
@@ -252,7 +270,6 @@ function reduceServerEvent(state: ChatSessionState, event: ChatEvent): ChatSessi
         thinkingText: '',
         thinkingStartMs: 0,
         thinkingEndMs: 0,
-        optimisticEntries: [],
       };
     case 'compact_boundary':
       return { ...state, compactCount: state.compactCount + 1 };

@@ -102,21 +102,10 @@ function ContextDrivenDetail({
   scrollToMessageId?: string | null;
   onMessagesLoaded?: (messages: Message[]) => void;
 }) {
-  const { id: sessionId, messages, loading, error, refetch, summary } = useSession();
+  const { id: sessionId, messages, loading, error, summary } = useSession();
   const chat = useChatConnection();
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
-  const prevPhaseRef = useRef(chat.state.phase);
-
-  // Refetch session data after TurnComplete (running → idle)
-  useEffect(() => {
-    const prev = prevPhaseRef.current;
-    prevPhaseRef.current = chat.state.phase;
-    if (prev === 'running' && chat.state.phase === 'idle') {
-      const timer = setTimeout(() => refetch(), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [chat.state.phase, refetch]);
 
   const historyEntries = useMemo(() => messagesToTimeline(messages), [messages]);
   const { entries: timelineEntries, streamingEntry } = useMergedTimeline(
