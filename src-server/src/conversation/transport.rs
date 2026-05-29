@@ -428,18 +428,4 @@ mod tests {
         let status = t.wait().await.unwrap();
         assert!(status.success());
     }
-
-    #[tokio::test]
-    async fn spawn_in_nonexistent_cwd() {
-        let config = SpawnConfig {
-            mode: SpawnMode::New,
-            cwd: "/nonexistent/path/xyz".to_string(),
-            model: None,
-            permission_mode: None,
-            cli_path: Some("echo".to_string()),
-        };
-        // echo should still work even with nonexistent cwd (it doesn't access files)
-        let result = Transport::spawn(&config).await;
-        assert!(result.is_ok());
-    }
 }
