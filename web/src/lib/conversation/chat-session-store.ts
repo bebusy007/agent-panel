@@ -153,7 +153,6 @@ export function chatReducer(state: ChatSessionState, action: ChatAction): ChatSe
         phase: 'disconnected',
         streamingText: '',
         thinkingText: '',
-        liveEntries: [],
       };
     case 'ERROR':
       return { ...state, phase: 'error', error: action.message };
