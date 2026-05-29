@@ -5,6 +5,7 @@ import { ToolCard } from '@/components/tool-cards/ToolCard';
 import { UserMessage } from '@/components/conversation/UserMessage';
 import { AssistantMessage } from '@/components/conversation/AssistantMessage';
 import { SystemNotice } from '@/components/conversation/SystemNotice';
+import { StreamingBlock } from '@/components/conversation/StreamingBlock';
 import { canonicalTool } from '@/lib/tool-aliases';
 import { centerMarkInScroller } from '@/lib/highlight';
 import { turnIndexForMessage } from '@/lib/turn-grouping';
@@ -14,7 +15,6 @@ import {
   ESTIMATE_DEFAULT_HEIGHT,
   ESTIMATE_META_HEIGHT,
   ESTIMATE_TOOL_HEIGHT,
-  IMAGE_STRIP_EXTRA_HEIGHT,
   SHORT_TEXT_THRESHOLD,
   MEDIUM_TEXT_THRESHOLD,
   SCROLL_SIGNAL_COOLDOWN_MS,
@@ -27,9 +27,18 @@ import {
   SCROLL_ANCHOR_OFFSET,
 } from '@/lib/constants';
 
+interface StreamingState {
+  streamingText: string;
+  thinkingText: string;
+  thinkingStartMs: number;
+  thinkingEndMs: number;
+  model?: string | null;
+}
+
 interface MessageTimelineProps {
   entries: AdaptedTimelineEntry[];
   scrollToMessageId?: string | null;
+  streamingEntry?: StreamingState | null;
 }
 
 // ── Minimal adapter for ToolCard / toggleFav backward compat ──
@@ -88,7 +97,11 @@ function pairTimelineToolResults(entries: AdaptedTimelineEntry[]) {
 
 // ── Component ──
 
-export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineProps) {
+export function MessageTimeline({
+  entries,
+  scrollToMessageId,
+  streamingEntry,
+}: MessageTimelineProps) {
   const {
     id: sessionId,
     messages: allMessages,
@@ -432,6 +445,11 @@ export function MessageTimeline({ entries, scrollToMessageId }: MessageTimelineP
           );
         })}
       </div>
+      {streamingEntry && (
+        <div className="mt-2">
+          <StreamingBlock streaming={streamingEntry} />
+        </div>
+      )}
     </div>
   );
 }
