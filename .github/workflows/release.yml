@@ -98,7 +98,7 @@ jobs:
             "$DMG"
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: AgentPanel-macos-aarch64
           path: |
@@ -132,7 +132,7 @@ jobs:
         run: |
           find target -name "*.AppImage" -o -name "*.deb" | head -5
           file target/release/agent-panel-server
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: AgentPanel-linux-x86_64
           path: target/**/bundle/{appimage,deb}/*
@@ -160,7 +160,7 @@ jobs:
         run: |
           Get-ChildItem -Recurse -Filter "*.msi" target/
           Get-ChildItem -Recurse -Filter "*.exe" target/release/
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: AgentPanel-windows-x86_64
           path: target/**/bundle/msi/*.msi
