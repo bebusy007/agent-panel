@@ -8,7 +8,7 @@ description = "Rust backend for Agent Panel — local AI agent asset dashboard"
 # HTTP server
 axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "cors", "compression-gzip", "trace", "request-id"] }
+tower-http = { version = "0.7", features = ["fs", "cors", "compression-gzip", "trace", "request-id"] }
 tokio = { version = "1", features = ["full"] }
 
 # Serialization
@@ -30,7 +30,7 @@ dirs = "6"
 http = "1"
 
 # Encoding
-base64 = "0.22"
+base64 = "0.23"
 
 # Utilities
 tracing = "0.1"
@@ -56,5 +56,5 @@ ts-rs = "12"
 [dev-dependencies]
 tempfile = "3"
 tokio-test = "0.4"
-axum-test = "20"
+axum-test = "21"
 pretty_assertions = "1"
